@@ -58,7 +58,6 @@
     transition: background-color 0.3s, color 0.3s;
   }
 
-  /* === TITLEBAR === */
   .titlebar {
     background: var(--surface); border-bottom: 1px solid var(--border);
     padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
@@ -74,10 +73,7 @@
   }
   .brand-text { display: flex; flex-direction: column; gap: 1px; }
   .brand h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.1; }
-  .credit {
-    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
-    color: var(--muted); font-weight: 400; letter-spacing: 0.2px;
-  }
+  .credit { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--muted); font-weight: 400; letter-spacing: 0.2px; }
   .credit::before { content: '— '; opacity: 0.5; }
   .titlebar-right { display: flex; align-items: center; gap: 12px; }
   .file-info {
@@ -100,17 +96,13 @@
   html[data-theme="dark"] .theme-toggle .moon-icon { display: none; }
   html[data-theme="dark"] .theme-toggle .sun-icon { display: block; }
 
-  /* === TOOLBAR === */
   .toolbar {
     background: var(--surface); border-bottom: 1px solid var(--border);
     padding: 12px 24px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
     position: sticky; top: 67px; z-index: 50;
     transition: background-color 0.3s, border-color 0.3s;
   }
-  .tool-group {
-    display: flex; gap: 4px; align-items: center; padding: 0 8px;
-    border-right: 1px solid var(--border);
-  }
+  .tool-group { display: flex; gap: 4px; align-items: center; padding: 0 8px; border-right: 1px solid var(--border); }
   .tool-group:last-of-type { border-right: none; }
   .tool-group:first-child { padding-left: 0; }
   .spacer { flex: 1 1 auto; }
@@ -129,24 +121,14 @@
   .btn.outlined { border-color: var(--border); background: var(--surface); }
   .btn.outlined:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-2); }
   .btn.tool { padding: 8px 12px; }
-  .btn.tool.active {
-    background: var(--accent-subtle); color: var(--accent);
-    box-shadow: inset 0 0 0 1px var(--accent-ring);
-  }
-  .btn.primary {
-    background: var(--accent); color: white; font-weight: 600;
-    box-shadow: 0 1px 2px rgba(37,99,235,0.3);
-  }
+  .btn.tool.active { background: var(--accent-subtle); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-ring); }
+  .btn.primary { background: var(--accent); color: white; font-weight: 600; box-shadow: 0 1px 2px rgba(37,99,235,0.3); }
   .btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
-  .btn.danger:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger);
-  }
+  .btn.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
   input[type=file] { display: none; }
-
   .text-defaults { display: flex; align-items: center; gap: 8px; padding: 0 8px; }
   .text-defaults .label { font-size: 12px; color: var(--muted); font-weight: 500; }
 
-  /* === CONTEXT BAR === */
   .context-bar {
     background: var(--accent-subtle); border-bottom: 1px solid var(--border);
     padding: 11px 24px; font-size: 14px; color: var(--accent);
@@ -160,12 +142,8 @@
     font-weight: 700; font-size: 12px; flex-shrink: 0;
   }
 
-  main {
-    padding: 32px 24px; display: flex; flex-direction: column;
-    align-items: center; gap: 28px;
-  }
+  main { padding: 32px 24px; display: flex; flex-direction: column; align-items: center; gap: 28px; }
 
-  /* === DROPZONE === */
   #dropzone {
     background: var(--surface); border: 2px dashed var(--border-strong);
     border-radius: var(--radius-lg); padding: 56px 48px 40px;
@@ -181,7 +159,7 @@
   #dropzone .sub { color: var(--muted); font-size: 14px; margin-bottom: 22px; }
   .quick-guide {
     text-align: left; background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 18px 22px; margin: 0 auto; max-width: 460px;
+    border-radius: var(--radius); padding: 18px 22px; margin: 0 auto; max-width: 480px;
     transition: background-color 0.3s, border-color 0.3s;
   }
   .quick-guide h3 {
@@ -193,7 +171,6 @@
   .quick-guide li { margin-bottom: 5px; }
   .quick-guide strong { color: var(--accent); font-weight: 600; }
 
-  /* === PDF PAGES — with zoom shell === */
   .page-block {
     display: flex; flex-direction: column; align-items: center; gap: 10px;
     animation: fadeUp 0.3s ease both;
@@ -203,29 +180,18 @@
     font-family: 'JetBrains Mono', monospace; font-size: 11px;
     color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 500;
   }
-  .page-zoom-shell {
-    position: relative;
-    /* width/height set inline based on zoom */
-  }
+  .page-zoom-shell { position: relative; }
   .page-wrapper {
     position: absolute; top: 0; left: 0;
     box-shadow: var(--shadow-md); line-height: 0;
     background: white; border-radius: 2px; overflow: hidden;
     transform-origin: top left;
-    /* transform: scale(zoom) set inline */
   }
   .page-wrapper canvas { display: block; }
   .overlay { position: absolute; top: 0; left: 0; cursor: crosshair; }
   .overlay.text-cursor { cursor: text; }
 
-  /* === ANNOTATIONS === */
   .annotation { position: absolute; box-sizing: border-box; }
-  .rect-annotation {
-    background: rgba(255, 255, 255, 0.94); border: 1.5px dashed #2563eb;
-    pointer-events: auto; cursor: move; transition: box-shadow var(--tr);
-  }
-  .rect-annotation:hover { box-shadow: 0 0 0 2px rgba(37,99,235,0.20); }
-  .rect-annotation.selected { border-style: solid; box-shadow: 0 0 0 2px rgba(37,99,235,0.30); }
 
   .text-annotation {
     background: white; color: #000;
@@ -246,15 +212,13 @@
     font-family: 'Helvetica', 'Arial', sans-serif;
     border: 2px solid #2563eb; padding: 1px 4px;
     outline: none; line-height: 1.15;
-    min-width: 60px; max-width: 600px;
+    min-width: 80px; max-width: 600px;
     box-shadow: 0 4px 16px rgba(37,99,235,0.30);
     border-radius: 2px;
     white-space: pre-wrap; word-break: break-word;
     cursor: text;
   }
-  .text-input-active.no-bg {
-    background: var(--editor-empty-bg);
-  }
+  .text-input-active.no-bg { background: var(--editor-empty-bg); }
   .text-input-active > div { display: block; min-height: 1em; }
   .text-input-active:empty::before {
     content: 'Type here…';
@@ -262,14 +226,61 @@
     pointer-events: none;
   }
 
-  .img-annotation {
-    pointer-events: auto; cursor: move; user-select: none;
-    border: 1.5px dashed transparent; transition: border-color var(--tr);
+  /* === IMAGE ANNOTATION with handles === */
+  .img-container {
+    pointer-events: auto;
+    transform-origin: center center;
+    user-select: none;
   }
-  .img-annotation:hover { border-color: rgba(37,99,235,0.30); }
-  .img-annotation.selected { border-color: #2563eb; border-style: solid; }
+  .img-container img {
+    display: block;
+    width: 100%; height: 100%;
+    pointer-events: auto;
+    cursor: move;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  .img-container.selected {
+    outline: 2px solid #2563eb;
+    outline-offset: 0;
+  }
+  .img-handle {
+    position: absolute;
+    width: 14px; height: 14px;
+    background: white;
+    border: 2px solid #2563eb;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    z-index: 5;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .img-container.selected .img-handle { pointer-events: auto; opacity: 1; }
+  .img-handle.nw { top: -9px; left: -9px; cursor: nwse-resize; }
+  .img-handle.ne { top: -9px; right: -9px; cursor: nesw-resize; }
+  .img-handle.sw { bottom: -9px; left: -9px; cursor: nesw-resize; }
+  .img-handle.se { bottom: -9px; right: -9px; cursor: nwse-resize; }
+  .img-handle.rot {
+    top: -36px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2563eb;
+    border-color: white;
+    cursor: grab;
+  }
+  .img-handle.rot::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 22px;
+    background: #2563eb;
+  }
+  .img-handle.rot:active { cursor: grabbing; }
 
-  /* === FLOATING PROPS PANEL === */
   .props-panel {
     position: fixed; background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 8px;
@@ -291,9 +302,7 @@
     color: var(--text-soft); transition: all var(--tr); font-family: 'Manrope', sans-serif;
   }
   .pbtn:hover { background: var(--surface-2); color: var(--text); }
-  .pbtn.active {
-    background: var(--accent-subtle); color: var(--accent); border-color: var(--accent-ring);
-  }
+  .pbtn.active { background: var(--accent-subtle); color: var(--accent); border-color: var(--accent-ring); }
   .pbtn.primary { background: var(--accent); color: white; }
   .pbtn.primary:hover { background: var(--accent-hover); }
   .pbtn.danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
@@ -306,26 +315,29 @@
     transition: transform var(--tr);
   }
   .pswatch:hover { transform: scale(1.15); }
-  .pswatch.active {
-    border-color: var(--text);
-    box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text);
-  }
+  .pswatch.active { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
   .psize-input {
     width: 50px; background: var(--surface-2); border: 1px solid var(--border);
     border-radius: 4px; padding: 6px 8px; font-size: 13px; text-align: center;
     font-family: 'JetBrains Mono', monospace; color: var(--text);
   }
   .psize-input:focus { outline: 2px solid var(--accent-ring); border-color: var(--accent); }
+  .protate-input {
+    width: 60px; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 6px 8px; font-size: 13px; text-align: center;
+    font-family: 'JetBrains Mono', monospace; color: var(--text);
+  }
+  .protate-input:focus { outline: 2px solid var(--accent-ring); border-color: var(--accent); }
   .pcolor-input {
     width: 30px; height: 30px; border: 1px solid var(--border);
     border-radius: var(--radius-sm); cursor: pointer; padding: 0; background: transparent;
   }
+  .plabel { font-size: 11px; color: var(--muted); font-weight: 500; padding-right: 4px; }
   .panel-hint {
     font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace;
     padding: 0 6px; max-width: 240px; line-height: 1.3;
   }
 
-  /* === ZOOM BAR (bottom-right) === */
   .zoom-bar {
     position: fixed; bottom: 50px; right: 20px;
     background: var(--surface); border: 1px solid var(--border);
@@ -351,7 +363,6 @@
   }
   .zoom-percent:hover { background: var(--surface-2); }
 
-  /* === TOAST === */
   .toast {
     position: fixed; bottom: 40px; left: 50%;
     transform: translateX(-50%) translateY(140px);
@@ -366,7 +377,6 @@
   .toast.error { background: var(--danger); color: white; }
   .toast.warn { background: var(--warn); color: white; }
 
-  /* === BANNERS === */
   .banner {
     position: fixed; bottom: 100px; right: 20px;
     background: var(--surface); border: 1px solid var(--border);
@@ -388,7 +398,6 @@
   .banner .actions { display: flex; gap: 6px; }
   .banner.install.show + .banner.update.show { bottom: 185px; }
 
-  /* === STATUS BAR === */
   #status {
     position: fixed; bottom: 0; left: 0; right: 0;
     background: var(--surface); border-top: 1px solid var(--border);
@@ -449,12 +458,8 @@
     </label>
   </div>
   <div class="tool-group">
-    <!-- White Box tool is hidden — text annotation has built-in background now -->
-    <!-- <button class="btn tool" data-tool="rectangle" title="Cover text with white box"><span class="icon">▭</span> White Box</button> -->
-    <button class="btn tool active" data-tool="text" title="Add text (multi-line, rich formatting)">
-      <span class="icon">T</span> Add Text
-    </button>
-    <label class="btn" title="Insert an image">
+    <button class="btn tool active" data-tool="text" title="Add text"><span class="icon">T</span> Add Text</button>
+    <label class="btn" title="Insert an image (paste with Ctrl+V also works)">
       <input type="file" id="imgInput" accept="image/*">
       <span class="icon">🖼</span> Image
     </label>
@@ -487,10 +492,10 @@
       <h3>Quick guide</h3>
       <ol>
         <li><strong>Open</strong> a PDF</li>
-        <li>Pick a tool: <strong>Add Text</strong> or <strong>Image</strong></li>
-        <li>For text: click on the PDF, type with <strong>Enter for new lines</strong>. Select any part to make it <strong>Bold</strong>, <em>Italic</em>, <u>Underlined</u>, change color, or remove the white background</li>
+        <li><strong>Add Text</strong>: click on PDF, type. Enter for new lines. Select to format (Bold, Italic, Underline, color, background)</li>
+        <li><strong>Image</strong>: insert from file or <kbd>Ctrl</kbd>+<kbd>V</kbd>. Drag corners to <strong>resize</strong>, top handle to <strong>rotate</strong></li>
         <li>Drag any change to move it; double-click text to re-edit; Delete to remove</li>
-        <li><strong>Save</strong> or <strong>Print</strong> when done. Zoom with the controls in the bottom-right or <kbd>Ctrl</kbd>+<kbd>scroll</kbd></li>
+        <li><strong>Save</strong> or <strong>Print</strong> when done. Zoom with <kbd>Ctrl</kbd>+<kbd>scroll</kbd> or the controls in the bottom-right</li>
       </ol>
     </div>
   </div>
@@ -499,7 +504,6 @@
 
 <div class="props-panel" id="propsPanel"></div>
 
-<!-- Zoom bar -->
 <div class="zoom-bar" id="zoomBar" style="display: none">
   <button class="zoom-btn" id="zoomOut" title="Zoom out (Ctrl+−)">−</button>
   <button class="zoom-percent" id="zoomReset" title="Reset to 100% (Ctrl+0)">100%</button>
@@ -534,16 +538,14 @@
   <span><span class="label">Edits:</span> <span class="val" id="statusAnnots">0</span></span>
   <span class="signature" style="margin-left: auto; margin-right: auto">Built<span class="heart"> ♥ </span>by Kamil Niemczyk</span>
   <span>
-    <kbd>Ctrl</kbd>+<kbd>S</kbd> save &nbsp;·&nbsp;
-    <kbd>Ctrl</kbd>+<kbd>P</kbd> print &nbsp;·&nbsp;
-    <kbd>Ctrl</kbd>+<kbd>±</kbd> zoom
+    <kbd>Ctrl</kbd>+<kbd>S</kbd> save · <kbd>Ctrl</kbd>+<kbd>P</kbd> print · <kbd>Ctrl</kbd>+<kbd>±</kbd> zoom
   </span>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-const { PDFDocument, rgb, StandardFonts } = PDFLib;
+const { PDFDocument, rgb, StandardFonts, degrees } = PDFLib;
 const RENDER_SCALE = 1.6;
 const PALETTE = ['#000000', '#dc2626', '#2563eb', '#15803d', '#a16207', '#7c3aed', '#ffffff'];
 const ZOOM_LEVELS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0];
@@ -654,12 +656,11 @@ if ('launchQueue' in window) {
   });
 }
 
-// === CONTEXT ===
 const CTX = {
   noFile:   { step: 1, text: 'Start by opening a PDF file — click "Open" or drag a file onto the page.' },
-  text:     { step: 2, text: 'Click anywhere on the PDF to add text. Use Enter for new lines. Select any part to format it (Bold, Italic, Underline, color, background).' },
+  text:     { step: 2, text: 'Click on the PDF to add text. Use Enter for new lines. Select any part to format it.' },
   typing:   { step: 3, text: 'Type your text. Select any part to format it. Press Esc to cancel, click outside or ✓ Done to finish.' },
-  selected: { step: 3, text: 'Use the toolbar to format. Drag to move. Double-click text to edit. Press Delete to remove.' }
+  selected: { step: 3, text: 'Drag to move. Drag corners to resize images, top handle to rotate. Press Delete to remove.' }
 };
 function setContext(key) {
   const c = CTX[key]; if (!c) return;
@@ -667,7 +668,6 @@ function setContext(key) {
   document.getElementById('contextText').textContent = c.text;
 }
 
-// === TOOL SELECTION ===
 document.querySelectorAll('.btn.tool').forEach(b => {
   b.addEventListener('click', () => {
     document.querySelectorAll('.btn.tool').forEach(x => x.classList.remove('active'));
@@ -684,7 +684,6 @@ document.getElementById('defaultSize').addEventListener('input', e => {
   const v = parseInt(e.target.value); if (v >= 6 && v <= 96) defaultSize = v;
 });
 
-// === FILE LOAD ===
 const fileInput = document.getElementById('fileInput'), dropzone = document.getElementById('dropzone');
 fileInput.addEventListener('change', e => { if (e.target.files[0]) loadPDF(e.target.files[0]); });
 dropzone.addEventListener('click', () => fileInput.click());
@@ -736,26 +735,20 @@ async function renderPages() {
     const viewport = page.getViewport({ scale: RENDER_SCALE });
     const baseW = viewport.width, baseH = viewport.height;
 
-    const block = document.createElement('div');
-    block.className = 'page-block';
+    const block = document.createElement('div'); block.className = 'page-block';
     block.style.animationDelay = (i * 30) + 'ms';
-
-    const label = document.createElement('div');
-    label.className = 'page-label';
+    const label = document.createElement('div'); label.className = 'page-label';
     label.textContent = 'Page ' + i + ' of ' + pdfJsDoc.numPages;
     block.appendChild(label);
 
-    const shell = document.createElement('div');
-    shell.className = 'page-zoom-shell';
+    const shell = document.createElement('div'); shell.className = 'page-zoom-shell';
     shell.style.width = (baseW * currentZoom) + 'px';
     shell.style.height = (baseH * currentZoom) + 'px';
 
-    const wrapper = document.createElement('div');
-    wrapper.className = 'page-wrapper';
+    const wrapper = document.createElement('div'); wrapper.className = 'page-wrapper';
     wrapper.dataset.pageNum = i; wrapper.dataset.scale = RENDER_SCALE;
     wrapper.dataset.baseW = baseW; wrapper.dataset.baseH = baseH;
-    wrapper.style.width = baseW + 'px';
-    wrapper.style.height = baseH + 'px';
+    wrapper.style.width = baseW + 'px'; wrapper.style.height = baseH + 'px';
     wrapper.style.transform = `scale(${currentZoom})`;
 
     const canvas = document.createElement('canvas');
@@ -775,7 +768,6 @@ async function renderPages() {
   }
 }
 
-// === ZOOM ===
 function applyZoom() {
   document.querySelectorAll('.page-zoom-shell').forEach(shell => {
     const wrapper = shell.querySelector('.page-wrapper');
@@ -787,35 +779,26 @@ function applyZoom() {
   document.getElementById('zoomReset').textContent = Math.round(currentZoom * 100) + '%';
   if (selected) positionPropsPanel(selected);
 }
-function setZoom(z) {
-  currentZoom = Math.max(0.25, Math.min(3.0, z));
-  applyZoom();
-}
+function setZoom(z) { currentZoom = Math.max(0.25, Math.min(3.0, z)); applyZoom(); }
 function snapZoom(direction) {
-  // direction: +1 in, -1 out
   let idx = ZOOM_LEVELS.findIndex(z => Math.abs(z - currentZoom) < 0.01);
   if (idx < 0) {
-    // Find closest level in given direction
     if (direction > 0) idx = ZOOM_LEVELS.findIndex(z => z > currentZoom);
     else { idx = -1; for (let i = ZOOM_LEVELS.length - 1; i >= 0; i--) if (ZOOM_LEVELS[i] < currentZoom) { idx = i; break; } }
     if (idx < 0) return;
     setZoom(ZOOM_LEVELS[idx]);
   } else {
-    const newIdx = Math.max(0, Math.min(ZOOM_LEVELS.length - 1, idx + direction));
-    setZoom(ZOOM_LEVELS[newIdx]);
+    setZoom(ZOOM_LEVELS[Math.max(0, Math.min(ZOOM_LEVELS.length - 1, idx + direction))]);
   }
 }
 document.getElementById('zoomIn').addEventListener('click', () => snapZoom(+1));
 document.getElementById('zoomOut').addEventListener('click', () => snapZoom(-1));
 document.getElementById('zoomReset').addEventListener('click', () => setZoom(1.0));
-
-// Ctrl + wheel zoom
 document.addEventListener('wheel', e => {
   if (!e.ctrlKey && !e.metaKey) return;
   if (!pdfJsDoc) return;
   e.preventDefault();
-  if (e.deltaY < 0) setZoom(currentZoom * 1.1);
-  else setZoom(currentZoom / 1.1);
+  setZoom(e.deltaY < 0 ? currentZoom * 1.1 : currentZoom / 1.1);
 }, { passive: false });
 
 // === RICH TEXT HELPERS ===
@@ -913,77 +896,28 @@ function renderTextAnnotation(ann) {
   ann.el.classList.toggle('no-bg', !!ann.noBackground);
 }
 
-// === OVERLAY INTERACTION ===
+// === OVERLAY INTERACTION (text + click-through) ===
 function setupOverlay(overlay, pageNum) {
-  let drawing = false, startX = 0, startY = 0, previewEl = null;
-
   overlay.addEventListener('mousedown', e => {
     if (e.target !== overlay) return;
-
-    // Convert viewport coords to design space (accounting for zoom)
     const rect = overlay.getBoundingClientRect();
     const x = (e.clientX - rect.left) / currentZoom;
     const y = (e.clientY - rect.top) / currentZoom;
 
-    // If there's an active editor, treat this as "commit current and start new"
-    if (activeEditor) {
-      commitEditor(true);
-      // Don't open a new editor on this same click — prevent confusion
-      e.stopPropagation();
-      return;
-    }
-
+    if (activeEditor) { commitEditor(true); e.stopPropagation(); return; }
     deselect();
     lastClickPos = { pageNum, x, y, overlay };
 
-    if (currentTool === 'rectangle') {
-      drawing = true; startX = x; startY = y;
-      previewEl = document.createElement('div');
-      previewEl.className = 'annotation rect-annotation';
-      previewEl.style.cssText = `left:${x}px;top:${y}px;width:0;height:0`;
-      overlay.appendChild(previewEl);
-    } else if (currentTool === 'text') {
-      // CRITICAL: stop propagation so document-level mousedown
-      // doesn't immediately commit the newly-opened editor
+    if (currentTool === 'text') {
       e.stopPropagation();
       openTextEditor(overlay, pageNum, x, y, null);
     }
-  });
-
-  overlay.addEventListener('mousemove', e => {
-    if (!drawing) return;
-    const r = overlay.getBoundingClientRect();
-    const x = (e.clientX - r.left) / currentZoom;
-    const y = (e.clientY - r.top) / currentZoom;
-    previewEl.style.left = Math.min(startX, x) + 'px';
-    previewEl.style.top = Math.min(startY, y) + 'px';
-    previewEl.style.width = Math.abs(x - startX) + 'px';
-    previewEl.style.height = Math.abs(y - startY) + 'px';
-  });
-
-  overlay.addEventListener('mouseup', e => {
-    if (!drawing) return;
-    drawing = false;
-    const r = overlay.getBoundingClientRect();
-    const w = Math.abs((e.clientX - r.left) / currentZoom - startX);
-    const h = Math.abs((e.clientY - r.top) / currentZoom - startY);
-    if (w < 4 || h < 4) { previewEl.remove(); previewEl = null; return; }
-    const ann = {
-      type: 'rectangle', pageNum,
-      x: parseFloat(previewEl.style.left), y: parseFloat(previewEl.style.top),
-      width: w, height: h, el: previewEl
-    };
-    annotations.push(ann);
-    enableDrag(previewEl, ann);
-    updateAnnotCount();
-    previewEl = null;
   });
 }
 
 // === TEXT EDITOR ===
 function openTextEditor(overlay, pageNum, x, y, existingAnn) {
   if (activeEditor) commitEditor(true);
-
   let ann = existingAnn;
   if (!ann) {
     const el = document.createElement('div');
@@ -994,13 +928,11 @@ function openTextEditor(overlay, pageNum, x, y, existingAnn) {
     overlay.appendChild(el);
     ann = {
       type: 'text', pageNum, x, y,
-      lines: [],
-      fontSize: defaultSize,
-      noBackground: false,
+      lines: [], fontSize: defaultSize, noBackground: false,
       width: 80, height: defaultSize * 1.5, el
     };
     annotations.push(ann);
-    enableDrag(el, ann);
+    enableTextDrag(el, ann);
     el.addEventListener('dblclick', () => openTextEditor(el.parentElement, ann.pageNum, ann.x, ann.y, ann));
     isNewAnnotation = true;
   } else {
@@ -1017,13 +949,9 @@ function openTextEditor(overlay, pageNum, x, y, existingAnn) {
   editor.style.color = defaultColor;
   editor.style.minWidth = Math.max(80, ann.width) + 'px';
 
-  // For new empty annotation, leave editor empty so placeholder shows
-  // For existing, render the lines
-  if (isNewAnnotation || isLinesEmpty(ann.lines)) {
-    editor.innerHTML = '';
-  } else {
-    editor.innerHTML = linesToHtml(ann.lines);
-  }
+  if (isNewAnnotation || isLinesEmpty(ann.lines)) editor.innerHTML = '';
+  else editor.innerHTML = linesToHtml(ann.lines);
+
   overlay.appendChild(editor);
   activeEditor = editor; activeEditorAnn = ann;
   editorJustOpened = true;
@@ -1035,10 +963,8 @@ function openTextEditor(overlay, pageNum, x, y, existingAnn) {
     editor.focus();
     try {
       const range = document.createRange();
-      range.selectNodeContents(editor);
-      range.collapse(false);
-      const sel = window.getSelection();
-      sel.removeAllRanges(); sel.addRange(range);
+      range.selectNodeContents(editor); range.collapse(false);
+      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
     } catch (e) {}
     updatePropsForEditor();
   }, 20);
@@ -1063,8 +989,7 @@ function commitEditor(commit) {
       ann.el.remove();
       const i = annotations.indexOf(ann); if (i >= 0) annotations.splice(i, 1);
       if (selected === ann) deselect();
-      updateAnnotCount();
-      isNewAnnotation = false;
+      updateAnnotCount(); isNewAnnotation = false;
       setContext(currentTool);
       return;
     }
@@ -1073,8 +998,7 @@ function commitEditor(commit) {
     ann.el.remove();
     const i = annotations.indexOf(ann); if (i >= 0) annotations.splice(i, 1);
     if (selected === ann) deselect();
-    updateAnnotCount();
-    isNewAnnotation = false;
+    updateAnnotCount(); isNewAnnotation = false;
     setContext(currentTool);
     return;
   }
@@ -1085,14 +1009,11 @@ function commitEditor(commit) {
   isNewAnnotation = false;
   updateAnnotCount();
   setContext(selected === ann ? 'selected' : currentTool);
-  if (selected === ann) {
-    buildPropsPanel(ann);
-    positionPropsPanel(ann);
-  }
+  if (selected === ann) { buildPropsPanel(ann); positionPropsPanel(ann); }
 }
 
-// === DRAG ===
-function enableDrag(el, ann) {
+// === TEXT DRAG (for text + rect annotations) ===
+function enableTextDrag(el, ann) {
   let dragging = false, downX = 0, downY = 0, startLeft = 0, startTop = 0, hasMoved = false;
   el.addEventListener('mousedown', e => {
     if (activeEditor && activeEditorAnn === ann) return;
@@ -1123,7 +1044,7 @@ function enableDrag(el, ann) {
   });
 }
 
-// === IMAGE ===
+// === IMAGE ANNOTATION with resize + rotate ===
 document.getElementById('imgInput').addEventListener('change', async e => {
   const file = e.target.files[0]; if (!file) return;
   if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
@@ -1133,7 +1054,8 @@ document.getElementById('imgInput').addEventListener('change', async e => {
   }
   const dataURL = await fileToDataURL(file);
   const ann = addImageAnnotation(lastClickPos, dataURL, file.type);
-  select(ann); e.target.value = '';
+  e.target.value = '';
+  // selection happens after image loads
 });
 
 document.addEventListener('paste', async e => {
@@ -1149,8 +1071,8 @@ document.addEventListener('paste', async e => {
     if (item.type.startsWith('image/')) {
       const blob = item.getAsFile();
       const dataURL = await blobToDataURL(blob);
-      const ann = addImageAnnotation(lastClickPos, dataURL, item.type);
-      select(ann); e.preventDefault(); break;
+      addImageAnnotation(lastClickPos, dataURL, item.type);
+      e.preventDefault(); break;
     }
   }
 });
@@ -1159,19 +1081,220 @@ function fileToDataURL(f) { return new Promise(r => { const fr = new FileReader(
 function blobToDataURL(b) { return fileToDataURL(b); }
 
 function addImageAnnotation(pos, dataURL, mimeType) {
+  const container = document.createElement('div');
+  container.className = 'annotation img-container';
+  container.style.left = pos.x + 'px';
+  container.style.top = pos.y + 'px';
+  container.style.transform = 'rotate(0deg)';
+
   const img = document.createElement('img');
-  img.src = dataURL; img.className = 'annotation img-annotation';
-  img.style.left = pos.x + 'px'; img.style.top = pos.y + 'px';
-  img.style.maxWidth = '260px'; img.draggable = false;
-  pos.overlay.appendChild(img);
-  const ann = { type: 'image', pageNum: pos.pageNum, x: pos.x, y: pos.y, dataURL, mimeType, el: img };
+  img.src = dataURL;
+  img.draggable = false;
+  container.appendChild(img);
+
+  // Resize handles
+  ['nw','ne','sw','se'].forEach(corner => {
+    const h = document.createElement('div');
+    h.className = 'img-handle ' + corner;
+    h.dataset.corner = corner;
+    container.appendChild(h);
+  });
+  // Rotate handle
+  const rotHandle = document.createElement('div');
+  rotHandle.className = 'img-handle rot';
+  container.appendChild(rotHandle);
+
+  pos.overlay.appendChild(container);
+
+  const ann = {
+    type: 'image', pageNum: pos.pageNum,
+    x: pos.x, y: pos.y,
+    width: 0, height: 0, rotation: 0,
+    dataURL, mimeType, el: container, imgEl: img
+  };
   annotations.push(ann);
+
   img.addEventListener('load', () => {
-    enableDrag(img, ann);
+    const maxW = 260;
+    const natRatio = img.naturalWidth / img.naturalHeight;
+    let w = Math.min(maxW, img.naturalWidth);
+    let h = w / natRatio;
+    if (h > maxW) { h = maxW; w = h * natRatio; }
+    ann.width = w; ann.height = h;
+    ann.aspectRatio = w / h;  // store original aspect for proportional resize
+    container.style.width = w + 'px';
+    container.style.height = h + 'px';
+    enableImageInteractions(container, ann);
+    select(ann);
+    updateAnnotCount();
+  });
+
+  return ann;
+}
+
+function applyImgTransform(ann) {
+  ann.el.style.left = ann.x + 'px';
+  ann.el.style.top = ann.y + 'px';
+  ann.el.style.width = ann.width + 'px';
+  ann.el.style.height = ann.height + 'px';
+  ann.el.style.transform = `rotate(${ann.rotation}deg)`;
+}
+
+function enableImageInteractions(container, ann) {
+  const img = container.querySelector('img');
+  const handles = container.querySelectorAll('.img-handle:not(.rot)');
+  const rotHandle = container.querySelector('.img-handle.rot');
+
+  // === MOVE: dragging the image body ===
+  let mDragging = false, mDownX = 0, mDownY = 0, mStartX = 0, mStartY = 0, mMoved = false;
+  img.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    mDragging = true; mMoved = false;
+    mDownX = e.clientX; mDownY = e.clientY;
+    mStartX = ann.x; mStartY = ann.y;
+    container.style.opacity = '0.85';
+  });
+  window.addEventListener('mousemove', e => {
+    if (!mDragging) return;
+    const dx = (e.clientX - mDownX) / currentZoom;
+    const dy = (e.clientY - mDownY) / currentZoom;
+    if (!mMoved && Math.abs(dx) + Math.abs(dy) < 4) return;
+    mMoved = true;
+    const overlay = container.parentElement;
+    ann.x = Math.max(0, Math.min(overlay.offsetWidth - ann.width, mStartX + dx));
+    ann.y = Math.max(0, Math.min(overlay.offsetHeight - ann.height, mStartY + dy));
+    applyImgTransform(ann);
     if (selected === ann) positionPropsPanel(ann);
   });
-  updateAnnotCount();
-  return ann;
+  window.addEventListener('mouseup', () => {
+    if (!mDragging) return;
+    container.style.opacity = '1';
+    if (!mMoved) select(ann);
+    mDragging = false;
+  });
+
+  // === RESIZE: dragging a corner handle ===
+  handles.forEach(h => {
+    h.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.stopPropagation(); e.preventDefault();
+      select(ann);
+      const corner = h.dataset.corner;
+      const startX = e.clientX, startY = e.clientY;
+      const startW = ann.width, startH = ann.height;
+      const startCX = ann.x + startW / 2;
+      const startCY = ann.y + startH / 2;
+      const aspect = (ann.aspectRatio && ann.aspectRatio > 0) ? ann.aspectRatio : (startW / startH);
+      const theta = (ann.rotation || 0) * Math.PI / 180;
+      const cos = Math.cos(theta), sin = Math.sin(theta);
+
+      function onMove(ev) {
+        // Mouse delta in design space (account for zoom)
+        const dx = (ev.clientX - startX) / currentZoom;
+        const dy = (ev.clientY - startY) / currentZoom;
+        // Rotate delta into image's local (unrotated) frame
+        const lmdx = dx * cos + dy * sin;
+        const lmdy = -dx * sin + dy * cos;
+
+        // Sign for each corner: in local frame, anchor opposite corner stays put.
+        // SE handle: +X, +Y. Width change = +lmdx, height change = +lmdy
+        // NE handle: +X, -Y. Width = +lmdx, height = -lmdy
+        // SW handle: -X, +Y. Width = -lmdx, height = +lmdy
+        // NW handle: -X, -Y. Width = -lmdx, height = -lmdy
+        const sx = (corner === 'se' || corner === 'ne') ? 1 : -1;
+        const sy = (corner === 'se' || corner === 'sw') ? 1 : -1;
+        let newW = startW + sx * lmdx;
+        let newH = startH + sy * lmdy;
+
+        // Lock aspect unless Shift is held
+        if (!ev.shiftKey) {
+          // Use the larger relative change as driver
+          const rW = newW / startW, rH = newH / startH;
+          const r = Math.abs(rW - 1) > Math.abs(rH - 1) ? rW : rH;
+          newW = startW * r;
+          newH = newW / aspect;
+        }
+
+        // Minimum size
+        const MIN = 20;
+        if (newW < MIN) { newW = MIN; if (!ev.shiftKey) newH = newW / aspect; }
+        if (newH < MIN) { newH = MIN; if (!ev.shiftKey) newW = newH * aspect; }
+
+        // Anchor opposite corner of dragged corner.
+        // Compute the anchor corner's viewport position from initial state,
+        // then derive new center so anchor stays put after resize.
+        // Anchor offset in local frame from center, BEFORE resize:
+        const ax_local = -sx * (startW / 2);
+        const ay_local = -sy * (startH / 2);
+        // After rotation, anchor offset in global frame:
+        const ax_global = ax_local * cos - ay_local * sin;
+        const ay_global = ax_local * sin + ay_local * cos;
+        // Anchor global position (constant during resize):
+        const anchorX = startCX + ax_global;
+        const anchorY = startCY + ay_global;
+        // New anchor local offset (from new center):
+        const nax_local = -sx * (newW / 2);
+        const nay_local = -sy * (newH / 2);
+        // In global:
+        const nax_global = nax_local * cos - nay_local * sin;
+        const nay_global = nax_local * sin + nay_local * cos;
+        // New center:
+        const newCX = anchorX - nax_global;
+        const newCY = anchorY - nay_global;
+
+        ann.width = newW; ann.height = newH;
+        ann.x = newCX - newW / 2;
+        ann.y = newCY - newH / 2;
+        if (!ev.shiftKey) ann.aspectRatio = aspect;
+        else ann.aspectRatio = newW / newH;
+        applyImgTransform(ann);
+        if (selected === ann) positionPropsPanel(ann);
+      }
+      function onUp() {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      }
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    });
+  });
+
+  // === ROTATE: dragging the rotate handle ===
+  rotHandle.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    e.stopPropagation(); e.preventDefault();
+    select(ann);
+    // Compute image center in viewport coords
+    const rect = container.getBoundingClientRect();
+    const cx_view = rect.left + rect.width / 2;
+    const cy_view = rect.top + rect.height / 2;
+
+    function onMove(ev) {
+      const angleRad = Math.atan2(ev.clientY - cy_view, ev.clientX - cx_view);
+      // Rotate handle is positioned at "top" of image, so 0° rotation = handle points UP (angle = -π/2)
+      // We want rotation = mouse_angle_from_center + 90° (so when mouse is above, rotation is 0)
+      let deg = (angleRad * 180 / Math.PI) + 90;
+      if (deg < 0) deg += 360;
+      if (deg >= 360) deg -= 360;
+      // Snap to 15° when Shift held
+      if (ev.shiftKey) deg = Math.round(deg / 15) * 15;
+      ann.rotation = deg;
+      applyImgTransform(ann);
+      if (selected === ann) {
+        // Update rotation input in panel
+        const rotInput = document.querySelector('.protate-input');
+        if (rotInput) rotInput.value = Math.round(deg);
+        positionPropsPanel(ann);
+      }
+    }
+    function onUp() {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  });
 }
 
 // === SELECT + PANEL ===
@@ -1200,14 +1323,12 @@ function buildPropsPanel(ann) {
   panel.classList.toggle('editing', !!editing);
 
   if (ann.type === 'text') {
-    // B I U
     const bg = mkGroup();
     bg.appendChild(mkFormatBtn('B', 'bold', ann, editing));
     bg.appendChild(mkFormatBtn('I', 'italic', ann, editing));
     bg.appendChild(mkFormatBtn('U', 'underline', ann, editing));
     panel.appendChild(bg);
 
-    // Size
     const sg = mkGroup();
     const sIn = document.createElement('input');
     sIn.type = 'number'; sIn.min = '6'; sIn.max = '96';
@@ -1226,7 +1347,6 @@ function buildPropsPanel(ann) {
     sg.appendChild(sIn);
     panel.appendChild(sg);
 
-    // Color
     const cg = mkGroup();
     PALETTE.forEach(col => cg.appendChild(mkSwatch(col, ann, editing)));
     const cIn = document.createElement('input');
@@ -1237,7 +1357,6 @@ function buildPropsPanel(ann) {
     cg.appendChild(cIn);
     panel.appendChild(cg);
 
-    // Background toggle
     const bgGroup = mkGroup();
     const bgBtn = document.createElement('button');
     bgBtn.className = 'pbtn bg-toggle';
@@ -1247,32 +1366,26 @@ function buildPropsPanel(ann) {
     bgBtn.addEventListener('click', () => {
       ann.noBackground = !ann.noBackground;
       ann.el.classList.toggle('no-bg', ann.noBackground);
-      if (activeEditor && activeEditorAnn === ann) {
-        activeEditor.classList.toggle('no-bg', ann.noBackground);
-      }
+      if (activeEditor && activeEditorAnn === ann) activeEditor.classList.toggle('no-bg', ann.noBackground);
       buildPropsPanel(ann); positionPropsPanel(ann);
     });
     bgGroup.appendChild(bgBtn);
     panel.appendChild(bgGroup);
 
-    // Actions
     const ag = mkGroup();
     if (editing) {
       const doneBtn = document.createElement('button');
-      doneBtn.className = 'pbtn primary'; doneBtn.innerHTML = '✓';
-      doneBtn.title = 'Done (Ctrl+Enter)';
+      doneBtn.className = 'pbtn primary'; doneBtn.innerHTML = '✓'; doneBtn.title = 'Done (Ctrl+Enter)';
       doneBtn.addEventListener('click', () => commitEditor(true));
       ag.appendChild(doneBtn);
     } else {
       const editBtn = document.createElement('button');
-      editBtn.className = 'pbtn'; editBtn.innerHTML = '✎';
-      editBtn.title = 'Edit text (or double-click)';
+      editBtn.className = 'pbtn'; editBtn.innerHTML = '✎'; editBtn.title = 'Edit text (or double-click)';
       editBtn.addEventListener('click', () => openTextEditor(ann.el.parentElement, ann.pageNum, ann.x, ann.y, ann));
       ag.appendChild(editBtn);
     }
     const delBtn = document.createElement('button');
-    delBtn.className = 'pbtn danger'; delBtn.innerHTML = '🗑';
-    delBtn.title = 'Delete (Del)';
+    delBtn.className = 'pbtn danger'; delBtn.innerHTML = '🗑'; delBtn.title = 'Delete (Del)';
     delBtn.addEventListener('click', () => {
       if (activeEditor && activeEditorAnn === ann) commitEditor(false);
       removeAnnotation(ann); deselect();
@@ -1286,11 +1399,52 @@ function buildPropsPanel(ann) {
       hint.innerHTML = 'Select text to format · <kbd>Enter</kbd> new line · <kbd>Esc</kbd> cancel';
       panel.appendChild(hint);
     }
+  } else if (ann.type === 'image') {
+    // Rotation
+    const rg = mkGroup();
+    const rLabel = document.createElement('span');
+    rLabel.className = 'plabel';
+    rLabel.textContent = 'Rotate:';
+    rg.appendChild(rLabel);
+    const rIn = document.createElement('input');
+    rIn.type = 'number'; rIn.min = '-360'; rIn.max = '360';
+    rIn.className = 'protate-input'; rIn.value = Math.round(ann.rotation || 0); rIn.title = 'Rotation (degrees)';
+    rIn.addEventListener('mousedown', e => e.stopPropagation());
+    rIn.addEventListener('input', () => {
+      let v = parseFloat(rIn.value); if (isNaN(v)) return;
+      v = ((v % 360) + 360) % 360;
+      ann.rotation = v;
+      applyImgTransform(ann); positionPropsPanel(ann);
+    });
+    rg.appendChild(rIn);
+    const resetRot = document.createElement('button');
+    resetRot.className = 'pbtn'; resetRot.innerHTML = '↺'; resetRot.title = 'Reset rotation to 0°';
+    resetRot.addEventListener('click', () => {
+      ann.rotation = 0; rIn.value = 0;
+      applyImgTransform(ann); positionPropsPanel(ann);
+    });
+    rg.appendChild(resetRot);
+    panel.appendChild(rg);
+
+    // Hint
+    const hint = document.createElement('div');
+    hint.className = 'panel-hint';
+    hint.innerHTML = 'Drag corners to resize · top handle to rotate · <kbd>Shift</kbd> for free aspect';
+    panel.appendChild(hint);
+
+    // Delete
+    const ag = mkGroup();
+    const delBtn = document.createElement('button');
+    delBtn.className = 'pbtn danger'; delBtn.innerHTML = '🗑'; delBtn.title = 'Delete (Del)';
+    delBtn.addEventListener('click', () => { removeAnnotation(ann); deselect(); });
+    ag.appendChild(delBtn);
+    panel.appendChild(ag);
   } else {
+    // Other (rectangle, if ever used)
     const ag = mkGroup();
     const lbl = document.createElement('span');
     lbl.style.cssText = 'font-size:12px;color:var(--muted);padding:0 8px';
-    lbl.textContent = ann.type === 'image' ? 'Image' : 'Box';
+    lbl.textContent = 'Box';
     ag.appendChild(lbl);
     const delBtn = document.createElement('button');
     delBtn.className = 'pbtn danger'; delBtn.innerHTML = '🗑'; delBtn.title = 'Delete (Del)';
@@ -1381,9 +1535,9 @@ function positionPropsPanel(ann) {
   const targetEl = (activeEditor && activeEditorAnn === ann) ? activeEditor : ann.el;
   const r = targetEl.getBoundingClientRect();
   const pw = panel.offsetWidth, ph = panel.offsetHeight;
-  let top = r.top - ph - 10;
+  let top = r.top - ph - 14;
   let left = r.left + (r.width - pw) / 2;
-  if (top < 130) top = r.bottom + 10;
+  if (top < 130) top = r.bottom + 14;
   left = Math.max(8, Math.min(window.innerWidth - pw - 8, left));
   panel.style.top = top + 'px'; panel.style.left = left + 'px';
 }
@@ -1397,7 +1551,7 @@ document.addEventListener('mousedown', e => {
   else deselect();
 });
 
-// === UNDO / CLEAR / DELETE / KEYBOARD ===
+// === UNDO / CLEAR / DELETE ===
 document.getElementById('undoBtn').addEventListener('click', undoLast);
 document.getElementById('clearBtn').addEventListener('click', () => {
   if (!annotations.length) return;
@@ -1417,24 +1571,21 @@ document.addEventListener('keydown', e => {
   } else if (ctrl && (e.key === 's' || e.key === 'S')) {
     e.preventDefault(); if (pdfBytes) savePDF();
   } else if (ctrl && (e.key === 'p' || e.key === 'P')) {
-    e.preventDefault(); if (pdfBytes) printPDF();
+    e.preventDefault(); e.stopPropagation(); if (pdfBytes) printPDF();
   } else if (ctrl && (e.key === '+' || e.key === '=')) {
     e.preventDefault(); if (pdfJsDoc) snapZoom(+1);
   } else if (ctrl && e.key === '-') {
     e.preventDefault(); if (pdfJsDoc) snapZoom(-1);
   } else if (ctrl && e.key === '0') {
     e.preventDefault(); if (pdfJsDoc) setZoom(1.0);
-  } else if (e.key === 'Delete') {
-    if (ce || inp) return;  // don't delete annotation when typing
-    if (selected) { e.preventDefault(); removeAnnotation(selected); deselect(); }
-  } else if (e.key === 'Backspace') {
+  } else if (e.key === 'Delete' || e.key === 'Backspace') {
     if (ce || inp) return;
     if (selected) { e.preventDefault(); removeAnnotation(selected); deselect(); }
   } else if (e.key === 'Escape') {
     if (activeEditor) { e.preventDefault(); commitEditor(false); }
     else if (selected) deselect();
   }
-});
+}, true);  // capture: true ensures we get Ctrl+P before browser default
 
 function undoLast() {
   const last = annotations.pop();
@@ -1473,18 +1624,11 @@ async function generatePdfBytes() {
     const pageH = page.getHeight();
     const px = ann.x / scale;
 
-    if (ann.type === 'rectangle') {
-      const pw = ann.width / scale, ph = ann.height / scale;
-      page.drawRectangle({
-        x: px, y: pageH - (ann.y / scale) - ph, width: pw, height: ph,
-        color: rgb(1, 1, 1), borderWidth: 0
-      });
-    } else if (ann.type === 'text') {
+    if (ann.type === 'text') {
       const fs = ann.fontSize;
       const padTopPdf = 1 / scale, padLeftPdf = 4 / scale;
       const pyTop = pageH - (ann.y / scale);
       const pw = ann.width / scale, ph = ann.height / scale;
-      // White background only if not toggled off
       if (!ann.noBackground) {
         page.drawRectangle({
           x: px, y: pyTop - ph, width: pw, height: ph,
@@ -1522,8 +1666,28 @@ async function generatePdfBytes() {
       const bytes = dataURLToBytes(ann.dataURL);
       const isJpeg = ann.mimeType.includes('jpeg') || ann.mimeType.includes('jpg');
       const img = isJpeg ? await doc.embedJpg(bytes) : await doc.embedPng(bytes);
-      const pw = ann.el.offsetWidth / scale, ph = ann.el.offsetHeight / scale;
-      page.drawImage(img, { x: px, y: pageH - (ann.y / scale) - ph, width: pw, height: ph });
+      const wPdf = ann.width / scale;
+      const hPdf = ann.height / scale;
+      const cxDesign = ann.x + ann.width / 2;
+      const cyDesign = ann.y + ann.height / 2;
+      const cxPdf = cxDesign / scale;
+      const cyPdf = pageH - cyDesign / scale;
+      const angleDeg = ann.rotation || 0;
+      const theta = angleDeg * Math.PI / 180;
+      const cosT = Math.cos(theta), sinT = Math.sin(theta);
+      // x,y so that drawImage rotates around the image's visual center
+      const xPdf = cxPdf - (wPdf / 2) * cosT + (hPdf / 2) * sinT;
+      const yPdf = cyPdf - (wPdf / 2) * sinT - (hPdf / 2) * cosT;
+      page.drawImage(img, {
+        x: xPdf, y: yPdf, width: wPdf, height: hPdf,
+        rotate: degrees(angleDeg)
+      });
+    } else if (ann.type === 'rectangle') {
+      const pw = ann.width / scale, ph = ann.height / scale;
+      page.drawRectangle({
+        x: px, y: pageH - (ann.y / scale) - ph, width: pw, height: ph,
+        color: rgb(1, 1, 1), borderWidth: 0
+      });
     }
   }
   return await doc.save();
@@ -1538,7 +1702,6 @@ async function savePDF() {
   try {
     const bytes = await generatePdfBytes();
     const blob = new Blob([bytes], { type: 'application/pdf' });
-
     if (window.showSaveFilePicker) {
       try {
         const handle = await window.showSaveFilePicker({
@@ -1550,24 +1713,15 @@ async function savePDF() {
         await writable.close();
         showToast('Saved as ' + handle.name, 'success');
       } catch (err) {
-        if (err.name === 'AbortError') {
-          // user cancelled — nothing to do
-        } else {
-          // Picker failed — fall back to download
-          downloadBlob(blob, pdfFileName);
-          showToast('Downloaded as ' + pdfFileName, 'success');
-        }
+        if (err.name === 'AbortError') { /* user cancelled */ }
+        else { downloadBlob(blob, pdfFileName); showToast('Downloaded as ' + pdfFileName, 'success'); }
       }
     } else {
       downloadBlob(blob, pdfFileName);
       showToast('Downloaded as ' + pdfFileName, 'success');
     }
-  } catch (err) {
-    console.error(err);
-    showToast(err.message || 'Could not save PDF.', 'error');
-  } finally {
-    btn.innerHTML = original; btn.disabled = false;
-  }
+  } catch (err) { console.error(err); showToast(err.message || 'Could not save PDF.', 'error'); }
+  finally { btn.innerHTML = original; btn.disabled = false; }
 }
 
 document.getElementById('printBtn').addEventListener('click', printPDF);
@@ -1580,31 +1734,32 @@ async function printPDF() {
     const bytes = await generatePdfBytes();
     const blob = new Blob([bytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;width:0;height:0;border:0;left:-9999px;top:-9999px;';
-    iframe.src = url;
-    document.body.appendChild(iframe);
-    const cleanup = () => {
-      try { iframe.remove(); } catch (e) {}
-      try { URL.revokeObjectURL(url); } catch (e) {}
-    };
+
+    // Open the PDF in a new window — this is the most reliable way to get the
+    // browser to print ONLY the PDF (not the surrounding app UI). Some browsers'
+    // hidden-iframe.print() falls back to printing the parent page.
+    const printWin = window.open(url, '_blank');
+    if (!printWin) {
+      // Popup blocked — fall back to downloading so user can open + print manually
+      downloadBlob(blob, pdfFileName);
+      showToast('Pop-up blocked — PDF downloaded so you can print it manually.', 'warn');
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    // Trigger print once PDF is loaded. Use multiple attempts because PDF
+    // viewer initialization timing varies between browsers.
     let printed = false;
-    iframe.addEventListener('load', () => {
-      setTimeout(() => {
-        try {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-          printed = true;
-        } catch (e) {
-          // Browser blocked iframe print (Chrome built-in PDF viewer) — open in new tab
-          window.open(url, '_blank');
-        }
-        // Cleanup after print dialog likely closed
-        setTimeout(cleanup, 60000);
-      }, 300);
-    });
-    // Safety cleanup if load never fires
-    setTimeout(() => { if (!printed) cleanup(); }, 90000);
+    const tryPrint = () => {
+      if (printed) return;
+      try { printWin.focus(); printWin.print(); printed = true; }
+      catch (e) { /* window may have been closed */ }
+    };
+    try { printWin.addEventListener('load', () => setTimeout(tryPrint, 400)); } catch (e) {}
+    setTimeout(tryPrint, 1500);
+    // Revoke the blob URL after a reasonable delay (browser already loaded it)
+    setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 120000);
+
     showToast('Opening print dialog…', 'success');
   } catch (err) {
     console.error(err);

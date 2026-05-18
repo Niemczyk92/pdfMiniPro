@@ -1,6 +1,6 @@
-// PDF Mini Editor — service worker v5
+// PDF Mini Editor — service worker v6
 // Bump this version string for every release to trigger updates.
-const CACHE = 'pdf-mini-editor-v5';
+const CACHE = 'pdf-mini-editor-v6';
 
 const ASSETS = [
   './',
@@ -26,11 +26,9 @@ const ASSETS = [
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE).then(cache =>
-      Promise.all(
-        ASSETS.map(url =>
-          cache.add(url).catch(err => console.warn('SW cache miss:', url, err.message))
-        )
-      )
+      Promise.all(ASSETS.map(url =>
+        cache.add(url).catch(err => console.warn('SW cache miss:', url, err.message))
+      ))
     )
   );
 });
