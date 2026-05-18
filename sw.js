@@ -1,6 +1,6 @@
-// PDF Mini Editor — service worker v3
+// PDF Mini Editor — service worker v5
 // Bump this version string for every release to trigger updates.
-const CACHE = 'pdf-mini-editor-v3';
+const CACHE = 'pdf-mini-editor-v5';
 
 const ASSETS = [
   './',
@@ -11,6 +11,13 @@ const ASSETS = [
   './icon-192.png',
   './icon-512.png',
   './icon-512-maskable.png',
+  './pdf-file-icon.svg',
+  './pdf-file-icon-16.png',
+  './pdf-file-icon-32.png',
+  './pdf-file-icon-48.png',
+  './pdf-file-icon-64.png',
+  './pdf-file-icon-128.png',
+  './pdf-file-icon-256.png',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
@@ -38,9 +45,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', e => {

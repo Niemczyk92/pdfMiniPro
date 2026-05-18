@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="docG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#f3f4f6"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="36" fill="#dc2626"/>
+  <g transform="translate(46, 32)">
+    <path d="M 0 8 Q 0 0 8 0 L 110 0 L 160 50 L 160 184 Q 160 192 152 192 L 8 192 Q 0 192 0 184 Z" fill="url(#docG)"/>
+    <path d="M 110 0 L 160 50 L 116 50 Q 110 50 110 44 Z" fill="#fca5a5"/>
+    <text x="80" y="135" font-family="Helvetica, Arial, sans-serif" font-weight="900" font-size="42" fill="#dc2626" text-anchor="middle" letter-spacing="-2">PDF</text>
+  </g>
+</svg>
