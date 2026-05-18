@@ -1,6 +1,6 @@
-// PDF Mini Editor — service worker v2
+// PDF Mini Editor — service worker v3
 // Bump this version string for every release to trigger updates.
-const CACHE = 'pdf-mini-editor-v2';
+const CACHE = 'pdf-mini-editor-v3';
 
 const ASSETS = [
   './',
@@ -8,6 +8,9 @@ const ASSETS = [
   './manifest.webmanifest',
   './icon.svg',
   './icon-maskable.svg',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-512-maskable.png',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
@@ -23,8 +26,6 @@ self.addEventListener('install', e => {
       )
     )
   );
-  // Note: we do NOT call skipWaiting() here. Instead we wait for the
-  // page to send a SKIP_WAITING message (after the user clicks "Update").
 });
 
 self.addEventListener('activate', e => {
