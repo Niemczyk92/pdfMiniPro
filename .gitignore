@@ -1,0 +1,25 @@
+# Test PDFs — not part of the project
+001.pdf
+test-form.pdf
+000.pdf
+*.tmp
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor junk
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (if anyone runs tooling here)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Local logs / state
+*.log

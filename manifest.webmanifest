@@ -1,7 +1,7 @@
 {
-  "name": "PDF Mini Editor",
-  "short_name": "PDF Editor",
-  "description": "Edit PDF files locally in your browser. Add text, notes, and images.",
+  "name": "PDF Mini Editor Pro",
+  "short_name": "PDF Pro",
+  "description": "Pro edition — edit existing PDF text in place, multiple fonts, alignment, line spacing, quick-access tools.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
