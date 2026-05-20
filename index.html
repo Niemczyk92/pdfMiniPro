@@ -484,6 +484,41 @@
     pointer-events: none;
   }
 
+  /* QR / Barcode modal */
+  .code-pane { padding: 4px 2px; }
+  .code-grid {
+    display: grid; grid-template-columns: 1fr 240px; gap: 18px;
+    align-items: start;
+  }
+  .code-form { display: flex; flex-direction: column; gap: 8px; }
+  .code-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .code-preview {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    min-height: 240px;
+  }
+  .code-preview-label {
+    font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .code-canvas {
+    max-width: 100%; max-height: 220px;
+    background: white; border-radius: 4px;
+    image-rendering: pixelated;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+  .code-status {
+    font-size: 11px; color: var(--muted);
+    text-align: center; line-height: 1.4;
+  }
+  .code-status.err { color: var(--danger); }
+  .code-status.ok { color: #047857; }
+  @media (max-width: 640px) {
+    .code-grid { grid-template-columns: 1fr; }
+  }
+
   /* AI features — only shown when local AI connection is verified */
   .ai-only { display: none; }
   html.ai-connected .ai-only { display: inline-block; }
@@ -2284,6 +2319,8 @@
       <button class="dropdown-item pro-tool" data-act="tool:strike" type="button"><span class="icon" style="color:#dc2626">S̶</span><span>Strike</span></button>
       <button class="dropdown-item pro-tool" data-act="tool:link" type="button"><span class="icon">🔗</span><span>Link</span></button>
       <button class="dropdown-item pro-tool" data-act="tool:redact" type="button"><span class="icon">▮</span><span>Redact (black-out)</span><span class="hint">strips metadata on save</span></button>
+      <div class="dropdown-section">Codes</div>
+      <button class="dropdown-item pro-tool" id="qrBarcodeBtnMenu" type="button"><span class="icon">▦</span><span>QR / Barcode…</span><span class="hint">generate &amp; insert</span></button>
       <div class="dropdown-section">Stamps & signatures</div>
       <button class="dropdown-item" id="stampsBtnMenu" type="button"><span class="icon">⊟</span><span>Stamps gallery</span></button>
       <button class="dropdown-item" id="signatureBtnMenu" type="button"><span class="icon">✍</span><span>Signature</span><span class="hint">draw / type / upload</span></button>
@@ -2804,6 +2841,122 @@
     <div class="modal-actions">
       <button class="btn" id="compressCancel" type="button">Cancel</button>
       <button class="btn primary" id="compressGo" type="button">Compress &amp; Download</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="codeModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:620px">
+    <div class="modal-head">
+      <h2 class="modal-title">Generate QR / Barcode</h2>
+      <button class="modal-close" id="codeClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="settings-tabs" role="tablist">
+      <button class="settings-tab active" data-codetab="qr" type="button">▦ QR Code</button>
+      <button class="settings-tab" data-codetab="bar" type="button">||||| Barcode</button>
+    </div>
+
+    <!-- QR -->
+    <div class="code-pane" data-codepane="qr">
+      <div class="code-grid">
+        <div class="code-form">
+          <label class="ps-label">Content (URL, text, vCard, Wi-Fi…)</label>
+          <textarea id="qrText" class="ps-text" style="height:90px" placeholder="https://example.com&#10;or:&#10;WIFI:T:WPA;S:MyNet;P:secret123;;"></textarea>
+          <div class="code-row">
+            <div>
+              <label class="ps-label">Size (px)</label>
+              <input type="number" id="qrSize" class="ps-text" value="240" min="80" max="800" step="20">
+            </div>
+            <div>
+              <label class="ps-label">Margin (modules)</label>
+              <input type="number" id="qrMargin" class="ps-text" value="2" min="0" max="8">
+            </div>
+          </div>
+          <div class="code-row">
+            <div>
+              <label class="ps-label">Error correction</label>
+              <select id="qrEcc" class="ps-text">
+                <option value="L">L (7% recovery — smallest)</option>
+                <option value="M" selected>M (15% recovery — default)</option>
+                <option value="Q">Q (25% recovery)</option>
+                <option value="H">H (30% recovery — best)</option>
+              </select>
+            </div>
+            <div>
+              <label class="ps-label">Dark colour</label>
+              <input type="color" id="qrDark" class="ps-text" value="#000000" style="height:38px;padding:2px">
+            </div>
+          </div>
+          <div class="code-row">
+            <div>
+              <label class="ps-label">Light (background)</label>
+              <input type="color" id="qrLight" class="ps-text" value="#ffffff" style="height:38px;padding:2px">
+            </div>
+            <div>
+              <label class="check" style="margin-top:24px"><input type="checkbox" id="qrTransparent"> Transparent background</label>
+            </div>
+          </div>
+        </div>
+        <div class="code-preview">
+          <div class="code-preview-label">Preview</div>
+          <canvas id="qrCanvas" class="code-canvas"></canvas>
+          <div id="qrStatus" class="code-status">Type something above to preview.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barcode -->
+    <div class="code-pane" data-codepane="bar" hidden>
+      <div class="code-grid">
+        <div class="code-form">
+          <label class="ps-label">Format</label>
+          <select id="barFormat" class="ps-text">
+            <option value="CODE128" selected>Code 128 — general (alphanumeric)</option>
+            <option value="CODE39">Code 39 — uppercase + digits</option>
+            <option value="EAN13">EAN-13 — 12-digit, retail</option>
+            <option value="EAN8">EAN-8 — 7-digit retail</option>
+            <option value="UPC">UPC-A — 11-digit, US retail</option>
+            <option value="ITF14">ITF-14 — packaging</option>
+            <option value="ITF">ITF — interleaved 2 of 5</option>
+            <option value="MSI">MSI — inventory</option>
+            <option value="pharmacode">Pharmacode — short pharma</option>
+            <option value="codabar">Codabar — libraries / blood banks</option>
+          </select>
+          <label class="ps-label" style="margin-top:8px">Value</label>
+          <input type="text" id="barText" class="ps-text" placeholder="12345 or ABC-123" value="123456789012">
+          <div class="code-row">
+            <div>
+              <label class="ps-label">Bar width (px)</label>
+              <input type="number" id="barWidth" class="ps-text" value="2" min="1" max="8">
+            </div>
+            <div>
+              <label class="ps-label">Height (px)</label>
+              <input type="number" id="barHeight" class="ps-text" value="80" min="20" max="240">
+            </div>
+          </div>
+          <div class="code-row">
+            <div>
+              <label class="ps-label">Bar colour</label>
+              <input type="color" id="barColor" class="ps-text" value="#000000" style="height:38px;padding:2px">
+            </div>
+            <div>
+              <label class="check" style="margin-top:24px"><input type="checkbox" id="barDisplayValue" checked> Show value below bars</label>
+            </div>
+          </div>
+        </div>
+        <div class="code-preview">
+          <div class="code-preview-label">Preview</div>
+          <canvas id="barCanvas" class="code-canvas"></canvas>
+          <div id="barStatus" class="code-status">Pick format + value to preview.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="codeCancel" type="button">Cancel</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn outlined" id="codeDownload" type="button">⤓ Save as PNG</button>
+      <button class="btn primary" id="codeInsert" type="button">＋ Insert into PDF</button>
     </div>
   </div>
 </div>
@@ -12713,6 +12866,201 @@ async function exportToDocx() {
 })();
 
 // =====================================================================
+// =====================  QR / BARCODE GENERATOR  ======================
+// =====================================================================
+// Lazy-loaded from CDN on first use; cached by the service worker for offline
+// thereafter. Both libraries are pure-JS, no deps:
+//   - qrcode-generator (Kazuhiko Arase)  ~12 KB minified
+//   - JsBarcode                          ~30 KB minified
+const QR_LIB_URL  = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+const BAR_LIB_URL = 'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js';
+let _qrLibPromise = null;
+let _barLibPromise = null;
+function _loadScript(url) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('Could not load ' + url + ' (no internet on first run?)'));
+    document.head.appendChild(s);
+  });
+}
+function loadQrLib()  { return _qrLibPromise  || (_qrLibPromise  = _loadScript(QR_LIB_URL)); }
+function loadBarLib() { return _barLibPromise || (_barLibPromise = _loadScript(BAR_LIB_URL)); }
+
+// --- Render QR onto qrCanvas based on form fields ---
+async function renderQrPreview() {
+  const text    = document.getElementById('qrText').value.trim();
+  const size    = parseInt(document.getElementById('qrSize').value)   || 240;
+  const margin  = parseInt(document.getElementById('qrMargin').value) || 2;
+  const ecc     = document.getElementById('qrEcc').value || 'M';
+  const dark    = document.getElementById('qrDark').value;
+  const light   = document.getElementById('qrLight').value;
+  const trans   = document.getElementById('qrTransparent').checked;
+  const status  = document.getElementById('qrStatus');
+  const canvas  = document.getElementById('qrCanvas');
+  if (!text) {
+    canvas.width = canvas.height = 1;
+    status.className = 'code-status'; status.textContent = 'Type something above to preview.';
+    return;
+  }
+  try {
+    status.className = 'code-status'; status.textContent = 'Loading QR library…';
+    await loadQrLib();
+    // qrcode-generator: new typeNumber 0 = auto-detect best version
+    // The library exposes itself as `qrcode` global.
+    const qr = window.qrcode(0, ecc);
+    qr.addData(text);
+    qr.make();
+    const moduleCount = qr.getModuleCount();
+    const total = moduleCount + margin * 2;
+    const cell = Math.max(1, Math.floor(size / total));
+    const px = cell * total;
+    canvas.width = px; canvas.height = px;
+    const ctx = canvas.getContext('2d');
+    if (trans) ctx.clearRect(0, 0, px, px);
+    else { ctx.fillStyle = light; ctx.fillRect(0, 0, px, px); }
+    ctx.fillStyle = dark;
+    for (let r = 0; r < moduleCount; r++) {
+      for (let c = 0; c < moduleCount; c++) {
+        if (qr.isDark(r, c)) {
+          ctx.fillRect((c + margin) * cell, (r + margin) * cell, cell, cell);
+        }
+      }
+    }
+    status.className = 'code-status ok'; status.textContent = `${moduleCount}×${moduleCount} modules · ${px}×${px} px · ECC=${ecc}`;
+  } catch (e) {
+    status.className = 'code-status err'; status.textContent = 'Error: ' + (e.message || e);
+    console.warn('[qr] render failed:', e);
+  }
+}
+
+// --- Render Barcode onto barCanvas ---
+async function renderBarPreview() {
+  const fmt = document.getElementById('barFormat').value;
+  const text = document.getElementById('barText').value;
+  const width  = parseInt(document.getElementById('barWidth').value)  || 2;
+  const height = parseInt(document.getElementById('barHeight').value) || 80;
+  const color  = document.getElementById('barColor').value;
+  const showText = document.getElementById('barDisplayValue').checked;
+  const status = document.getElementById('barStatus');
+  const canvas = document.getElementById('barCanvas');
+  if (!text) {
+    canvas.width = canvas.height = 1;
+    status.className = 'code-status'; status.textContent = 'Pick format + value to preview.';
+    return;
+  }
+  try {
+    status.className = 'code-status'; status.textContent = 'Loading barcode library…';
+    await loadBarLib();
+    window.JsBarcode(canvas, text, {
+      format: fmt,
+      lineColor: color,
+      width: width,
+      height: height,
+      displayValue: showText,
+      background: '#ffffff',
+      margin: 10,
+      textMargin: 4,
+      fontSize: 14,
+      valid: (isValid) => {
+        if (!isValid) {
+          status.className = 'code-status err';
+          status.textContent = 'Value not valid for ' + fmt + ' (check format requirements — e.g. EAN-13 needs exactly 12-13 digits).';
+        }
+      }
+    });
+    if (status.classList.contains('err')) return;
+    status.className = 'code-status ok';
+    status.textContent = `${fmt} · ${canvas.width}×${canvas.height} px`;
+  } catch (e) {
+    status.className = 'code-status err'; status.textContent = 'Error: ' + (e.message || e);
+    console.warn('[barcode] render failed:', e);
+  }
+}
+
+// Insert the active preview canvas as an image annotation on the PDF
+function insertCodeIntoPdf() {
+  const activeTab = document.querySelector('.settings-tab[data-codetab].active');
+  if (!activeTab) return;
+  const which = activeTab.dataset.codetab;
+  const canvas = document.getElementById(which === 'qr' ? 'qrCanvas' : 'barCanvas');
+  if (!canvas || canvas.width <= 1) {
+    showToast('Generate a preview first.', 'warn'); return;
+  }
+  if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+  const dataURL = canvas.toDataURL('image/png');
+  // Pick a default insertion overlay (first page if no lastClickPos)
+  const overlay = (lastClickPos && lastClickPos.overlay)
+    ? lastClickPos.overlay
+    : document.querySelector('.overlay');
+  if (!overlay) { showToast('No page overlay to insert into.', 'error'); return; }
+  const pageNum = parseInt(overlay.closest('.page-wrapper').dataset.pageNum);
+  const pos = lastClickPos && lastClickPos.pageNum === pageNum
+    ? lastClickPos
+    : { pageNum, x: 50, y: 50, overlay };
+  addImageAnnotation(pos, dataURL, 'image/png');
+  closeCodeModal();
+  showToast((which === 'qr' ? 'QR code' : 'Barcode') + ' inserted. Drag to position.', 'success');
+}
+
+// Download the current preview as a standalone PNG
+function downloadCodeAsPng() {
+  const activeTab = document.querySelector('.settings-tab[data-codetab].active');
+  if (!activeTab) return;
+  const which = activeTab.dataset.codetab;
+  const canvas = document.getElementById(which === 'qr' ? 'qrCanvas' : 'barCanvas');
+  if (!canvas || canvas.width <= 1) { showToast('Generate a preview first.', 'warn'); return; }
+  canvas.toBlob((blob) => {
+    if (!blob) { showToast('Could not save PNG.', 'error'); return; }
+    const name = which === 'qr' ? 'qrcode.png' : 'barcode.png';
+    downloadBlob(blob, name);
+    showToast(`Saved ${name}`, 'success');
+  }, 'image/png');
+}
+
+function openCodeModal() {
+  document.getElementById('codeModal').classList.add('show');
+  // Default to QR tab + initial render
+  showCodeTab('qr');
+  setTimeout(renderQrPreview, 50);
+}
+function closeCodeModal() {
+  document.getElementById('codeModal').classList.remove('show');
+}
+function showCodeTab(which) {
+  document.querySelectorAll('.settings-tab[data-codetab]').forEach(t =>
+    t.classList.toggle('active', t.dataset.codetab === which));
+  document.querySelectorAll('.code-pane').forEach(p =>
+    p.hidden = (p.dataset.codepane !== which));
+  if (which === 'qr')  setTimeout(renderQrPreview, 0);
+  else                 setTimeout(renderBarPreview, 0);
+}
+
+(function wireCodeGenerator() {
+  const open = document.getElementById('qrBarcodeBtnMenu');
+  if (open) open.addEventListener('click', () => { closeAllDropdowns && closeAllDropdowns(); openCodeModal(); });
+  const close = document.getElementById('codeClose');
+  if (close) close.addEventListener('click', closeCodeModal);
+  const cancel = document.getElementById('codeCancel');
+  if (cancel) cancel.addEventListener('click', closeCodeModal);
+  const insert = document.getElementById('codeInsert');
+  if (insert) insert.addEventListener('click', insertCodeIntoPdf);
+  const dl = document.getElementById('codeDownload');
+  if (dl) dl.addEventListener('click', downloadCodeAsPng);
+  document.querySelectorAll('.settings-tab[data-codetab]').forEach(t =>
+    t.addEventListener('click', () => showCodeTab(t.dataset.codetab)));
+  // Live preview on input changes
+  ['qrText','qrSize','qrMargin','qrEcc','qrDark','qrLight','qrTransparent']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('input', () => renderQrPreview()); });
+  ['barFormat','barText','barWidth','barHeight','barColor','barDisplayValue']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('input', () => renderBarPreview()); });
+  // Click outside modal closes
+  const m = document.getElementById('codeModal');
+  if (m) m.addEventListener('click', e => { if (e.target.id === 'codeModal') closeCodeModal(); });
+})();
+
+// =====================================================================
 // =====================  SHARE — compress + email  ====================
 // =====================================================================
 async function compressBytesForShare(sourceBytes, dpi, quality) {
@@ -12739,10 +13087,25 @@ function openShareModal() {
   if (!pdfBytes) { showToast('Open a PDF first.', 'warn'); return; }
   document.getElementById('shareSubject').value = (pdfFileName || 'Document') + ' — for your review';
   document.getElementById('shareBody').value = 'Hi,\n\nAttached is the document for your review.\n\nThanks,';
-  document.getElementById('shareStatus').className = 'settings-status';
-  document.getElementById('shareStatus').textContent = (navigator.share && navigator.canShare)
-    ? 'Your browser supports direct file share. We\'ll open the system share sheet.'
-    : 'Your browser can\'t attach files via mail link. We\'ll download the file and open your mail app — drag the file in or pick it from Recents.';
+  // Probe Web Share with a tiny dummy file (canShare requires actual file shape)
+  const status = document.getElementById('shareStatus');
+  let supported = false;
+  try {
+    if (navigator.share && navigator.canShare) {
+      const probe = new File([new Uint8Array([0x25, 0x50, 0x44, 0x46])], 'probe.pdf', { type: 'application/pdf' });
+      supported = navigator.canShare({ files: [probe] });
+    }
+  } catch (_) {}
+  console.log('[share] Web Share with files supported:', supported, '· UA:', navigator.userAgent.slice(0, 80));
+  if (supported) {
+    status.className = 'settings-status ok';
+    status.textContent = '✓ Your browser supports direct file sharing. Click Share → pick your email app → PDF will be attached automatically.';
+  } else {
+    status.className = 'settings-status warn';
+    status.textContent = '⚠ Your browser does NOT support direct file attach via mailto (Firefox / Safari desktop / old Chrome). ' +
+                         'We\'ll compress + download the PDF then open mail — you will need to drag the file in from Downloads. ' +
+                         'This is a browser security limit, not us. (Tip: use Chrome / Edge on this device, or pick from your Recents in the file dialog when composing.)';
+  }
   document.getElementById('shareModal').classList.add('show');
 }
 function closeShareModal() {
