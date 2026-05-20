@@ -436,6 +436,21 @@
   }
   body.edit-pdf-mode .pdf-image-marker:hover::before { opacity: 1; }
 
+  /* Redaction — black rectangles, opaque */
+  .redact-annotation {
+    position: absolute;
+    background: #000;
+    border: 1px solid #000;
+    box-sizing: border-box;
+    cursor: move;
+    z-index: 6;
+  }
+  .redact-annotation.selected {
+    outline: 2px dashed #dc2626;
+    outline-offset: 2px;
+  }
+  body.redact-mode .overlay { cursor: crosshair; }
+
   /* Crop overlays — show the crop region right on the page */
   .crop-overlay {
     position: absolute; inset: 0;
@@ -2268,9 +2283,11 @@
       <button class="dropdown-item pro-tool" data-act="tool:underline" type="button"><span class="icon" style="color:#dc2626">U̲</span><span>Underline</span></button>
       <button class="dropdown-item pro-tool" data-act="tool:strike" type="button"><span class="icon" style="color:#dc2626">S̶</span><span>Strike</span></button>
       <button class="dropdown-item pro-tool" data-act="tool:link" type="button"><span class="icon">🔗</span><span>Link</span></button>
+      <button class="dropdown-item pro-tool" data-act="tool:redact" type="button"><span class="icon">▮</span><span>Redact (black-out)</span><span class="hint">strips metadata on save</span></button>
       <div class="dropdown-section">Stamps & signatures</div>
       <button class="dropdown-item" id="stampsBtnMenu" type="button"><span class="icon">⊟</span><span>Stamps gallery</span></button>
-      <button class="dropdown-item" id="signatureBtnMenu" type="button"><span class="icon">✍</span><span>Signature</span></button>
+      <button class="dropdown-item" id="signatureBtnMenu" type="button"><span class="icon">✍</span><span>Signature</span><span class="hint">draw / type / upload</span></button>
+      <button class="dropdown-item pro-tool" id="digitalSigBtnMenu" type="button"><span class="icon">🔐</span><span>Certified signature…</span><span class="hint">PAdES — roadmap</span></button>
     </div>
   </div>
 
@@ -2370,6 +2387,8 @@
     </div>
     <div class="dropdown-menu" role="menu" style="right:0;left:auto">
       <button class="dropdown-item" id="exportBtnMenu" type="button"><span class="icon">⤓</span><span>Export as…</span><span class="hint">HQ / Web / Archive</span></button>
+      <button class="dropdown-item" id="exportTextBtnMenu" type="button"><span class="icon">📄</span><span>Export → Text (.txt)</span><span class="hint">extracted plain text</span></button>
+      <button class="dropdown-item" id="exportDocxBtnMenu" type="button"><span class="icon">📝</span><span>Export → Word (.docx)</span><span class="hint">text only, no layout</span></button>
       <button class="dropdown-item" id="shareBtnMenu" type="button"><span class="icon">✉</span><span>Share by email…</span><span class="hint">compresses + attaches</span></button>
       <button class="dropdown-item" id="printBtnMenu" type="button"><span class="icon">🖨</span><span>Print</span><span class="kbd">Ctrl+P</span></button>
       <div class="dropdown-section">Danger</div>
@@ -3535,6 +3554,7 @@ function setTool(tool) {
   document.body.classList.toggle('underline-mode', currentTool === 'underline');
   document.body.classList.toggle('strike-mode', currentTool === 'strike');
   document.body.classList.toggle('link-mode', currentTool === 'link');
+  document.body.classList.toggle('redact-mode', currentTool === 'redact');
   document.querySelectorAll('.overlay').forEach(o => o.classList.toggle('edit-pdf-cursor', currentTool === 'edit-pdf'));
   if (changed && tool !== 'select' && typeof bumpUsage === 'function') {
     bumpUsage(tool === 'shape' ? ('shape:' + currentShape) : ('tool:' + tool));
@@ -6231,11 +6251,10 @@ async function generatePdfBytes(saveOpts) {
   // legacy "fonts" object for code that still references it (stamps embed their own fonts)
   const fonts = { _legacy: true };
   // Draw whiteouts FIRST (so they cover original PDF content without obscuring user annotations)
-  const orderedAnns = annotations.slice().sort((a, b) => {
-    const ap = a.type === 'whiteout' ? 0 : 1;
-    const bp = b.type === 'whiteout' ? 0 : 1;
-    return ap - bp;
-  });
+  // Whiteouts AND redactions go first so they cover original PDF content
+  const _coverFirst = (a) => (a.type === 'whiteout' || a.type === 'redact') ? 0 : 1;
+  const orderedAnns = annotations.slice().sort((a, b) => _coverFirst(a) - _coverFirst(b));
+  const _hasRedaction = annotations.some(a => a.type === 'redact');
   for (const ann of orderedAnns) {
     const page = doc.getPage(ann.pageNum - 1);
     const wrapper = document.querySelector(`.page-wrapper[data-page-num="${ann.pageNum}"]`);
@@ -6250,6 +6269,15 @@ async function generatePdfBytes(saveOpts) {
         width: ann.width / scale,
         height: ann.height / scale,
         color: rgb(1, 1, 1),
+        borderWidth: 0
+      });
+    } else if (ann.type === 'redact') {
+      page.drawRectangle({
+        x: ann.x / scale,
+        y: pageH - (ann.y + ann.height) / scale,
+        width: ann.width / scale,
+        height: ann.height / scale,
+        color: rgb(0, 0, 0),
         borderWidth: 0
       });
     } else if (ann.type === 'decoration') {
@@ -6711,6 +6739,21 @@ async function generatePdfBytes(saveOpts) {
   } catch (e) {
     console.warn('[export] metadata step failed:', e);
   }
+  // Redaction triggers a metadata wipe: title/author/subject/keywords/producer/creator
+  // get blanked out so they don't leak identity info on the redacted document.
+  if (_hasRedaction) {
+    try {
+      doc.setTitle('');
+      doc.setAuthor('');
+      doc.setSubject('');
+      doc.setKeywords([]);
+      doc.setProducer('PDF Mini Editor Pro');
+      doc.setCreator('PDF Mini Editor Pro');
+      // Don't preserve the original creation date either
+      doc.setCreationDate(new Date());
+      doc.setModificationDate(new Date());
+    } catch (e) { console.warn('[redact] metadata wipe failed:', e); }
+  }
 
   const saveOptions = preset === 'archive'
     ? { useObjectStreams: false, addDefaultPage: false }
@@ -6957,6 +7000,20 @@ function _proxy(menuId, originalId) {
 }
 _proxy('stampsBtnMenu', 'stampsBtn');
 _proxy('signatureBtnMenu', 'signatureBtn');
+// Certified (PAdES) signing is on the roadmap — explain current scope honestly.
+(function () {
+  const b = document.getElementById('digitalSigBtnMenu');
+  if (b) b.addEventListener('click', () => {
+    closeAllDropdowns && closeAllDropdowns();
+    showToast(
+      'Cryptographic PAdES signing (X.509 + CAdES wrapping) is on the v1.7 roadmap — ' +
+      'it requires ~500 KB of crypto libraries that we don\'t ship yet. ' +
+      'For now, use ＋ Add → Signature for a visible signature (draw / type / upload), ' +
+      'then add a text annotation with your name + date + role for an audit trail.',
+      'info'
+    );
+  });
+})();
 _proxy('pageSetupBtnMenu', 'pageSetupBtn');
 _proxy('templatesBtnMenu', 'templatesBtn');
 _proxy('bookmarksBtnMenu', 'bookmarksBtn');
@@ -11069,21 +11126,85 @@ document.getElementById('hyperlinkModal').addEventListener('click', (e) => {
   if (e.target.id === 'hyperlinkModal') closeHyperlinkModal(true);
 });
 
-// Hook link tool into the overlay pointerdown path
+// Hook link + redact tools into the overlay pointerdown path
 const _origSetupOverlay2 = setupOverlay;
 setupOverlay = function(overlay, pageNum) {
   _origSetupOverlay2(overlay, pageNum);
   overlay.addEventListener('pointerdown', e => {
-    if (currentTool !== 'link') return;
+    if (currentTool !== 'link' && currentTool !== 'redact') return;
     if (e.target !== overlay) return;
     if (e.button !== undefined && e.button !== 0) return;
     const rect = overlay.getBoundingClientRect();
     const x = (e.clientX - rect.left) / currentZoom;
     const y = (e.clientY - rect.top) / currentZoom;
     e.preventDefault(); e.stopPropagation();
-    startLinkDrag(overlay, pageNum, x, y, e.pointerId);
+    if (currentTool === 'link') startLinkDrag(overlay, pageNum, x, y, e.pointerId);
+    else startRedactDrag(overlay, pageNum, x, y, e.pointerId);
   });
 };
+
+// ==== Redact tool: drag a black rectangle. On save, document metadata
+// (Title/Author/Subject/Keywords/Producer/Creator) is wiped. ====
+function startRedactDrag(overlay, pageNum, x0, y0, pointerId) {
+  const preview = document.createElement('div');
+  preview.className = 'redact-annotation';
+  preview.style.left = x0 + 'px'; preview.style.top = y0 + 'px';
+  preview.style.width = '0px'; preview.style.height = '0px';
+  overlay.appendChild(preview);
+  let p2 = { x: x0, y: y0 };
+  try { overlay.setPointerCapture(pointerId); } catch (_) {}
+  const onMove = (ev) => {
+    if (ev.pointerId !== pointerId) return;
+    const rect = overlay.getBoundingClientRect();
+    p2.x = (ev.clientX - rect.left) / currentZoom;
+    p2.y = (ev.clientY - rect.top) / currentZoom;
+    const x = Math.min(x0, p2.x), y = Math.min(y0, p2.y);
+    const w = Math.abs(p2.x - x0), h = Math.abs(p2.y - y0);
+    preview.style.left = x + 'px'; preview.style.top = y + 'px';
+    preview.style.width = w + 'px'; preview.style.height = h + 'px';
+  };
+  const onUp = (ev) => {
+    if (ev.pointerId !== pointerId) return;
+    overlay.removeEventListener('pointermove', onMove);
+    overlay.removeEventListener('pointerup', onUp);
+    overlay.removeEventListener('pointercancel', onUp);
+    try { overlay.releasePointerCapture(pointerId); } catch (_) {}
+    const x = Math.min(x0, p2.x), y = Math.min(y0, p2.y);
+    const w = Math.abs(p2.x - x0), h = Math.abs(p2.y - y0);
+    if (w < 8 || h < 8) { preview.remove(); return; }
+    const ann = { type: 'redact', pageNum, x, y, width: w, height: h, el: preview };
+    annotations.push(ann);
+    enableWhiteoutInteractions(preview, ann);   // same drag semantics
+    updateAnnotCount();
+    pushHistory('redact');
+    setTool('select');
+    select(ann);
+  };
+  overlay.addEventListener('pointermove', onMove);
+  overlay.addEventListener('pointerup', onUp);
+  overlay.addEventListener('pointercancel', onUp);
+}
+
+// Recreate redact annotation on undo / autosave restore
+function recreateRedactAnn(def, overlay) {
+  const el = document.createElement('div');
+  el.className = 'redact-annotation';
+  el.style.left = def.x + 'px'; el.style.top = def.y + 'px';
+  el.style.width = def.width + 'px'; el.style.height = def.height + 'px';
+  overlay.appendChild(el);
+  const ann = Object.assign({}, def, { el });
+  enableWhiteoutInteractions(el, ann);
+  return ann;
+}
+// Hook into the recreate dispatcher
+if (typeof window._redactRecreateWired === 'undefined') {
+  window._redactRecreateWired = true;
+  const _orig = recreateAnnotation;
+  recreateAnnotation = function(def, overlay) {
+    if (def.type === 'redact') return recreateRedactAnn(def, overlay);
+    return _orig(def, overlay);
+  };
+}
 document.getElementById('statsBtn').addEventListener('click', openStatsModal);
 document.getElementById('statsClose').addEventListener('click', closeStatsModal);
 document.getElementById('statsDone').addEventListener('click', closeStatsModal);
@@ -12384,6 +12505,197 @@ async function aiAction(systemPrompt, userPrompt, title, canInsert) {
 })();
 
 // =====================================================================
+// =====================================================================
+// =====================  EXPORT → TEXT / DOCX  ========================
+// =====================================================================
+// Browser-side PDF text extraction via pdf.js. The DOCX writer is a hand-rolled
+// minimal OOXML packed into a stored-mode (no-compression) ZIP — no JSZip
+// dependency, ~120 LOC. Output opens in Word, LibreOffice, Google Docs.
+async function _extractAllPdfText() {
+  if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return null; }
+  const pages = [];
+  for (let pi = 1; pi <= pdfJsDoc.numPages; pi++) {
+    const page = await pdfJsDoc.getPage(pi);
+    const tc = await page.getTextContent();
+    // Group items into lines by Y-position
+    const items = tc.items.filter(it => it.str);
+    items.sort((a, b) => (b.transform[5] - a.transform[5]) || (a.transform[4] - b.transform[4]));
+    let lines = [];
+    let curY = null, curLine = [];
+    for (const it of items) {
+      const y = it.transform[5];
+      if (curY === null || Math.abs(y - curY) < 3) {
+        curLine.push(it.str);
+        curY = curY === null ? y : curY;
+      } else {
+        if (curLine.length) lines.push(curLine.join(' '));
+        curLine = [it.str];
+        curY = y;
+      }
+    }
+    if (curLine.length) lines.push(curLine.join(' '));
+    pages.push(lines);
+    page.cleanup();
+  }
+  return pages;
+}
+async function exportToText() {
+  showToast('Extracting text…', 'info');
+  const pages = await _extractAllPdfText();
+  if (!pages) return;
+  let out = '';
+  pages.forEach((lines, i) => {
+    out += `=== Page ${i + 1} ===\n`;
+    out += lines.join('\n');
+    out += '\n\n';
+  });
+  const blob = new Blob([out], { type: 'text/plain;charset=utf-8' });
+  const name = _shareSafeName((pdfFileName || 'document').replace(/\.pdf$/i, '') + '.txt').replace(/\.pdf$/i, '.txt');
+  downloadBlob(blob, name);
+  showToast(`Exported ${pages.length} pages → ${name}`, 'success');
+}
+
+// ---- Minimal ZIP writer (STORED method, no compression) ----
+// Produces a valid ZIP that Word, LibreOffice, etc. accept as DOCX/XLSX.
+function _crc32(bytes) {
+  if (!_crc32.table) {
+    const t = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      t[i] = c;
+    }
+    _crc32.table = t;
+  }
+  let crc = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) crc = (_crc32.table[(crc ^ bytes[i]) & 0xff] ^ (crc >>> 8)) >>> 0;
+  return (crc ^ 0xffffffff) >>> 0;
+}
+function _zipPack(files) {
+  // files: [{ name: 'path/in/zip', data: Uint8Array }]
+  const enc = new TextEncoder();
+  const records = files.map(f => {
+    const nameBytes = enc.encode(f.name);
+    const dataBytes = f.data instanceof Uint8Array ? f.data : enc.encode(f.data);
+    return { name: f.name, nameBytes, dataBytes, crc: _crc32(dataBytes), size: dataBytes.length };
+  });
+  const chunks = [];
+  let offset = 0;
+  const central = [];
+  for (const r of records) {
+    // Local file header (signature 0x04034b50)
+    const local = new Uint8Array(30 + r.nameBytes.length);
+    const lv = new DataView(local.buffer);
+    lv.setUint32(0, 0x04034b50, true);   // sig
+    lv.setUint16(4, 20, true);            // version needed
+    lv.setUint16(6, 0, true);             // flags
+    lv.setUint16(8, 0, true);             // method: 0 = stored
+    lv.setUint16(10, 0, true);            // mod time
+    lv.setUint16(12, 0, true);            // mod date
+    lv.setUint32(14, r.crc, true);        // crc32
+    lv.setUint32(18, r.size, true);       // compressed size
+    lv.setUint32(22, r.size, true);       // uncompressed size
+    lv.setUint16(26, r.nameBytes.length, true);
+    lv.setUint16(28, 0, true);            // extra len
+    local.set(r.nameBytes, 30);
+    chunks.push(local);
+    chunks.push(r.dataBytes);
+    // Build central directory entry parallel
+    const cd = new Uint8Array(46 + r.nameBytes.length);
+    const cv = new DataView(cd.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint16(12, 0, true);
+    cv.setUint16(14, 0, true);
+    cv.setUint32(16, r.crc, true);
+    cv.setUint32(20, r.size, true);
+    cv.setUint32(24, r.size, true);
+    cv.setUint16(28, r.nameBytes.length, true);
+    cv.setUint16(30, 0, true);
+    cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true);
+    cv.setUint16(36, 0, true);
+    cv.setUint32(38, 0, true);
+    cv.setUint32(42, offset, true);
+    cd.set(r.nameBytes, 46);
+    central.push(cd);
+    offset += local.length + r.size;
+  }
+  const cdStart = offset;
+  for (const cd of central) chunks.push(cd);
+  const cdSize = central.reduce((s, c) => s + c.length, 0);
+  // End of central directory record (signature 0x06054b50)
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(8, records.length, true);
+  ev.setUint16(10, records.length, true);
+  ev.setUint32(12, cdSize, true);
+  ev.setUint32(16, cdStart, true);
+  chunks.push(eocd);
+  // Concatenate
+  let total = 0;
+  for (const c of chunks) total += c.length;
+  const out = new Uint8Array(total);
+  let p = 0;
+  for (const c of chunks) { out.set(c, p); p += c.length; }
+  return out;
+}
+function _xmlEscape(s) {
+  return String(s || '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
+}
+async function exportToDocx() {
+  showToast('Extracting text…', 'info');
+  const pages = await _extractAllPdfText();
+  if (!pages) return;
+  // Build word/document.xml. One <w:p> per text line, page-break between pages.
+  const paragraphs = [];
+  pages.forEach((lines, idx) => {
+    if (idx > 0) {
+      paragraphs.push('<w:p><w:r><w:br w:type="page"/></w:r></w:p>');
+    }
+    paragraphs.push('<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">' + _xmlEscape('Page ' + (idx + 1)) + '</w:t></w:r></w:p>');
+    for (const line of lines) {
+      paragraphs.push('<w:p><w:r><w:t xml:space="preserve">' + _xmlEscape(line) + '</w:t></w:r></w:p>');
+    }
+  });
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:body>${paragraphs.join('')}</w:body>
+</w:document>`;
+  const contentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+  const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+  const enc = new TextEncoder();
+  const zipBytes = _zipPack([
+    { name: '[Content_Types].xml',     data: enc.encode(contentTypes) },
+    { name: '_rels/.rels',             data: enc.encode(rels) },
+    { name: 'word/document.xml',       data: enc.encode(documentXml) }
+  ]);
+  const blob = new Blob([zipBytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const name = _shareSafeName((pdfFileName || 'document').replace(/\.pdf$/i, '') + '.docx').replace(/\.pdf$/i, '.docx');
+  downloadBlob(blob, name);
+  showToast(`Exported ${pages.length} pages → ${name}. Note: text only, layout is not preserved.`, 'success');
+}
+
+(function () {
+  const t = document.getElementById('exportTextBtnMenu');
+  if (t) t.addEventListener('click', () => { closeAllDropdowns && closeAllDropdowns(); exportToText(); });
+  const d = document.getElementById('exportDocxBtnMenu');
+  if (d) d.addEventListener('click', () => { closeAllDropdowns && closeAllDropdowns(); exportToDocx(); });
+})();
+
+// =====================================================================
 // =====================  SHARE — compress + email  ====================
 // =====================================================================
 async function compressBytesForShare(sourceBytes, dpi, quality) {
@@ -12419,6 +12731,25 @@ function openShareModal() {
 function closeShareModal() {
   document.getElementById('shareModal').classList.remove('show');
 }
+// Sanitise a filename so Windows mail clients / share targets don't choke on
+// it (Outlook in particular renames anything with diacritics or odd punctuation
+// to "noname"). ASCII-safe, no path separators, no quotes.
+function _shareSafeName(rawName) {
+  let n = (rawName || 'document').toString();
+  // Strip any path prefix
+  n = n.split(/[\\\/]/).pop();
+  // Strip diacritics
+  n = n.normalize('NFKD').replace(/[̀-ͯ]/g, '');
+  // Replace non-ASCII / unsafe chars
+  n = n.replace(/[^\w.\- ]+/g, '_');
+  // Collapse repeated separators / leading dots
+  n = n.replace(/_+/g, '_').replace(/^[._\-\s]+/, '').trim();
+  // Guarantee .pdf extension
+  if (!/\.pdf$/i.test(n)) n = n.replace(/\.[^.]+$/, '') + '.pdf';
+  if (!n || n === '.pdf') n = 'document.pdf';
+  return n;
+}
+
 async function doShare() {
   const goBtn = document.getElementById('shareGo');
   const orig = goBtn.innerHTML;
@@ -12445,43 +12776,54 @@ async function doShare() {
     }
     const origMB = ((sourceBytes.byteLength || sourceBytes.length) / 1048576).toFixed(2);
     const newMB  = ((outBytes.byteLength || outBytes.length) / 1048576).toFixed(2);
-    const outName = (pdfFileName || 'document').replace(/\.pdf$/i, '') + (preset !== 'none' ? '-compressed' : '') + '.pdf';
-    const blob = new Blob([outBytes], { type: 'application/pdf' });
-    const file = new File([outBytes], outName, { type: 'application/pdf' });
-    status.className = 'settings-status ok'; status.textContent = `Ready · ${origMB} MB → ${newMB} MB`;
-    // 3. Try Web Share API with file (best UX — single click, file attached)
+    const rawName = (pdfFileName || 'document').replace(/\.pdf$/i, '') + (preset !== 'none' ? '-compressed' : '') + '.pdf';
+    const outName = _shareSafeName(rawName);
+    console.log('[share] file name:', outName, 'bytes:', outBytes.length);
+    // IMPORTANT: ArrayBuffer-flavoured Uint8Array works with File but some
+    // mobile share-sheets misread the size when the underlying buffer is shared.
+    // We materialise a fresh ArrayBuffer to avoid that class of bug.
+    const arrBuf = outBytes.buffer.slice(outBytes.byteOffset, outBytes.byteOffset + outBytes.byteLength);
+    const blob = new Blob([arrBuf], { type: 'application/pdf' });
+    const file = new File([arrBuf], outName, { type: 'application/pdf', lastModified: Date.now() });
+    status.className = 'settings-status ok'; status.textContent = `Ready · ${outName} · ${origMB} MB → ${newMB} MB`;
+    // 3. Choose strategy
     const subject = document.getElementById('shareSubject').value || (pdfFileName || 'Document');
     const body = document.getElementById('shareBody').value || '';
     const to = (document.getElementById('shareTo').value || '').trim();
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+    // Web Share API with files works well on mobile, less so on desktop where it
+    // hands the file to OS share-targets that may drop the filename. On desktop
+    // we prefer the download-then-mailto path because at least the file lands
+    // with the right name in Downloads.
+    const ua = navigator.userAgent || '';
+    const isMobile = /Mobi|Android|iPhone|iPad/i.test(ua);
+    const canFileShare = !!(navigator.share && navigator.canShare && navigator.canShare({ files: [file] }));
+    if (isMobile && canFileShare) {
       try {
-        await navigator.share({
-          files: [file],
-          title: subject,
-          text: body
-        });
+        await navigator.share({ files: [file], title: subject, text: body });
         closeShareModal();
         showToast('Shared.', 'success');
         return;
       } catch (e) {
-        if (e.name === 'AbortError') { /* user cancelled — fall through to download */ }
-        else console.warn('[share] navigator.share failed:', e);
+        if (e.name === 'AbortError') return;   // user cancelled, don't fall through
+        console.warn('[share] navigator.share failed:', e);
       }
     }
-    // 4. Fallback: download file + open mailto:
+    // 4. Desktop / fallback path: download the file with the safe name,
+    //    THEN open mail client with a pre-filled message that names the attachment.
     downloadBlob(blob, outName);
-    const fullBody = (body || '') + '\n\n(Attach the just-downloaded "' + outName + '" file.)';
+    const fullBody = (body || '') +
+      '\n\n— attach "' + outName + '" (just downloaded to your Downloads folder) —';
     let href = 'mailto:';
     if (to) href += encodeURIComponent(to);
     href += '?subject=' + encodeURIComponent(subject)
          +  '&body='    + encodeURIComponent(fullBody);
-    // mailto: length limits — keep body modest
     if (href.length > 1900) href = href.slice(0, 1900);
-    window.location.href = href;
+    // Open mail client in a new tab so back-button doesn't break the page
+    window.open(href, '_blank');
     closeShareModal();
-    showToast(`Downloaded ${outName} (${newMB} MB). Your mail app should open — drag the file in.`, 'success');
+    showToast(`📥 Downloaded ${outName} (${newMB} MB). Mail app opening — drag the file from Downloads into the email.`, 'success');
   } catch (e) {
-    console.error(e);
+    console.error('[share] error:', e);
     status.className = 'settings-status err'; status.textContent = 'Failed: ' + (e.message || e);
     showToast('Share failed: ' + (e.message || e), 'error');
   } finally {
