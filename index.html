@@ -304,7 +304,8 @@
   .side-panel {
     position: fixed;
     left: 0; top: 121px;     /* below titlebar + toolbar */
-    bottom: 0; width: 260px;
+    bottom: 0; width: 280px;
+    --sp-thumb-w: 200px;     /* controlled by the zoom slider */
     background: var(--surface);
     border-right: 1px solid var(--border);
     box-shadow: 1px 0 3px rgba(0,0,0,0.04);
@@ -313,6 +314,53 @@
     transition: transform 0.2s ease;
   }
   .side-panel[hidden] { transform: translateX(-100%); display: flex !important; pointer-events: none; }
+  /* Resize handle on the right edge — drag to widen/narrow the panel */
+  .sp-resize-handle {
+    position: absolute;
+    top: 0; right: -8px; bottom: 0; width: 16px;
+    cursor: ew-resize;
+    z-index: 50;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--border-strong);
+    user-select: none;
+    opacity: 0.5;
+    transition: opacity .12s;
+  }
+  .sp-resize-handle:hover, .sp-resize-handle.dragging { opacity: 1; }
+  .sp-resize-handle span {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 8px 1px;
+    font-size: 10px;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  /* Thumbnail zoom slider — between tabs and body, only relevant for thumbs pane */
+  .sp-thumb-zoom {
+    display: none;            /* shown only when thumbs pane is active */
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  body.sp-thumbs-active .sp-thumb-zoom { display: flex; }
+  .sp-zoom-btn {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 4px;
+    width: 24px; height: 24px;
+    line-height: 1;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--text);
+    transition: background .12s;
+  }
+  .sp-zoom-btn:hover { background: var(--surface-2); }
+  #spZoomSlider {
+    flex: 1; min-width: 40px;
+    accent-color: var(--accent);
+  }
   .sp-tabs {
     display: flex; gap: 2px;
     padding: 8px 8px 6px;
@@ -341,18 +389,23 @@
   .sp-body { flex: 1; overflow-y: auto; padding: 8px; }
   .sp-loading { color: var(--muted); font-size: 12px; padding: 14px; text-align: center; }
   .sp-thumb {
-    display: block; width: 100%; text-align: center;
-    padding: 6px; border: 1px solid transparent;
+    display: block;
+    width: var(--sp-thumb-w);
+    max-width: 100%;
+    margin: 0 auto 12px;
+    padding: 6px;
+    border: 1px solid transparent;
     border-radius: 6px; cursor: pointer;
     background: var(--surface-2);
-    margin-bottom: 8px;
-    transition: border-color .15s, transform .12s;
+    transition: border-color .15s;
   }
   .sp-thumb:hover { border-color: var(--border-strong); }
   .sp-thumb.current { border-color: var(--accent); background: var(--accent-subtle); }
   .sp-thumb canvas, .sp-thumb img {
     display: block; margin: 0 auto;
-    max-width: 100%; box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    width: 100%;
+    height: auto;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
     border-radius: 2px;
   }
   .sp-thumb-num {
@@ -391,11 +444,11 @@
     transition: background .12s, border-color .12s, transform .12s;
   }
   .side-panel-toggle:hover { background: var(--surface-2); border-color: var(--border-strong); transform: translateY(-1px); }
-  body.side-panel-open .side-panel-toggle { left: 272px; }
+  body.side-panel-open .side-panel-toggle { left: calc(var(--sp-width-actual, 280px) - 8px); }
 
-  /* When side panel open, push main content rightward */
-  body.side-panel-open main { padding-left: 280px; }
-  body.side-panel-open .quick-panel { left: 280px; }
+  /* When side panel open, push main content rightward by the panel's actual width */
+  body.side-panel-open main { padding-left: calc(var(--sp-width-actual, 280px) + 8px); }
+  body.side-panel-open .quick-panel { left: calc(var(--sp-width-actual, 280px) + 8px); }
   @media (max-width: 760px) {
     .side-panel { width: 220px; }
     body.side-panel-open main { padding-left: 12px; padding-top: 12px; }
@@ -2508,6 +2561,11 @@
     <span class="sp-spacer"></span>
     <button class="sp-close" id="sidePanelClose" type="button" title="Hide panel" aria-label="Close">✕</button>
   </div>
+  <div class="sp-thumb-zoom" id="spThumbZoom">
+    <button class="sp-zoom-btn" id="spZoomOut" type="button" title="Smaller thumbnails">−</button>
+    <input type="range" id="spZoomSlider" min="100" max="320" step="10" value="200">
+    <button class="sp-zoom-btn" id="spZoomIn" type="button" title="Larger thumbnails">+</button>
+  </div>
   <div class="sp-body" id="sidePanelBody">
     <div class="sp-pane" data-sp="thumbs"><div class="sp-loading">No PDF loaded</div></div>
     <div class="sp-pane" data-sp="outline" hidden><div class="sp-loading">No PDF loaded</div></div>
@@ -2515,6 +2573,7 @@
     <div class="sp-pane" data-sp="signatures" hidden><div class="sp-loading">No PDF loaded</div></div>
     <div class="sp-pane" data-sp="attachments" hidden><div class="sp-loading">No PDF loaded</div></div>
   </div>
+  <div class="sp-resize-handle" id="spResizeHandle" title="Drag to resize panel"><span>‖</span></div>
 </aside>
 
 <button class="side-panel-toggle" id="sidePanelToggle" title="Show side panel (Ctrl+\\)" aria-label="Side panel">
@@ -11773,6 +11832,8 @@ function openSidePanel(focusTab) {
   const sp = document.getElementById('sidePanel');
   sp.hidden = false;
   document.body.classList.add('side-panel-open');
+  // Push the panel's current width into the CSS var so main gets offset correctly
+  document.documentElement.style.setProperty('--sp-width-actual', sp.getBoundingClientRect().width + 'px');
   if (focusTab) showSpTab(focusTab);
   else showSpTab(_spActive);
 }
@@ -11788,6 +11849,7 @@ function toggleSidePanel() {
 }
 function showSpTab(tab) {
   _spActive = tab;
+  document.body.classList.toggle('sp-thumbs-active', tab === 'thumbs');
   document.querySelectorAll('.sp-tab').forEach(t => t.classList.toggle('active', t.dataset.sp === tab));
   document.querySelectorAll('.sp-pane').forEach(p => p.hidden = (p.dataset.sp !== tab));
   // Populate the pane lazily
@@ -11831,7 +11893,10 @@ async function renderSpThumb(pi, card) {
   const p = (async () => {
     try {
       const page = await pdfJsDoc.getPage(pi);
-      const targetW = 220;
+      // Render at the maximum allowed thumb width (per the zoom slider's upper bound)
+      // so CSS can scale DOWN without blur when the user picks a smaller thumb size,
+      // and scale UP only slightly when they zoom in.
+      const targetW = 360;
       const naturalViewport = page.getViewport({ scale: 1, rotation: page.rotate || 0 });
       const scale = targetW / naturalViewport.width;
       const viewport = page.getViewport({ scale, rotation: page.rotate || 0 });
@@ -11987,7 +12052,38 @@ async function populateSpAttachments() {
     pane.innerHTML = '<div class="sp-list-empty">Couldn\'t read attachments: ' + (e.message || e) + '</div>';
   }
 }
-// Wire up the toggle + tab clicks
+// Wire up the toggle + tab clicks + zoom slider + resize handle
+const SP_WIDTH_KEY = 'pdfMiniPro.sidePanel.width.v1';
+const SP_THUMB_W_KEY = 'pdfMiniPro.sidePanel.thumbW.v1';
+
+function _spApplyWidth(w) {
+  const sp = document.getElementById('sidePanel');
+  if (!sp) return;
+  const min = 200, max = Math.min(window.innerWidth - 200, 600);
+  const clamped = Math.max(min, Math.min(max, w));
+  sp.style.width = clamped + 'px';
+  // Push main content rightward by the same amount when panel is open
+  document.documentElement.style.setProperty('--sp-width-actual', clamped + 'px');
+}
+function _spApplyThumbWidth(w) {
+  const sp = document.getElementById('sidePanel');
+  if (!sp) return;
+  const clamped = Math.max(100, Math.min(400, w));
+  sp.style.setProperty('--sp-thumb-w', clamped + 'px');
+  const slider = document.getElementById('spZoomSlider');
+  if (slider && parseInt(slider.value) !== clamped) slider.value = clamped;
+}
+function _spLoadPrefs() {
+  try {
+    const w = parseInt(localStorage.getItem(SP_WIDTH_KEY));
+    if (w) _spApplyWidth(w);
+    const tw = parseInt(localStorage.getItem(SP_THUMB_W_KEY));
+    if (tw) _spApplyThumbWidth(tw);
+  } catch (_) {}
+}
+function _spSaveWidth(w)     { try { localStorage.setItem(SP_WIDTH_KEY, String(w)); } catch (_) {} }
+function _spSaveThumbW(w)    { try { localStorage.setItem(SP_THUMB_W_KEY, String(w)); } catch (_) {} }
+
 (function () {
   const btn = document.getElementById('sidePanelToggle');
   if (btn) btn.addEventListener('click', toggleSidePanel);
@@ -12002,6 +12098,62 @@ async function populateSpAttachments() {
       e.preventDefault(); toggleSidePanel();
     }
   });
+  // Thumb zoom slider
+  const slider = document.getElementById('spZoomSlider');
+  if (slider) {
+    slider.addEventListener('input', () => {
+      const w = parseInt(slider.value) || 200;
+      _spApplyThumbWidth(w);
+      _spSaveThumbW(w);
+    });
+  }
+  const zin = document.getElementById('spZoomIn');
+  if (zin) zin.addEventListener('click', () => {
+    const cur = parseInt(slider.value) || 200;
+    const next = Math.min(parseInt(slider.max), cur + 20);
+    slider.value = next; _spApplyThumbWidth(next); _spSaveThumbW(next);
+  });
+  const zout = document.getElementById('spZoomOut');
+  if (zout) zout.addEventListener('click', () => {
+    const cur = parseInt(slider.value) || 200;
+    const next = Math.max(parseInt(slider.min), cur - 20);
+    slider.value = next; _spApplyThumbWidth(next); _spSaveThumbW(next);
+  });
+  // Resize handle — drag horizontally to change panel width
+  const handle = document.getElementById('spResizeHandle');
+  if (handle) {
+    let dragging = false;
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      dragging = true;
+      handle.classList.add('dragging');
+      handle.setPointerCapture(e.pointerId);
+      document.body.style.cursor = 'ew-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    handle.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const sp = document.getElementById('sidePanel');
+      const rect = sp.getBoundingClientRect();
+      const newW = e.clientX - rect.left;
+      _spApplyWidth(newW);
+    });
+    const endDrag = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      handle.classList.remove('dragging');
+      try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      const sp = document.getElementById('sidePanel');
+      _spSaveWidth(sp.getBoundingClientRect().width);
+    };
+    handle.addEventListener('pointerup', endDrag);
+    handle.addEventListener('pointercancel', endDrag);
+  }
+  // Initialise from localStorage
+  _spLoadPrefs();
 })();
 // Re-populate panel when a new PDF loads (we wrap loadPDFFromBytes' completion)
 if (typeof window._origLoadForSp === 'undefined') {
