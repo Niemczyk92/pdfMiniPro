@@ -2984,10 +2984,11 @@
       <textarea id="shareBody" class="ps-text" placeholder="Hi, please find the attached document…" style="height:90px"></textarea>
       <div id="shareStatus" class="settings-status" style="margin-top:10px">Pick a compression level and click Share.</div>
     </div>
-    <div class="modal-actions">
+    <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
       <button class="btn" id="shareCancel" type="button">Cancel</button>
       <span class="spacer" style="flex:1"></span>
-      <button class="btn primary" id="shareGo" type="button">✉ Compress &amp; share</button>
+      <button class="btn outlined" id="shareGoDownload" type="button">📥 Download + open mail</button>
+      <button class="btn primary" id="shareGo" type="button">📨 Share via app</button>
     </div>
   </div>
 </div>
@@ -12248,14 +12249,27 @@ async function aiChat(messages, opts) {
   return _aiExtractReply(j, cand.flavour);
 }
 async function refreshAiAvailability() {
-  if (!aiConfig.baseUrl) { aiAvailable = false; updateAiVisibility(); return; }
+  if (!aiConfig.baseUrl) {
+    aiAvailable = false;
+    aiConfig.resolvedUrl = null;
+    aiConfig.flavour = null;
+    updateAiVisibility();
+    return false;
+  }
   const r = await aiTestConnection();
   aiAvailable = !!r.ok;
   updateAiVisibility();
+  return aiAvailable;
 }
 function updateAiVisibility() {
   document.documentElement.classList.toggle('ai-connected', aiAvailable);
 }
+// Periodic AI health check — if the user's local LLM goes offline mid-session,
+// hide the AI menu within ~60s instead of waiting for a page reload. Cheap probe
+// because aiTestConnection() has an 8s timeout and we only run it every 60s.
+setInterval(() => {
+  if (aiConfig && aiConfig.baseUrl) refreshAiAvailability();
+}, 60 * 1000);
 
 // ----- Settings modal wiring -----
 function openSettingsModal() {
@@ -12670,7 +12684,17 @@ async function aiAction(systemPrompt, userPrompt, title, canInsert) {
   const aiDD = document.getElementById('aiDropdown');
   if (aiDD) {
     const trig = aiDD.querySelector('.btn');
-    if (trig) trig.addEventListener('click', (e) => toggleDropdown('aiDropdown', e));
+    if (trig) trig.addEventListener('click', async (e) => {
+      // Fast path: open immediately so UI is responsive
+      toggleDropdown('aiDropdown', e);
+      // Then re-check in the background. If the server has gone down since
+      // last check, hide the menu and tell the user.
+      const stillUp = await refreshAiAvailability();
+      if (!stillUp) {
+        closeAllDropdowns();
+        showToast('AI server is no longer reachable — menu hidden. Re-test in Settings → AI.', 'warn');
+      }
+    });
   }
 })();
 
@@ -13130,6 +13154,120 @@ function _shareSafeName(rawName) {
   return n;
 }
 
+// Compress + return File / Blob / name. Shared by both share paths.
+async function _prepareSharePayload(goBtn) {
+  const status = document.getElementById('shareStatus');
+  let sourceBytes = annotations.length || acroFormFields.length ? await generatePdfBytes() : pdfBytes;
+  let outBytes;
+  const preset = document.getElementById('sharePreset').value;
+  if (preset !== 'none') {
+    const profiles = {
+      high:     { dpi: 150, q: 0.88 },
+      balanced: { dpi: 120, q: 0.72 },
+      small:    { dpi: 96,  q: 0.55 }
+    };
+    const p = profiles[preset] || profiles.balanced;
+    goBtn.innerHTML = '⏳ Compressing…';
+    status.className = 'settings-status warn';
+    status.textContent = `Compressing at DPI ${p.dpi} · JPEG ${Math.round(p.q*100)}%…`;
+    outBytes = await compressBytesForShare(sourceBytes, p.dpi, p.q);
+  } else {
+    outBytes = sourceBytes;
+  }
+  const rawName = (pdfFileName || 'document').replace(/\.pdf$/i, '') + (preset !== 'none' ? '-compressed' : '') + '.pdf';
+  const outName = _shareSafeName(rawName);
+  // Create a fresh ArrayBuffer so the File object holds its own bytes
+  // (some Windows share targets misread sub-views of the original buffer).
+  const arrBuf = outBytes.buffer.slice(outBytes.byteOffset, outBytes.byteOffset + outBytes.byteLength);
+  const blob = new Blob([arrBuf], { type: 'application/pdf' });
+  const file = new File([arrBuf], outName, { type: 'application/pdf', lastModified: Date.now() });
+  return { blob, file, outName, outBytes, sourceBytes };
+}
+
+// ---- Path 1: System share (Web Share API). User picks the email/messaging app. ----
+// Works on Chrome/Edge mobile + most Android. On Windows desktop, Outlook is
+// known to receive an empty "no_name" file due to a broken Windows Share Contract
+// implementation — that's an Outlook bug, not us. Pick "Mail" (Win11) instead,
+// or use the Download path below.
+async function doShareViaApp() {
+  const goBtn = document.getElementById('shareGo');
+  const orig = goBtn.innerHTML;
+  goBtn.disabled = true; goBtn.innerHTML = '⏳ Generating PDF…';
+  const status = document.getElementById('shareStatus');
+  try {
+    const { file, outName, outBytes, sourceBytes } = await _prepareSharePayload(goBtn);
+    const origMB = ((sourceBytes.byteLength || sourceBytes.length) / 1048576).toFixed(2);
+    const newMB  = ((outBytes.byteLength || outBytes.length) / 1048576).toFixed(2);
+    console.log('[share] file ready:', outName, 'bytes:', outBytes.length, '· canShare files:',
+      navigator.canShare && navigator.canShare({ files: [file] }));
+    status.className = 'settings-status ok';
+    status.textContent = `Ready · ${outName} · ${origMB} MB → ${newMB} MB · Opening share sheet…`;
+    if (!(navigator.share && navigator.canShare && navigator.canShare({ files: [file] }))) {
+      status.className = 'settings-status err';
+      status.textContent = 'Your browser does not support direct file sharing. Use "📥 Download + open mail" instead.';
+      return;
+    }
+    // Minimal payload — including title/text sometimes confuses Outlook
+    // into treating the file as text and creating an empty "no_name" attachment.
+    // Pass ONLY files. If user wants a subject/body they can set it in the
+    // email client after the share opens.
+    try {
+      await navigator.share({ files: [file] });
+      closeShareModal();
+      showToast('Shared. If Outlook shows "no_name" file is empty — that\'s an Outlook bug. Use Download path or pick Mail app instead.', 'success');
+    } catch (e) {
+      if (e.name === 'AbortError') {
+        status.className = 'settings-status'; status.textContent = 'Share cancelled.';
+        return;
+      }
+      throw e;
+    }
+  } catch (e) {
+    console.error('[share] error:', e);
+    status.className = 'settings-status err'; status.textContent = 'Failed: ' + (e.message || e);
+    showToast('Share failed: ' + (e.message || e), 'error');
+  } finally {
+    goBtn.disabled = false; goBtn.innerHTML = orig;
+  }
+}
+
+// ---- Path 2: Download + open mail. Always works, requires drag-and-drop. ----
+async function doShareViaDownload() {
+  const goBtn = document.getElementById('shareGoDownload');
+  const orig = goBtn.innerHTML;
+  goBtn.disabled = true; goBtn.innerHTML = '⏳ Generating PDF…';
+  const status = document.getElementById('shareStatus');
+  try {
+    const { blob, outName, outBytes, sourceBytes } = await _prepareSharePayload(goBtn);
+    const origMB = ((sourceBytes.byteLength || sourceBytes.length) / 1048576).toFixed(2);
+    const newMB  = ((outBytes.byteLength || outBytes.length) / 1048576).toFixed(2);
+    status.className = 'settings-status ok';
+    status.textContent = `Downloaded ${outName} · ${origMB} MB → ${newMB} MB`;
+    const subject = document.getElementById('shareSubject').value || (pdfFileName || 'Document');
+    const body = document.getElementById('shareBody').value || '';
+    const to = (document.getElementById('shareTo').value || '').trim();
+    downloadBlob(blob, outName);
+    const fullBody = (body || '') +
+      '\n\n📎 Drag "' + outName + '" from your Downloads into this email.\n' +
+      '(Browser security blocks automatic mailto attachments.)';
+    let href = 'mailto:';
+    if (to) href += encodeURIComponent(to);
+    href += '?subject=' + encodeURIComponent(subject)
+         +  '&body='    + encodeURIComponent(fullBody);
+    if (href.length > 1900) href = href.slice(0, 1900);
+    window.open(href, '_blank');
+    closeShareModal();
+    showToast(`📥 ${outName} downloaded (${newMB} MB). Drag it from Downloads into the email.`, 'success');
+  } catch (e) {
+    console.error('[share] error:', e);
+    status.className = 'settings-status err'; status.textContent = 'Failed: ' + (e.message || e);
+    showToast('Share failed: ' + (e.message || e), 'error');
+  } finally {
+    goBtn.disabled = false; goBtn.innerHTML = orig;
+  }
+}
+
+// Backwards-compatible single-path entry (the old "Compress & share" button)
 async function doShare() {
   const goBtn = document.getElementById('shareGo');
   const orig = goBtn.innerHTML;
@@ -13220,7 +13358,9 @@ async function doShare() {
   const cc = document.getElementById('shareCancel');
   if (cc) cc.addEventListener('click', closeShareModal);
   const g = document.getElementById('shareGo');
-  if (g) g.addEventListener('click', doShare);
+  if (g) g.addEventListener('click', doShareViaApp);
+  const gd = document.getElementById('shareGoDownload');
+  if (gd) gd.addEventListener('click', doShareViaDownload);
   const m = document.getElementById('shareModal');
   if (m) m.addEventListener('click', (e) => { if (e.target.id === 'shareModal') closeShareModal(); });
 })();
