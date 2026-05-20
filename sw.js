@@ -1,6 +1,6 @@
-// PDF Mini Editor Pro — service worker v22
+// PDF Mini Editor Pro — service worker v23
 // Bump this version string for every release to trigger updates.
-const CACHE = 'pdf-mini-editor-pro-v22';
+const CACHE = 'pdf-mini-editor-pro-v23';
 
 const ASSETS = [
   './',

@@ -2815,7 +2815,7 @@
       <button class="modal-close" id="shareClose" type="button" aria-label="Close">✕</button>
     </div>
     <div class="ps-section">
-      <div class="settings-desc">The PDF is compressed locally, then either sent through the system Share sheet (mobile / some desktops) or downloaded with a pre-filled email opened in your mail app.</div>
+      <div class="settings-desc">PDF se zkomprimuje lokálně, pak otevře <strong>systémový Share dialog</strong> (mobile + Chrome/Edge na Windows) → vyberete email aplikaci a soubor je už přiložený. Pokud váš prohlížeč Web Share s files nepodporuje (Firefox, Safari na desktopu), spadne to do download + mailto (drag-and-drop). To není naše chyba — browser security blokuje automatické mailto přílohy.</div>
       <label class="ps-label" style="margin-top:10px">Compression level</label>
       <select id="sharePreset" class="ps-text">
         <option value="high">High quality (DPI 150, JPEG 88%)</option>
@@ -2958,7 +2958,8 @@
       <div class="ps-section">
         <div class="settings-row-title">PDF Mini Editor Pro</div>
         <div class="settings-desc">Version <strong id="aboutVersion">—</strong> · Service worker <strong id="aboutSw">—</strong></div>
-        <div class="settings-desc" style="margin-top:6px">Created by Kamil Niemczyk · 100% offline · No tracking · No data leaves your device.</div>
+        <div class="settings-desc" style="margin-top:6px">Created by Kamil Niemczyk · No tracking · No analytics.</div>
+        <div class="settings-desc" id="aboutPrivacyLine" style="margin-top:10px;padding:10px 12px;border-radius:6px;background:var(--surface-2);border-left:3px solid #10b981">…</div>
       </div>
       <div class="ps-section">
         <div class="settings-row-title">Service worker</div>
@@ -4612,6 +4613,23 @@ function commitEditor(commit) {
   renderTextAnnotation(ann);
   ann.el.style.visibility = '';
   ann.width = ann.el.offsetWidth; ann.height = ann.el.offsetHeight;
+  // For Edit-PDF replacements, grow the underlying whiteout to cover the NEW
+  // text width if it's wider than the original glyph (so the original isn't
+  // still visible peeking out from beneath the new content).
+  if (ann.fromPdfEdit && ann.sourceWhiteout) {
+    const wo = ann.sourceWhiteout;
+    const bleed = Math.max(2, ann.fontSize * 0.08);
+    const needRight = ann.x + ann.width  + bleed;
+    const needBottom = ann.y + ann.height + bleed;
+    const woRight  = wo.x + wo.width;
+    const woBottom = wo.y + wo.height;
+    if (needRight > woRight)   { wo.width  = needRight  - wo.x; }
+    if (needBottom > woBottom) { wo.height = needBottom - wo.y; }
+    if (wo.el) {
+      wo.el.style.width  = wo.width  + 'px';
+      wo.el.style.height = wo.height + 'px';
+    }
+  }
   isNewAnnotation = false;
   updateAnnotCount();
   setContext(selected === ann ? 'selected' : currentTool);
@@ -6306,7 +6324,11 @@ async function generatePdfBytes(saveOpts) {
       // Link annotations are added at the end (after all drawing) via a separate pass
       // — see the linkAnnotations bundle below.
     } else if (ann.type === 'text') {
-      const fs = ann.fontSize;
+      // From-PDF-edit annotations captured their fontSize in VIEWPORT PIXELS
+      // (= PDF points × RENDER_SCALE). User-typed text annotations store their
+      // fontSize directly in PDF points (no conversion). So divide by scale
+      // only when we know the source was the in-place editor.
+      const fs = ann.fromPdfEdit ? (ann.fontSize / scale) : ann.fontSize;
       const family = ann.fontFamily || 'Helvetica';
       const lineHRatio = ann.lineHeight || LINE_HEIGHT_RATIO;
       const align = ann.align || 'left';
@@ -9798,33 +9820,13 @@ const HELP_SECTIONS = [
         <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
         <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>Redo</td></tr>
         <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd> / <kbd>D</kbd></td><td>Copy / Paste / Duplicate selection</td></tr>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>A</kbd></td><td>Select all objects</td></tr>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd></td><td>Group / Ungroup</td></tr>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd></td><td>Zoom in / out / reset</td></tr>
-        <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>Remove selected object(s)</td></tr>
-        <tr><td><kbd>Shift</kbd>+click</td><td>Add / remove from selection</td></tr>
-        <tr><td><kbd>Esc</kbd></td><td>Cancel editing / close modal / deselect</td></tr>
-        <tr><td>Double-click</td><td>Edit text / replace image / edit stamp</td></tr>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd></td><td>Paste image / rich text from system clipboard</td></tr>
-      </tbody>
-    </table>
-    <div class="help-tip"><strong>Tip:</strong> On Mac use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd>.</div>
-  ` },
-  { icon: '⌨', title: 'Keyboard shortcuts', body: `
-    <table class="shortcut-table">
-      <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
-      <tbody>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Save PDF</td></tr>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Print PDF</td></tr>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Find &amp; Replace</td></tr>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></td><td>Redo</td></tr>
-        <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd> / <kbd>D</kbd></td><td>Copy / Paste / Duplicate selection</td></tr>
         <tr><td><kbd>Ctrl</kbd>+<kbd>A</kbd></td><td>Select all objects on page</td></tr>
         <tr><td><kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd></td><td>Group / Ungroup selected objects</td></tr>
         <tr><td><kbd>Ctrl</kbd>+<kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd></td><td>Zoom in / out / reset</td></tr>
+        <tr><td><kbd>Ctrl</kbd>+<kbd>\\</kbd></td><td>Toggle side panel (thumbs / outline / bookmarks)</td></tr>
         <tr><td><kbd>Delete</kbd> / <kbd>Backspace</kbd></td><td>Remove selected object(s)</td></tr>
-        <tr><td><kbd>Shift</kbd> + click</td><td>Add to / remove from selection</td></tr>
+        <tr><td><kbd>Shift</kbd> + click</td><td>Add / remove from selection</td></tr>
+        <tr><td><kbd>Alt</kbd> + click (Edit PDF tool)</td><td>Grab whole paragraph as draggable text</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>Cancel editing / close modal / deselect</td></tr>
         <tr><td>Double-click</td><td>Edit text / replace image / edit stamp</td></tr>
         <tr><td><kbd>Ctrl</kbd>+<kbd>V</kbd> (image / text on clipboard)</td><td>Paste image or rich text onto the PDF</td></tr>
@@ -12160,6 +12162,21 @@ function populateAbout() {
     const m = t.match(/pdf-mini-editor-pro-v(\d+)/);
     document.getElementById('aboutSw').textContent = m ? ('v' + m[1]) : '—';
   }).catch(() => {});
+  // Privacy line is conditional — without AI everything is fully local; with
+  // AI configured, PDF text + selections are sent to the AI server the user
+  // configured. We name the host explicitly so it's transparent.
+  const line = document.getElementById('aboutPrivacyLine');
+  if (line) {
+    if (aiAvailable && aiConfig && aiConfig.baseUrl) {
+      let host = '(your AI server)';
+      try { host = new URL(aiConfig.baseUrl).host || aiConfig.baseUrl; } catch (_) {}
+      line.style.borderLeftColor = '#f59e0b';
+      line.innerHTML = '⚠ <strong>AI is connected.</strong> When you use the AI menu (Summarize, Translate, Explain, Form-fill suggestions), PDF text and your selection are sent to <strong>' + host + '</strong>. Everything else (drawing, editing, saving) stays local to this device. To go fully offline, disconnect AI in Settings → AI.';
+    } else {
+      line.style.borderLeftColor = '#10b981';
+      line.innerHTML = '🔒 <strong>Fully offline mode.</strong> No data leaves this device — drawing, editing, saving, and form-filling all run locally. (Connect a local AI server in Settings → AI to enable Summarize / Translate / Explain features; until then those features are hidden.)';
+    }
+  }
 }
 
 // ----- Wire up settings UI -----
@@ -12786,42 +12803,44 @@ async function doShare() {
     const blob = new Blob([arrBuf], { type: 'application/pdf' });
     const file = new File([arrBuf], outName, { type: 'application/pdf', lastModified: Date.now() });
     status.className = 'settings-status ok'; status.textContent = `Ready · ${outName} · ${origMB} MB → ${newMB} MB`;
-    // 3. Choose strategy
+    // 3. Choose strategy — ALWAYS try Web Share with files first if supported.
+    //    Web Share is the only browser path that can attach a file to an email
+    //    without download-then-drag. Browser security blocks mailto attachments.
     const subject = document.getElementById('shareSubject').value || (pdfFileName || 'Document');
     const body = document.getElementById('shareBody').value || '';
     const to = (document.getElementById('shareTo').value || '').trim();
-    // Web Share API with files works well on mobile, less so on desktop where it
-    // hands the file to OS share-targets that may drop the filename. On desktop
-    // we prefer the download-then-mailto path because at least the file lands
-    // with the right name in Downloads.
-    const ua = navigator.userAgent || '';
-    const isMobile = /Mobi|Android|iPhone|iPad/i.test(ua);
     const canFileShare = !!(navigator.share && navigator.canShare && navigator.canShare({ files: [file] }));
-    if (isMobile && canFileShare) {
+    if (canFileShare) {
       try {
         await navigator.share({ files: [file], title: subject, text: body });
         closeShareModal();
-        showToast('Shared.', 'success');
+        showToast('Shared. Pick your email app from the share sheet.', 'success');
         return;
       } catch (e) {
-        if (e.name === 'AbortError') return;   // user cancelled, don't fall through
-        console.warn('[share] navigator.share failed:', e);
+        if (e.name === 'AbortError') {
+          // user cancelled the share sheet — don't fall through to download
+          showToast('Share cancelled.', 'info');
+          return;
+        }
+        console.warn('[share] navigator.share failed, falling back:', e);
       }
     }
-    // 4. Desktop / fallback path: download the file with the safe name,
-    //    THEN open mail client with a pre-filled message that names the attachment.
+    // 4. Browser doesn't support Web Share with files (typical for Firefox / older
+    //    desktop browsers). The mailto spec explicitly forbids file attachments
+    //    for security reasons, so we MUST download the file and ask the user to
+    //    drag it in. No way around this without a server-side relay.
     downloadBlob(blob, outName);
     const fullBody = (body || '') +
-      '\n\n— attach "' + outName + '" (just downloaded to your Downloads folder) —';
+      '\n\nPřiložte soubor "' + outName + '" který se právě stáhl do složky Stažené.\n' +
+      '(Browser security blocks automatic mailto: attachments — Web Share API needed.)';
     let href = 'mailto:';
     if (to) href += encodeURIComponent(to);
     href += '?subject=' + encodeURIComponent(subject)
          +  '&body='    + encodeURIComponent(fullBody);
     if (href.length > 1900) href = href.slice(0, 1900);
-    // Open mail client in a new tab so back-button doesn't break the page
     window.open(href, '_blank');
     closeShareModal();
-    showToast(`📥 Downloaded ${outName} (${newMB} MB). Mail app opening — drag the file from Downloads into the email.`, 'success');
+    showToast(`📥 Browser nepodporuje přímé attachnutí. Stáhli jsme ${outName} — přetáhněte ho do emailu.`, 'warn');
   } catch (e) {
     console.error('[share] error:', e);
     status.className = 'settings-status err'; status.textContent = 'Failed: ' + (e.message || e);
