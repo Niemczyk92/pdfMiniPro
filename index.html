@@ -58,6 +58,70 @@
     transition: background-color 0.3s, color 0.3s;
   }
 
+  /* ---- Mobile "use desktop" notice (v1.34) ----
+     Shown for narrow viewports (< 760 px) while the dedicated mobile layout
+     is being rebuilt. Fully blocks the UI by default; the Continue button
+     hides it for users who want to peek anyway. */
+  #mobileNotice {
+    position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    overflow-y: auto;
+  }
+  /* Explicit override: the `display: flex` above wins specificity-wise over
+     the implicit `display: none` that `[hidden]` provides — same trap that
+     was hiding the broken-image bug in 035.jpg. Without this `!important`,
+     clicking "Continue anyway" sets `notice.hidden = true` and visually
+     nothing changes (the v1.34 bug the user reported). */
+  #mobileNotice[hidden] { display: none !important; }
+  .mobile-notice-card {
+    max-width: 420px; width: 100%;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+    padding: 32px 26px;
+    text-align: center;
+    font-family: 'Manrope', sans-serif; color: #0f172a;
+  }
+  .mobile-notice-icon {
+    font-size: 56px; line-height: 1;
+    margin-bottom: 8px;
+  }
+  .mobile-notice-card h2 {
+    margin: 8px 0 14px;
+    font-size: 22px; font-weight: 700; letter-spacing: -0.3px;
+  }
+  .mobile-notice-card p {
+    font-size: 14px; line-height: 1.55;
+    margin: 8px 0;
+    color: #334155;
+  }
+  .mobile-notice-card p strong { color: #0f172a; }
+  .mobile-notice-card .mobile-notice-sub {
+    font-size: 12px; color: #64748b; margin-top: 14px;
+  }
+  .mobile-notice-card button {
+    margin-top: 14px;
+    padding: 8px 18px;
+    font-size: 13px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: transparent;
+    color: #475569;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .mobile-notice-card button:hover {
+    background: #f1f5f9; color: #0f172a;
+  }
+  @media (max-width: 380px) {
+    .mobile-notice-card { padding: 24px 18px; }
+    .mobile-notice-icon { font-size: 44px; }
+    .mobile-notice-card h2 { font-size: 18px; }
+  }
+
   .titlebar {
     background: var(--surface); border-bottom: 1px solid var(--border);
     padding: 14px 24px; display: flex; align-items: center; justify-content: space-between;
@@ -2570,6 +2634,7 @@
     border-radius: 10px;
   }
   .profile-photo-circle {
+    position: relative;
     width: 84px; height: 84px; border-radius: 50%;
     background: var(--accent-subtle);
     display: flex; align-items: center; justify-content: center;
@@ -2577,7 +2642,33 @@
     overflow: hidden;
     border: 3px solid #ffffff;
     box-shadow: 0 0 0 1px var(--border);
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease;
   }
+  .profile-photo-circle:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 1px var(--accent), 0 4px 12px rgba(37, 99, 235, 0.22);
+  }
+  /* Camera overlay hint — sits across the bottom half of the circle and
+     appears on hover (only when no photo is set, so users know clicking
+     the avatar uploads one). */
+  .profile-photo-circle::after {
+    content: '📷 Upload';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(15, 23, 42, 0.78);
+    color: #ffffff;
+    font-size: 10px; font-weight: 600;
+    padding: 4px 0;
+    text-align: center;
+    opacity: 0;
+    transition: opacity .15s ease;
+    pointer-events: none;
+  }
+  .profile-photo-circle:hover::after { opacity: 1; }
+  /* When a photo is set, the parent gets the "has-photo" class — show a
+     subtle edit hint instead of "Upload". */
+  .profile-photo-circle.has-photo::after { content: '✎ Change'; }
   .profile-photo-initials {
     font-weight: 700; font-size: 28px;
     color: var(--accent);
@@ -2591,6 +2682,13 @@
   .profile-photo-img {
     width: 100%; height: 100%; object-fit: cover; display: block;
   }
+  /* The `hidden` HTML attribute is supposed to set display:none, but our
+     explicit `display: block` above wins specificity-wise — that's how the
+     broken-image icon + "Profile photo" alt text still showed up in 035.jpg.
+     Force the override so a hidden photo is truly invisible. */
+  .profile-photo-img[hidden],
+  .profile-photo-silhouette[hidden],
+  .profile-photo-initials[hidden] { display: none !important; }
   .profile-photo-actions {
     display: flex; gap: 8px; flex-wrap: wrap;
     align-items: center; flex: 1;
@@ -2869,6 +2967,27 @@
 </style>
 </head>
 <body>
+
+<!-- Mobile "please use desktop" notice. The mobile-optimized editor was
+     disabled in v1.34 because it had multiple unresolved layout bugs.
+     This full-screen overlay covers everything when the viewport is too
+     narrow to use the editor comfortably; user can dismiss it to peek
+     at the desktop layout but the experience is intentionally not great. -->
+<div id="mobileNotice" hidden>
+  <div class="mobile-notice-card">
+    <div class="mobile-notice-icon">💻</div>
+    <h2>Desktop only — for now</h2>
+    <p>
+      PDF Mini Editor is currently <strong>optimised for desktop browsers</strong>.
+      The mobile layout is being rebuilt and isn't ready yet.
+    </p>
+    <p>Please open <strong>pdf.kamagio.com</strong> on a desktop or laptop —
+       Chrome, Edge, Firefox or Safari all work. The full editor is free.</p>
+    <p class="mobile-notice-sub">If you really want to peek on this device you can
+      continue anyway, but layout will be broken until the mobile rework ships.</p>
+    <button class="btn outlined" id="mobileNoticeContinue" type="button">Continue anyway</button>
+  </div>
+</div>
 
 <div class="titlebar">
   <div class="brand">
@@ -4920,6 +5039,35 @@ async function initPdfWorker() {
 }
 workerReady = initPdfWorker();
 
+// === Mobile "use desktop" notice (v1.34) ===
+// The mobile editor experience is being rebuilt — until that ships, only
+// PHONES get a friendly overlay pointing them to the desktop site. Desktop
+// browsers (even narrow ones) get the editor unaltered.
+//
+// v1.35 tightened the trigger because v1.34's 760 px breakpoint was also
+// firing on small-windowed desktops. The rule is now:
+//   - viewport ≤ 500 px wide → phone, show notice
+//   - hovers-with-fine-pointer (mouse) → desktop, never show notice
+//     (catches landscape phones that report wider viewport too)
+(function _showMobileNotice() {
+  const PHONE_MAX_W = 500;  // iPhone Pro Max in portrait = 430; we leave headroom
+  const notice = document.getElementById('mobileNotice');
+  if (!notice) return;
+  // hasFinePointer is true on devices with a precise pointing device — i.e.
+  // a mouse-driven desktop or laptop. We treat such devices as "definitely
+  // desktop" no matter how narrow the window happens to be.
+  let hasFinePointer = false;
+  try {
+    hasFinePointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+  } catch (_) {}
+  if (hasFinePointer) return;
+  // Otherwise gate on viewport width — phones are <= 500 px portrait.
+  if (window.innerWidth > PHONE_MAX_W) return;
+  notice.hidden = false;
+  const cont = document.getElementById('mobileNoticeContinue');
+  if (cont) cont.addEventListener('click', () => { notice.hidden = true; });
+})();
+
 // === SW + UPDATE ===
 let waitingSW = null, refreshing = false;
 if ('serviceWorker' in navigator) {
@@ -5157,8 +5305,9 @@ async function renderPages() {
   const container = document.getElementById('pages');
   container.innerHTML = '';
   pdfTotalTextItems = 0;
-  // Allow auto-fit on the freshly-rendered pages. User can still override
-  // by clicking +/- afterwards (which re-sets _userZoomed = true).
+  // === MOBILE auto-fit reset DISABLED v1.34 — see commented block where
+  // fitToViewportWidthIfNeeded is defined. _userZoomed is now an unused
+  // stub but we keep the assignment to make the disabled intent explicit.
   _userZoomed = false;
   // High-resolution rendering: canvas pixels at 2× display so high-DPI screens stay crisp,
   // but CSS dimensions stay at RENDER_SCALE so layout/coords don't change.
@@ -5212,12 +5361,10 @@ async function renderPages() {
       buildPdfTextLayer(overlay, page, dispViewport, i).catch(e => console.warn('text layer error:', e))
     );
   }
-  // After layout, auto-fit page width to a narrow viewport (phones / split
-  // screens) so the right edge isn't clipped. Desktop / wide screens are
-  // unaffected because the function only fires when the page overflows.
-  // We run the fit on the next animation frame AND with safety-net timeouts
-  // because the wrapper's geometry isn't always settled the instant the for
-  // loop ends (text-layer promises still resolving in parallel can shift it).
+  // === MOBILE auto-fit DISABLED v1.34 — scheduleFitToViewport is now a
+  // no-op stub. The call is left here so re-enabling the feature later
+  // only needs to restore the body of scheduleFitToViewport. The "use a
+  // desktop browser" notice handles the narrow-viewport case for now.
   try { scheduleFitToViewport(); } catch (_) {}
   // Once all text layers finish, warn user if the PDF appears to be a scan
   const pending = window._textLayerPromises || [];
@@ -5484,26 +5631,26 @@ function enableWhiteoutInteractions(el, ann) {
 }
 
 function applyZoom() {
-  // Mobile cap: on viewports < 760 px we ENFORCE that the rendered page can
-  // never exceed the available width — even if the user explicitly clicked
-  // the "+" zoom button. Without this cap, snapZoom would happily bump to
-  // the next ZOOM_LEVELS value (e.g. 47% → 50%) and push the page off the
-  // right edge, which is what the user reported in 033.jpg ("na mobilu
-  // stale odrezava"). Pinch-zoom (the browser-native gesture) still works
-  // for reading details — it's independent of this CSS scale.
-  if (window.innerWidth < 760) {
-    const probe = document.querySelector('.page-wrapper');
-    const baseW = probe ? parseFloat(probe.dataset.baseW) : 0;
-    if (baseW > 0) {
-      const mainEl = document.querySelector('main');
-      const s = mainEl ? getComputedStyle(mainEl) : null;
-      const padL = s ? parseFloat(s.paddingLeft) || 0 : 0;
-      const padR = s ? parseFloat(s.paddingRight) || 0 : 0;
-      const available = Math.max(120, (mainEl ? mainEl.clientWidth : window.innerWidth) - padL - padR - 8);
-      const maxZoom = available / baseW;
-      if (currentZoom > maxZoom) currentZoom = maxZoom;
-    }
-  }
+  // === MOBILE CODE DISABLED v1.34 ============================================
+  // The mobile zoom cap below didn't work reliably (different bugs reported
+  // in 020/021/033/etc.). Disabled while we ship a proper mobile experience
+  // later. The block is kept commented for reference — re-enable once the
+  // wider mobile rework is ready.
+  // -------------------------------------------------------------------------
+  // if (window.innerWidth < 760) {
+  //   const probe = document.querySelector('.page-wrapper');
+  //   const baseW = probe ? parseFloat(probe.dataset.baseW) : 0;
+  //   if (baseW > 0) {
+  //     const mainEl = document.querySelector('main');
+  //     const s = mainEl ? getComputedStyle(mainEl) : null;
+  //     const padL = s ? parseFloat(s.paddingLeft) || 0 : 0;
+  //     const padR = s ? parseFloat(s.paddingRight) || 0 : 0;
+  //     const available = Math.max(120, (mainEl ? mainEl.clientWidth : window.innerWidth) - padL - padR - 8);
+  //     const maxZoom = available / baseW;
+  //     if (currentZoom > maxZoom) currentZoom = maxZoom;
+  //   }
+  // }
+  // ========================================================================
   document.querySelectorAll('.page-zoom-shell').forEach(shell => {
     const wrapper = shell.querySelector('.page-wrapper');
     const baseW = parseFloat(wrapper.dataset.baseW), baseH = parseFloat(wrapper.dataset.baseH);
@@ -5516,73 +5663,38 @@ function applyZoom() {
 }
 function setZoom(z) { currentZoom = Math.max(0.25, Math.min(3.0, z)); applyZoom(); }
 
-// On narrow screens (phones), the PDF page in its native size is wider than
-// the viewport — content gets clipped on the right because the page-wrapper
-// uses fixed pixel widths. Fit-to-width once after render and on rotate /
-// resize, but only if the user hasn't manually zoomed since.
+// === MOBILE FIT-TO-WIDTH DISABLED v1.34 ====================================
+// Auto-fit-to-viewport / ResizeObserver / resize listener — all part of the
+// mobile experience the user reported as broken. Kept commented for the
+// next iteration; meanwhile we show a "please use desktop" notice when the
+// viewport is mobile-sized (see _showMobileNotice() near the bottom).
+// `_userZoomed` and `scheduleFitToViewport` are kept as no-op stubs so the
+// rest of the code base — which calls them — doesn't need touching.
+// ---------------------------------------------------------------------------
 let _userZoomed = false;
-function fitToViewportWidthIfNeeded(force) {
-  const wrapper = document.querySelector('.page-wrapper');
-  if (!wrapper) return;
-  const baseW = parseFloat(wrapper.dataset.baseW);
-  if (!baseW) return;
-  if (_userZoomed && !force) return;
-  // Measure MAIN's content-area width — NOT #pages.width. #pages is a flex
-  // child whose width tracks its content, so measuring it creates a feedback
-  // loop: page shrinks → #pages shrinks → we measure smaller → page shrinks
-  // again, all the way down to the 0.25 min clamp. main's width is driven
-  // by its parent (body), independent of the page size, so it's stable.
-  const mainEl = document.querySelector('main');
-  let available;
-  if (mainEl) {
-    const s = getComputedStyle(mainEl);
-    const padL = parseFloat(s.paddingLeft) || 0;
-    const padR = parseFloat(s.paddingRight) || 0;
-    available = mainEl.clientWidth - padL - padR - 8; // -8 for shadow / margin
-  } else {
-    available = window.innerWidth - 48;
-  }
-  available = Math.max(120, available);
-  // Already fits → leave currentZoom alone. CRITICAL: this is what keeps
-  // a wide desktop monitor at 100%, since baseW (~979 for US Letter) is
-  // smaller than `available` (~1800+).
-  if (baseW * currentZoom <= available && !force) return;
-  // Only NOW do we need to shrink — page would overflow the available space.
-  const fit = available / baseW;
-  currentZoom = Math.max(0.25, Math.min(3.0, fit));
-  applyZoom();
-}
-// Schedule fit-to-width after layout has settled: we run on the next frame
-// AND with a couple short delays as a safety net. Cheap to run, harmless to
-// double-fire (the function early-returns if no refit is needed).
-function scheduleFitToViewport() {
-  if (!document.querySelector('.page-wrapper')) return;
-  requestAnimationFrame(() => fitToViewportWidthIfNeeded(false));
-  setTimeout(() => fitToViewportWidthIfNeeded(false), 60);
-  setTimeout(() => fitToViewportWidthIfNeeded(false), 250);
-}
-window.addEventListener('resize', () => {
-  if (!document.querySelector('.page-wrapper')) return;
-  scheduleFitToViewport();
-});
-// Observe MAIN (not #pages) so a side-panel toggle, dropzone hide, etc.
-// re-runs the fit without creating the page-shrinkage feedback loop above.
-if (window.ResizeObserver) {
-  const _bindFitObserver = () => {
-    const el = document.querySelector('main');
-    if (!el) return;
-    let lastW = el.clientWidth;
-    new ResizeObserver(() => {
-      const w = el.clientWidth;
-      if (w === lastW) return;  // ignore phantom resize ticks
-      lastW = w;
-      if (!document.querySelector('.page-wrapper')) return;
-      fitToViewportWidthIfNeeded(false);
-    }).observe(el);
-  };
-  if (document.readyState === 'complete' || document.readyState === 'interactive') _bindFitObserver();
-  else window.addEventListener('DOMContentLoaded', _bindFitObserver);
-}
+function fitToViewportWidthIfNeeded(/* force */) { /* disabled */ }
+function scheduleFitToViewport() { /* disabled */ }
+// window.addEventListener('resize', () => {
+//   if (!document.querySelector('.page-wrapper')) return;
+//   scheduleFitToViewport();
+// });
+// if (window.ResizeObserver) {
+//   const _bindFitObserver = () => {
+//     const el = document.querySelector('main');
+//     if (!el) return;
+//     let lastW = el.clientWidth;
+//     new ResizeObserver(() => {
+//       const w = el.clientWidth;
+//       if (w === lastW) return;
+//       lastW = w;
+//       if (!document.querySelector('.page-wrapper')) return;
+//       fitToViewportWidthIfNeeded(false);
+//     }).observe(el);
+//   };
+//   if (document.readyState === 'complete' || document.readyState === 'interactive') _bindFitObserver();
+//   else window.addEventListener('DOMContentLoaded', _bindFitObserver);
+// }
+// ===========================================================================
 function snapZoom(direction) {
   let idx = ZOOM_LEVELS.findIndex(z => Math.abs(z - currentZoom) < 0.01);
   if (idx < 0) {
@@ -5773,6 +5885,19 @@ function applyTextAnnotationStyle(el, ann) {
   el.classList.toggle('from-pdf-edit', !!ann.fromPdfEdit);
   el.style.transform = ann.rotation ? `rotate(${ann.rotation}deg)` : '';
   el.dataset.rotation = Math.round(ann.rotation || 0);
+  // Cap max-width to (wrapper_width − ann.x − safety) so text positioned on
+  // the right side of the page can never stretch past the right edge. The
+  // CSS rule alone (max-width:100%) is relative to the containing block (the
+  // wrapper) and IGNORES the element's own `left` offset — without this JS
+  // clamp, a box at x=200 on an 800-wide wrapper could grow to 800 px wide
+  // and overflow the page. This is the "breaks past ~90% page width" bug
+  // the user reported in v1.31. Applied here so every render path
+  // (creation, resize, history undo, page-restore) gets it consistently.
+  const overlay = el.parentElement;
+  if (overlay && overlay.offsetWidth && Number.isFinite(ann.x)) {
+    const maxW = Math.max(40, overlay.offsetWidth - ann.x - 4);
+    el.style.maxWidth = maxW + 'px';
+  }
   // Re-sync opacity from the annotation model so watermarks survive every re-render.
   if (ann.opacity != null && ann.opacity < 1) el.style.opacity = String(ann.opacity);
   else if (el.style.opacity && el.style.opacity !== '1' && ann.opacity == null) el.style.opacity = '';
@@ -6255,6 +6380,11 @@ function openTextEditor(overlay, pageNum, x, y, existingAnn) {
   editor.style.fontFamily = TEXT_FONT_FAMILIES[ann.fontFamily || 'Helvetica'] || TEXT_FONT_FAMILIES.Helvetica;
   editor.style.lineHeight = String(ann.lineHeight || 1.15);
   editor.style.textAlign = ann.align || 'left';
+  // Same right-edge cap as applyTextAnnotationStyle — keep the contentEditable
+  // from extending past the page while the user is typing.
+  if (overlay && overlay.offsetWidth) {
+    editor.style.maxWidth = Math.max(40, overlay.offsetWidth - ann.x - 4) + 'px';
+  }
 
   if (isNewAnnotation || isLinesEmpty(ann.lines)) editor.innerHTML = '';
   else editor.innerHTML = linesToHtml(ann.lines);
@@ -11104,6 +11234,7 @@ function refreshProfilePhotoPreview() {
   const initEl = document.getElementById('prPhotoInitials');
   const silhouette = document.getElementById('prPhotoSilhouette');
   const clearBtn = document.getElementById('prPhotoClear');
+  const circle = document.getElementById('prPhotoCircle');
   // Effective photo = staged (if any) OR saved
   const effective = (_profilePhotoStaged !== undefined) ? _profilePhotoStaged : (p.photo || '');
   // Initials always reflect the LIVE name field so users see them update
@@ -11115,6 +11246,8 @@ function refreshProfilePhotoPreview() {
     img.src = effective; img.hidden = false;
     initEl.hidden = true; silhouette.hidden = true;
     clearBtn.hidden = false;
+    circle.classList.add('has-photo');
+    circle.title = 'Click to change photo';
   } else {
     // No photo. Critically, REMOVE the src attribute instead of setting it
     // to ''. Setting src='' makes Firefox / Safari draw a broken-image icon
@@ -11122,6 +11255,8 @@ function refreshProfilePhotoPreview() {
     img.removeAttribute('src');
     img.hidden = true;
     clearBtn.hidden = true;
+    circle.classList.remove('has-photo');
+    circle.title = 'Click to upload your photo';
     if (liveInitials && liveInitials !== '?') {
       // We have a name → show initials
       initEl.textContent = liveInitials;
@@ -11140,6 +11275,17 @@ function refreshProfilePhotoPreview() {
   const input = document.getElementById('prPhotoInput');
   const clearBtn = document.getElementById('prPhotoClear');
   const nameInput = document.getElementById('prFullName');
+  // Clicking the avatar circle itself opens the file picker — the avatar
+  // IS the upload prompt (per user request: "avatar that prompts to upload
+  // picture"). The Upload button still works too; the circle is a more
+  // discoverable affordance for first-time users.
+  const circle = document.getElementById('prPhotoCircle');
+  if (circle && input) circle.addEventListener('click', (e) => {
+    // Don't intercept the file input itself or the Upload <label> when they
+    // bubble up — they already handle the picker.
+    if (e.target.closest && (e.target.closest('input[type="file"]') || e.target.closest('label.btn'))) return;
+    input.click();
+  });
   if (input) input.addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
     e.target.value = '';
@@ -14257,7 +14403,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.31';
+const APP_VERSION = '1.35';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
