@@ -234,21 +234,209 @@
     border-radius: 1px;
     cursor: move;
     box-sizing: border-box;
+    --deco-color: #dc2626;
   }
   .deco-annotation.selected { outline: 2px dashed #2563eb; outline-offset: 2px; }
+  /* Default colours — overridden by inline style for custom picks */
   .deco-annotation.highlight { background: rgba(255, 235, 59, 0.55); }
-  .deco-annotation.underline { background: transparent; border-bottom: 2px solid #dc2626; }
+  .deco-annotation.underline { background: transparent; border-bottom: 2px solid var(--deco-color); }
   .deco-annotation.strike { background: transparent; }
   .deco-annotation.strike::before {
     content: ''; position: absolute;
     top: 50%; left: 0; right: 0;
-    height: 2px; background: #dc2626;
+    height: 2px; background: var(--deco-color);
     transform: translateY(-50%);
   }
-  /* Cursors per annotation mode */
-  body.highlight-mode .overlay { cursor: pointer; }
-  body.underline-mode .overlay { cursor: pointer; }
-  body.strike-mode    .overlay { cursor: pointer; }
+  /* Cursors per annotation mode — text cursor so the drag-to-select gesture feels native */
+  body.highlight-mode .overlay { cursor: text; }
+  body.underline-mode .overlay { cursor: text; }
+  body.strike-mode    .overlay { cursor: text; }
+  /* Live preview rectangle while dragging across text */
+  .deco-drag-preview {
+    position: absolute; pointer-events: none;
+    border-radius: 2px;
+    z-index: 100;
+  }
+
+  /* Dedicated colour bar for highlight / underline / strike — shows only in those modes */
+  .deco-color-bar {
+    display: none;
+    position: fixed;
+    top: 140px; left: 50%; transform: translateX(-50%);
+    background: var(--surface);
+    border: 1.5px solid var(--accent);
+    border-radius: 999px;
+    padding: 8px 14px;
+    box-shadow: 0 6px 24px rgba(37, 99, 235, 0.18), 0 2px 6px rgba(0,0,0,0.08);
+    gap: 8px; align-items: center;
+    z-index: 200;
+    font-family: 'Manrope', sans-serif;
+    pointer-events: auto;
+  }
+  body.highlight-mode .deco-color-bar,
+  body.underline-mode .deco-color-bar,
+  body.strike-mode    .deco-color-bar { display: flex !important; }
+  .dcb-label {
+    font-size: 11px; font-weight: 700; color: var(--accent);
+    margin-right: 4px; text-transform: uppercase; letter-spacing: 0.6px;
+  }
+  .dcb-swatch {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid rgba(0,0,0,0.15); padding: 0; cursor: pointer;
+    transition: transform .12s, border-color .12s, box-shadow .12s;
+    flex-shrink: 0;
+  }
+  .dcb-swatch:hover { transform: scale(1.15); border-color: rgba(0,0,0,0.4); }
+  .dcb-swatch.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+    transform: scale(1.08);
+  }
+  .dcb-custom {
+    width: 30px; height: 30px; border: 1px dashed var(--border);
+    border-radius: 50%; padding: 0; cursor: pointer;
+    background: none; -webkit-appearance: none; appearance: none;
+    flex-shrink: 0;
+  }
+  .dcb-custom::-webkit-color-swatch-wrapper { padding: 2px; }
+  .dcb-custom::-webkit-color-swatch { border-radius: 50%; border: none; }
+  .dcb-custom::-moz-color-swatch { border-radius: 50%; border: none; }
+
+  /* ==========================================================================
+     MOBILE LAYOUT (matches 013.jpg) — slim top bar + bottom dock + sheet
+     ========================================================================== */
+  .mobile-topbar, .mobile-dock { display: none; }
+  .mobile-sheet { display: none; }
+  .mobile-sheet.is-open { display: block; }
+
+  @media (max-width: 760px) {
+    /* Hide desktop chrome — replaced by mobile counterparts */
+    .titlebar { display: none !important; }
+    .toolbar.tb-v2 { display: none !important; }
+    .context-bar { display: none !important; }
+    .side-panel-toggle { display: none !important; }
+    .quick-panel { display: none !important; }
+    .deco-color-bar { top: 60px !important; }
+
+    body { padding-top: 50px !important; padding-bottom: 80px !important; }
+    main { padding: 8px 4px !important; gap: 8px !important; }
+    .side-panel { top: 50px !important; bottom: 84px !important; }
+    .page-wrapper { max-width: 100%; }
+
+    .mobile-topbar {
+      display: flex; align-items: center; gap: 4px;
+      position: fixed; top: 0; left: 0; right: 0;
+      background: var(--surface);
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      z-index: 90;
+      height: 50px; box-sizing: border-box;
+    }
+    .mt-btn {
+      background: transparent; border: 0;
+      width: 36px; height: 36px; border-radius: 8px;
+      color: var(--text); cursor: pointer;
+      font-size: 18px; display: grid; place-items: center;
+      flex-shrink: 0;
+    }
+    .mt-btn:disabled { opacity: 0.35; }
+    .mt-btn:active { background: var(--surface-2); }
+    .mt-spacer { flex: 1; }
+    .mt-pill {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 18px; padding: 6px 12px;
+      font-size: 13px; font-weight: 600; color: var(--text);
+      cursor: pointer; display: inline-flex; align-items: center; gap: 4px;
+      white-space: nowrap;
+    }
+    .mt-pill.primary {
+      background: var(--accent); color: white; border-color: var(--accent);
+    }
+    .mt-pill:active { transform: scale(0.97); }
+
+    .mobile-dock {
+      display: flex; align-items: stretch; justify-content: space-between;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 6px 2px;
+      z-index: 90;
+      box-shadow: 0 -1px 8px rgba(0,0,0,0.05);
+      box-sizing: border-box;
+    }
+    .md-btn {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 3px;
+      background: transparent; border: 0; padding: 6px 2px;
+      color: var(--text-soft); cursor: pointer;
+      border-radius: 10px;
+      min-width: 0;
+      transition: background .12s, color .12s;
+    }
+    .md-btn.active {
+      color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+    .md-icon { font-size: 22px; line-height: 1; }
+    .md-label { font-size: 11px; line-height: 1.1; font-weight: 500; }
+
+    /* More sheet — bottom-anchored modal with a rounded card */
+    .mobile-sheet .ms-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 100;
+      animation: ms-fadein .15s ease;
+    }
+    .mobile-sheet .ms-content {
+      position: fixed; bottom: 72px; left: 12px; right: 12px;
+      background: var(--surface); border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+      padding: 14px 14px 18px;
+      z-index: 101;
+      animation: ms-slidein .2s ease;
+      max-height: 70vh; overflow-y: auto;
+    }
+    .ms-handle {
+      width: 38px; height: 4px; background: var(--border-strong);
+      border-radius: 2px; margin: 0 auto 10px; opacity: 0.55;
+    }
+    .ms-section-label {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.6px;
+      padding: 8px 4px 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .ms-section-label:not(:first-of-type) {
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+    .ms-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    .ms-tile {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 6px; padding: 10px 4px;
+      background: transparent; border: 0;
+      color: var(--text); cursor: pointer;
+      font-size: 11px; font-weight: 500; font-family: inherit;
+      border-radius: 12px;
+      line-height: 1.2;
+    }
+    .ms-tile:active { background: var(--surface-2); }
+    .ms-icon { font-size: 24px; line-height: 1; }
+
+    /* Compact dropdowns / modals on mobile */
+    .modal-card { max-width: calc(100vw - 24px) !important; max-height: calc(100vh - 84px) !important; overflow-y: auto; }
+    .props-panel { left: 8px !important; right: 8px !important; }
+  }
+
+  @keyframes ms-fadein { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes ms-slidein { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes rxPulse {
+    from { background: rgba(220,38,38,0.20); }
+    to   { background: rgba(220,38,38,0.45); }
+  }
   body.link-mode      .overlay { cursor: crosshair; }
   body.highlight-mode .pdf-text-item,
   body.underline-mode .pdf-text-item,
@@ -303,7 +491,7 @@
   /* Side panel — Acrobat-style left sidebar */
   .side-panel {
     position: fixed;
-    left: 0; top: 121px;     /* below titlebar + toolbar */
+    left: 0; top: 142px;     /* below titlebar + toolbar v2 (with breathing room) */
     bottom: 0; width: 280px;
     --sp-thumb-w: 200px;     /* controlled by the zoom slider */
     background: var(--surface);
@@ -1564,6 +1752,42 @@
     margin-top: 4px;
   }
 
+  /* === Nested submenu (fly-out) === */
+  .dropdown-submenu { position: relative; }
+  .dropdown-item.has-submenu { justify-content: flex-start; }
+  .dropdown-item.has-submenu .submenu-caret {
+    margin-left: auto; font-size: 11px; opacity: 0.55; color: var(--muted);
+  }
+  .dropdown-submenu > .dropdown-menu.submenu {
+    position: absolute; top: -6px; left: 100%;
+    display: none; min-width: 260px;
+  }
+  .dropdown-submenu:hover > .dropdown-menu.submenu,
+  .dropdown-submenu > .dropdown-menu.submenu:hover,
+  .dropdown-submenu.open > .dropdown-menu.submenu { display: flex; }
+  /* shape grid inside submenu — 3 cols, compact tiles */
+  .shape-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
+    padding: 2px;
+  }
+  .shape-tile {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 4px;
+    padding: 10px 6px; border: 1px solid transparent;
+    border-radius: var(--radius-sm); background: transparent;
+    cursor: pointer; transition: all var(--tr);
+    font-family: 'Manrope', sans-serif; font-size: 11px;
+    font-weight: 500; color: var(--text); text-align: center;
+    line-height: 1.15;
+  }
+  .shape-tile:hover {
+    background: var(--surface-2); border-color: var(--border);
+  }
+  .shape-tile .icon {
+    font-size: 22px; color: var(--accent);
+    width: auto; line-height: 1;
+  }
+
   /* === SHAPE / DRAW ANNOTATIONS === */
   .shape-annotation, .draw-annotation {
     position: absolute; pointer-events: auto;
@@ -2116,6 +2340,11 @@
     margin: 8px 0 0;
     font-size: 13px; color: var(--text-soft);
   }
+  .sig-audit-row {
+    margin: 8px 0 0;
+    font-size: 13px; color: var(--text-soft);
+  }
+  .sig-audit-row .row { display: flex; }
   .sig-saved-section {
     margin-bottom: 12px;
   }
@@ -2348,7 +2577,7 @@
 <div class="toolbar tb-v2">
   <!-- 1. Open -->
   <label class="btn btn-lg outlined" title="Open a PDF file (Ctrl+O)">
-    <input type="file" id="fileInput" accept="application/pdf">
+    <input type="file" id="fileInput" accept="application/pdf,.pdfenc">
     <span class="icon">📂</span> <span class="lbl">Open</span>
   </label>
 
@@ -2366,11 +2595,43 @@
       <span class="icon">＋</span> <span class="lbl">Add</span> <span class="dropdown-caret">▼</span>
     </button>
     <div class="dropdown-menu" role="menu">
-      <button class="dropdown-item" data-act="tool:text" type="button"><span class="icon">T</span><span>Add Text</span><span class="kbd">T</span></button>
+      <div class="dropdown-section">Insert</div>
+      <button class="dropdown-item" data-act="tool:text" type="button"><span class="icon">T</span><span>Text</span><span class="kbd">T</span></button>
       <label class="dropdown-item" title="Insert image (or paste with Ctrl+V)">
         <input type="file" id="imgInput" accept="image/*"><span class="icon">🖼</span><span>Image</span><span class="kbd">Ctrl+V</span>
       </label>
       <button class="dropdown-item" data-act="tool:draw" type="button"><span class="icon">✏</span><span>Free Draw</span></button>
+      <div class="dropdown-submenu" id="shapesSubmenu">
+        <button class="dropdown-item has-submenu" id="shapesSubmenuTrigger" type="button">
+          <span class="icon">▭</span><span>Shape</span><span class="submenu-caret">▸</span>
+        </button>
+        <div class="dropdown-menu submenu" role="menu">
+          <div class="dropdown-section">Basic</div>
+          <div class="shape-grid">
+            <button class="shape-tile" data-shape="rect" type="button"><span class="icon">▭</span><span>Rectangle</span></button>
+            <button class="shape-tile" data-shape="ellipse" type="button"><span class="icon">◯</span><span>Ellipse</span></button>
+            <button class="shape-tile" data-shape="triangle" type="button"><span class="icon">△</span><span>Triangle</span></button>
+            <button class="shape-tile" data-shape="line" type="button"><span class="icon">／</span><span>Line</span></button>
+            <button class="shape-tile" data-shape="arrow" type="button"><span class="icon">↗</span><span>Arrow</span></button>
+            <button class="shape-tile" data-shape="double-arrow" type="button"><span class="icon">⇆</span><span>Double<br>Arrow</span></button>
+          </div>
+          <div class="dropdown-section">Icons</div>
+          <div class="shape-grid">
+            <button class="shape-tile" data-shape="heart" type="button"><span class="icon">♥</span><span>Heart</span></button>
+            <button class="shape-tile" data-shape="star" type="button"><span class="icon">★</span><span>Star</span></button>
+            <button class="shape-tile" data-shape="lightning" type="button"><span class="icon">⚡</span><span>Lightning</span></button>
+            <button class="shape-tile" data-shape="cloud" type="button"><span class="icon">☁</span><span>Cloud</span></button>
+            <button class="shape-tile" data-shape="check" type="button"><span class="icon">✓</span><span>Check</span></button>
+            <button class="shape-tile" data-shape="cross" type="button"><span class="icon">✕</span><span>Cross</span></button>
+          </div>
+          <div class="dropdown-section">Templates</div>
+          <div class="shape-grid">
+            <button class="shape-tile" data-shape="checklist" type="button"><span class="icon">☐</span><span>Checklist</span></button>
+            <button class="shape-tile" data-shape="calendar-month" type="button"><span class="icon">📅</span><span>Monthly<br>Calendar</span></button>
+            <button class="shape-tile" data-shape="calendar-week" type="button"><span class="icon">📆</span><span>Weekly<br>Calendar</span></button>
+          </div>
+        </div>
+      </div>
       <div class="dropdown-section">Marks</div>
       <button class="dropdown-item pro-tool" data-act="tool:highlight" type="button"><span class="icon" style="color:#facc15">▓</span><span>Highlight</span></button>
       <button class="dropdown-item pro-tool" data-act="tool:underline" type="button"><span class="icon" style="color:#dc2626">U̲</span><span>Underline</span></button>
@@ -2382,34 +2643,7 @@
       <div class="dropdown-section">Stamps & signatures</div>
       <button class="dropdown-item" id="stampsBtnMenu" type="button"><span class="icon">⊟</span><span>Stamps gallery</span></button>
       <button class="dropdown-item" id="signatureBtnMenu" type="button"><span class="icon">✍</span><span>Signature</span><span class="hint">draw / type / upload</span></button>
-      <button class="dropdown-item pro-tool" id="digitalSigBtnMenu" type="button"><span class="icon">🔐</span><span>Certified signature…</span><span class="hint">PAdES — roadmap</span></button>
-    </div>
-  </div>
-
-  <!-- 4. Shape ▼ (kept as own dropdown — it has many options) -->
-  <div class="dropdown" id="shapeDropdown">
-    <button class="btn btn-lg tool" id="shapeDropdownBtn" data-tool="shape" title="Insert a shape">
-      <span class="icon">▭</span> <span class="lbl">Shape</span> <span class="dropdown-caret">▼</span>
-    </button>
-    <div class="dropdown-menu dropdown-menu-shapes" role="menu">
-      <div class="dropdown-section">Basic</div>
-      <button class="dropdown-item" data-shape="rect" type="button"><span class="icon">▭</span><span>Rectangle</span></button>
-      <button class="dropdown-item" data-shape="ellipse" type="button"><span class="icon">◯</span><span>Ellipse</span></button>
-      <button class="dropdown-item" data-shape="triangle" type="button"><span class="icon">△</span><span>Triangle</span></button>
-      <button class="dropdown-item" data-shape="line" type="button"><span class="icon">／</span><span>Line</span></button>
-      <button class="dropdown-item" data-shape="arrow" type="button"><span class="icon">↗</span><span>Arrow</span></button>
-      <button class="dropdown-item" data-shape="double-arrow" type="button"><span class="icon">⇆</span><span>Double Arrow</span></button>
-      <div class="dropdown-section">Icons</div>
-      <button class="dropdown-item" data-shape="heart" type="button"><span class="icon">♥</span><span>Heart</span></button>
-      <button class="dropdown-item" data-shape="star" type="button"><span class="icon">★</span><span>Star</span></button>
-      <button class="dropdown-item" data-shape="lightning" type="button"><span class="icon">⚡</span><span>Lightning</span></button>
-      <button class="dropdown-item" data-shape="cloud" type="button"><span class="icon">☁</span><span>Cloud</span></button>
-      <button class="dropdown-item" data-shape="check" type="button"><span class="icon">✓</span><span>Checkmark</span></button>
-      <button class="dropdown-item" data-shape="cross" type="button"><span class="icon">✕</span><span>Cross</span></button>
-      <div class="dropdown-section">Templates</div>
-      <button class="dropdown-item" data-shape="checklist" type="button"><span class="icon">☐</span><span>Checklist</span></button>
-      <button class="dropdown-item" data-shape="calendar-month" type="button"><span class="icon">📅</span><span>Monthly Calendar</span></button>
-      <button class="dropdown-item" data-shape="calendar-week" type="button"><span class="icon">📆</span><span>Weekly Calendar</span></button>
+      <button class="dropdown-item pro-tool" id="digitalSigBtnMenu" type="button" hidden style="display:none"><span class="icon">🔐</span><span>Certified signature…</span><span class="hint">PAdES — roadmap</span></button>
     </div>
   </div>
 
@@ -2418,6 +2652,18 @@
   <!-- 5. Pages -->
   <button class="btn btn-lg" id="organizeBtn" disabled title="Organize pages — reorder, rotate, delete, split, merge, compress">
     <span class="icon">⊞</span> <span class="lbl">Pages</span>
+  </button>
+
+  <!-- 5b. Direct PDF tools: Merge / Split / Compress (also reachable from Pages modal) -->
+  <label class="btn btn-lg" id="mergeMainBtn" title="Merge — append pages from another PDF" style="display:none">
+    <input type="file" id="mergeMainInput" accept="application/pdf" hidden>
+    <span class="icon">＋</span> <span class="lbl">Merge PDF</span>
+  </label>
+  <button class="btn btn-lg" id="splitMainBtn" type="button" title="Split — extract selected pages into a new PDF" style="display:none">
+    <span class="icon">⤴</span> <span class="lbl">Split PDF</span>
+  </button>
+  <button class="btn btn-lg" id="compressMainBtn" type="button" title="Compress — shrink file size by rasterising pages" style="display:none">
+    <span class="icon">⤓</span> <span class="lbl">Compress PDF</span>
   </button>
 
   <!-- AI ▼ — only visible when html.ai-connected; hidden otherwise -->
@@ -2439,13 +2685,25 @@
       <span class="icon">⋯</span> <span class="lbl">More</span> <span class="dropdown-caret">▼</span>
     </button>
     <div class="dropdown-menu" role="menu">
-      <button class="dropdown-item" id="pageSetupBtnMenu" type="button"><span class="icon">📰</span><span>Page Setup</span><span class="hint">watermark / headers / numbers</span></button>
-      <button class="dropdown-item" id="cropBtnMenu" type="button"><span class="icon">✂</span><span>Crop / Margins</span></button>
+      <div class="dropdown-section">Document</div>
+      <button class="dropdown-item" id="pageSetupBtnMenu" type="button"><span class="icon">📰</span><span>Page Setup</span><span class="hint">watermark · header · footer · numbers</span></button>
+      <button class="dropdown-item" id="cropBtnMenu" type="button"><span class="icon">✂</span><span>Crop / Resize / Margins</span><span class="hint">A4 · Letter · photo sizes</span></button>
       <button class="dropdown-item" id="bookmarksBtnMenu" type="button"><span class="icon">🔖</span><span>Bookmarks / Outline</span></button>
       <button class="dropdown-item" id="templatesBtnMenu" type="button"><span class="icon">📋</span><span>Templates</span></button>
+
       <div class="dropdown-section">Search</div>
       <button class="dropdown-item" id="findBtnMenu" type="button"><span class="icon">🔎</span><span>Find &amp; Replace</span><span class="kbd">Ctrl+F</span></button>
       <button class="dropdown-item" id="ocrBtnMenu" type="button"><span class="icon">📄</span><span>OCR scanned PDF</span></button>
+
+      <div class="dropdown-section">Security</div>
+      <button class="dropdown-item" id="passwordBtnMenu" type="button"><span class="icon">🔒</span><span>Password protect…</span><span class="hint">AES-256 envelope</span></button>
+      <button class="dropdown-item" id="sanitizeBtnMenu" type="button"><span class="icon">🧼</span><span>Sanitize document</span><span class="hint">flatten · strip metadata</span></button>
+      <button class="dropdown-item" id="regexRedactBtnMenu" type="button"><span class="icon">🛡</span><span>RegEx redact…</span><span class="hint">SSN · cards · emails · IBAN</span></button>
+
+      <div class="dropdown-section">Data &amp; extraction</div>
+      <button class="dropdown-item" id="diffBtnMenu" type="button"><span class="icon">⇄</span><span>Compare two PDFs…</span><span class="hint">side-by-side visual diff</span></button>
+      <button class="dropdown-item" id="tableExtractBtnMenu" type="button"><span class="icon">⊞</span><span>Extract table → CSV</span></button>
+      <button class="dropdown-item" id="jsonFillBtnMenu" type="button"><span class="icon">{ }</span><span>Fill form from JSON…</span><span class="hint">batch from array</span></button>
     </div>
   </div>
 
@@ -2515,6 +2773,87 @@
 <div class="context-bar" id="contextBar">
   <span class="step">1</span>
   <span id="contextText">Start by opening a PDF file — click "Open" or drag a file onto the page.</span>
+</div>
+
+<!-- ========================== MOBILE LAYOUT ========================== -->
+<!-- Visible only on screens < 760px; matches the dock pattern in 013.jpg.  -->
+<div class="mobile-topbar" id="mobileTopbar">
+  <button class="mt-btn" id="mobileMenuBtn" type="button" aria-label="Menu">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <button class="mt-btn" id="mobileUndoBtn" type="button" aria-label="Undo">↶</button>
+  <button class="mt-btn" id="mobileRedoBtn" type="button" aria-label="Redo">↷</button>
+  <span class="mt-spacer"></span>
+  <button class="mt-btn" id="mobileHelpBtn" type="button" aria-label="Help">?</button>
+  <button class="mt-pill" id="mobileShareBtn" type="button">Share</button>
+  <button class="mt-pill primary" id="mobileDownloadBtn" type="button">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    <span>Download</span>
+  </button>
+</div>
+
+<div class="mobile-dock" id="mobileDock">
+  <button class="md-btn active" data-mob-tool="select" type="button"><span class="md-icon">↖</span><span class="md-label">Select</span></button>
+  <button class="md-btn" data-mob-tool="text" type="button"><span class="md-icon" style="font-weight:700">T</span><span class="md-label">Text</span></button>
+  <button class="md-btn" data-mob-tool="draw" type="button"><span class="md-icon">✏</span><span class="md-label">Draw</span></button>
+  <button class="md-btn" data-mob-tool="image" type="button"><span class="md-icon">🖼</span><span class="md-label">Image</span></button>
+  <button class="md-btn" data-mob-tool="shape" type="button"><span class="md-icon">▭</span><span class="md-label">Shape</span></button>
+  <button class="md-btn" data-mob-tool="sign" type="button"><span class="md-icon">✍</span><span class="md-label">Sign</span></button>
+  <button class="md-btn" id="mobileMoreBtn" type="button"><span class="md-icon">⋯</span><span class="md-label">More</span></button>
+</div>
+
+<div class="mobile-sheet" id="mobileMoreSheet">
+  <div class="ms-backdrop"></div>
+  <div class="ms-content">
+    <div class="ms-handle"></div>
+
+    <div class="ms-section-label">Pages</div>
+    <div class="ms-grid">
+      <button class="ms-tile" data-ms="merge" type="button"><span class="ms-icon">＋</span><span>Merge</span></button>
+      <button class="ms-tile" data-ms="split" type="button"><span class="ms-icon">⤴</span><span>Split</span></button>
+      <button class="ms-tile" data-ms="compress" type="button"><span class="ms-icon">⤓</span><span>Compress</span></button>
+      <button class="ms-tile" data-ms="rearrange" type="button"><span class="ms-icon">⊞</span><span>Rearrange</span></button>
+      <button class="ms-tile" data-ms="rotate" type="button"><span class="ms-icon">↻</span><span>Rotate</span></button>
+      <button class="ms-tile" data-ms="pagenum" type="button"><span class="ms-icon">№</span><span>Page numbers</span></button>
+    </div>
+
+    <div class="ms-section-label">Tools</div>
+    <div class="ms-grid">
+      <button class="ms-tile" data-ms="highlight" type="button"><span class="ms-icon" style="color:#facc15">▓</span><span>Highlight</span></button>
+      <button class="ms-tile" data-ms="find" type="button"><span class="ms-icon">🔎</span><span>Find</span></button>
+      <button class="ms-tile" data-ms="ocr" type="button"><span class="ms-icon">📄</span><span>OCR</span></button>
+    </div>
+
+    <div class="ms-section-label">Security</div>
+    <div class="ms-grid">
+      <button class="ms-tile" data-ms="password" type="button"><span class="ms-icon">🔒</span><span>Password</span></button>
+      <button class="ms-tile" data-ms="sanitize" type="button"><span class="ms-icon">🧼</span><span>Sanitize</span></button>
+      <button class="ms-tile" data-ms="rxredact" type="button"><span class="ms-icon">🛡</span><span>RegEx redact</span></button>
+    </div>
+
+    <div class="ms-section-label">Data &amp; AI</div>
+    <div class="ms-grid">
+      <button class="ms-tile" data-ms="diff" type="button"><span class="ms-icon">⇄</span><span>Compare PDFs</span></button>
+      <button class="ms-tile" data-ms="table" type="button"><span class="ms-icon">⊞</span><span>Table → CSV</span></button>
+      <button class="ms-tile" data-ms="jsonfill" type="button"><span class="ms-icon">{ }</span><span>Fill from JSON</span></button>
+      <button class="ms-tile" data-ms="autofill" type="button"><span class="ms-icon">📝</span><span>Auto-Fill</span></button>
+      <button class="ms-tile" data-ms="ai" type="button"><span class="ms-icon">✨</span><span>Ask AI</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Floating colour picker for highlight / underline / strike — only visible in those modes -->
+<div class="deco-color-bar" id="decoColorBar" role="toolbar" aria-label="Annotation color">
+  <span class="dcb-label">Color</span>
+  <button class="dcb-swatch active" data-color="#ffeb3b" style="background:#ffeb3b" title="Yellow" type="button"></button>
+  <button class="dcb-swatch" data-color="#a5f3fc" style="background:#a5f3fc" title="Cyan" type="button"></button>
+  <button class="dcb-swatch" data-color="#bbf7d0" style="background:#bbf7d0" title="Green" type="button"></button>
+  <button class="dcb-swatch" data-color="#fecaca" style="background:#fecaca" title="Red" type="button"></button>
+  <button class="dcb-swatch" data-color="#fbcfe8" style="background:#fbcfe8" title="Pink" type="button"></button>
+  <button class="dcb-swatch" data-color="#c4b5fd" style="background:#c4b5fd" title="Purple" type="button"></button>
+  <button class="dcb-swatch" data-color="#fed7aa" style="background:#fed7aa" title="Orange" type="button"></button>
+  <button class="dcb-swatch" data-color="#000000" style="background:#000000" title="Black" type="button"></button>
+  <input type="color" class="dcb-custom" id="decoCustomColor" value="#ffeb3b" title="Custom color">
 </div>
 
 <div class="ocr-banner" id="ocrBanner" style="display:none">
@@ -2594,7 +2933,7 @@
       <h3>Quick guide</h3>
       <ol>
         <li><strong>Open</strong> a PDF</li>
-        <li><strong>Add Text</strong>: click on PDF, type. <kbd>Enter</kbd> for new lines. Select to format (Bold, Italic, Underline, color, background)</li>
+        <li><strong>Add Text</strong>: click on PDF, type. <kbd>Enter</kbd> finishes; <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line. Select to format (Bold, Italic, Underline, color, background)</li>
         <li><strong>Image</strong>: insert from file or <kbd>Ctrl</kbd>+<kbd>V</kbd>. Drag corners to resize, top handle to rotate</li>
         <li><strong>Draw</strong>: free-hand drawing with mouse, finger, or pen — adjust color &amp; stroke width</li>
         <li><strong>Shapes</strong>: rectangle, ellipse, line, arrow — click and drag to draw</li>
@@ -2705,6 +3044,27 @@
 
     <div class="save-sig-row">
       <label class="check"><input type="checkbox" id="sigSaveCheckbox"> Save this signature to my profile for future use</label>
+    </div>
+    <div class="sig-audit-row">
+      <label class="check"><input type="checkbox" id="sigAuditCheckbox"> Strengthen signature with audit metadata <span style="color:var(--muted);font-weight:400">— hash + timestamp + IP + device</span></label>
+      <div id="sigAuditPanel" hidden style="margin-top:6px;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-sm);border:1px solid var(--border)">
+        <div class="settings-desc" style="margin:0 0 6px">A small audit stamp is rendered <em>into</em> the signature image — non-removable. Includes: SHA-256 hash of the document, timestamp from an external time server, your IP + ISP + <strong>city-level location</strong> from <code>ipapi.co</code> (always captured), browser/OS. Click <em>Capture GPS</em> below for street-level precision and an English address via OpenStreetMap. Optional signer fields make it more official. All client-side, no backend.</div>
+        <details style="margin-top:4px" open>
+          <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--text-soft)">Signer identity (optional — printed on the stamp)</summary>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+            <label class="ps-mini"><span>First name</span><input type="text" id="sigAuditFirst" class="ps-text" placeholder="John" autocomplete="given-name"></label>
+            <label class="ps-mini"><span>Last name</span><input type="text" id="sigAuditLast" class="ps-text" placeholder="Doe" autocomplete="family-name"></label>
+            <label class="ps-mini"><span>Email</span><input type="email" id="sigAuditEmail" class="ps-text" placeholder="john@example.com" autocomplete="email"></label>
+            <label class="ps-mini"><span>Phone</span><input type="tel" id="sigAuditPhone" class="ps-text" placeholder="+1 555 123 4567" autocomplete="tel"></label>
+            <label class="ps-mini" style="grid-column:span 2"><span>Role / title <span style="color:var(--muted);font-weight:400">(optional)</span></span><input type="text" id="sigAuditRole" class="ps-text" placeholder="CEO, Notary, Witness…"></label>
+          </div>
+          <label class="check" style="margin-top:6px"><input type="checkbox" id="sigAuditRemember"> Remember on this device for next time</label>
+        </details>
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <button class="btn outlined" id="sigAuditLocBtn" type="button" style="padding:6px 10px"><span class="icon">📍</span> Upgrade to GPS-precise location</button>
+          <span id="sigAuditLocStatus" style="font-size:12px;color:var(--muted)">IP-based city/region is captured automatically. Click for GPS coordinates + street address.</span>
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn" id="sigCancel" type="button">Cancel</button>
@@ -2905,6 +3265,202 @@
     <div class="modal-actions">
       <button class="btn" id="compressCancel" type="button">Cancel</button>
       <button class="btn primary" id="compressGo" type="button">Compress &amp; Download</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="passwordModal" role="dialog" aria-modal="true" aria-labelledby="passwordTitle">
+  <div class="modal-card" style="max-width:460px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="passwordTitle">🔒 Password protect</h2>
+      <button class="modal-close" id="passwordClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub">Encrypt the current PDF with a password. The output is a <code>.pdfenc</code> file (AES-256-GCM, 250k PBKDF2 rounds). Open it back via the Open button — drop the <code>.pdfenc</code> file or pick it normally.</div>
+    <div class="ps-section">
+      <label class="ps-label">Password</label>
+      <input type="password" id="passwordInput" class="ps-text" placeholder="Strong password — at least 8 characters" autocomplete="new-password">
+      <label class="ps-label" style="margin-top:8px">Confirm</label>
+      <input type="password" id="passwordConfirm" class="ps-text" placeholder="Re-type the password" autocomplete="new-password">
+      <label class="check" style="margin-top:8px"><input type="checkbox" id="passwordShow"> Show passwords</label>
+      <div id="passwordError" style="color:var(--danger);font-size:12px;margin-top:6px;min-height:14px"></div>
+      <div class="settings-desc" style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:8px 10px;border-radius:6px;margin-top:8px">
+        ⚠ No recovery: without the password, the file cannot be decrypted. The encryption is fully client-side — your password never leaves the browser.
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="passwordCancel" type="button">Cancel</button>
+      <button class="btn primary" id="passwordEncrypt" type="button">Encrypt &amp; download</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="passwordOpenModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:420px">
+    <div class="modal-head">
+      <h2 class="modal-title">🔓 Decrypt PDF</h2>
+      <button class="modal-close" id="passwordOpenClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub">This file is encrypted. Enter the password to open it.</div>
+    <div class="ps-section">
+      <label class="ps-label">Password</label>
+      <input type="password" id="passwordOpenInput" class="ps-text" placeholder="Password" autocomplete="current-password">
+      <div id="passwordOpenError" style="color:var(--danger);font-size:12px;margin-top:6px;min-height:14px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="passwordOpenCancel" type="button">Cancel</button>
+      <button class="btn primary" id="passwordOpenGo" type="button">Decrypt &amp; open</button>
+    </div>
+  </div>
+</div>
+
+<!-- === SANITIZE === -->
+<div class="modal-overlay" id="sanitizeModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:520px">
+    <div class="modal-head">
+      <h2 class="modal-title">🧼 Sanitize document</h2>
+      <button class="modal-close" id="sanitizeClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub">Strip everything that could leak data: PDF metadata, hidden objects, JavaScript actions, and old incremental revisions. Annotations are baked into the visual layer first so nothing is "secretly editable" afterwards.</div>
+    <div class="ps-section">
+      <label class="check"><input type="checkbox" id="sanStripMeta" checked> Strip metadata (Title, Author, Subject, Keywords, Producer, Creator, dates)</label>
+      <label class="check" style="margin-top:6px"><input type="checkbox" id="sanFlatten" checked> Flatten annotations into the page (bake whiteouts, redactions, highlights, text)</label>
+      <label class="check" style="margin-top:6px"><input type="checkbox" id="sanRasterize"> Rasterize every page (most aggressive — destroys selectable text but guarantees no hidden content)</label>
+      <label class="ps-label" style="margin-top:10px">Rasterize DPI</label>
+      <input type="number" id="sanRasterDpi" class="ps-text" min="72" max="300" value="150" style="width:120px">
+      <div id="sanStatus" style="font-size:12px;color:var(--muted);margin-top:10px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="sanitizeCancel" type="button">Cancel</button>
+      <button class="btn primary" id="sanitizeGo" type="button">Sanitize &amp; download</button>
+    </div>
+  </div>
+</div>
+
+<!-- === REGEX REDACT === -->
+<div class="modal-overlay" id="regexRedactModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:560px">
+    <div class="modal-head">
+      <h2 class="modal-title">🛡 RegEx redact</h2>
+      <button class="modal-close" id="regexRedactClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub">Permanently remove sensitive data. Each match in the PDF text layer is covered by an opaque rectangle <em>and</em> the text is dropped from the underlying content. Save the document to bake these in.</div>
+    <div class="ps-section">
+      <label class="ps-label">Presets <span style="color:var(--muted);font-weight:400">— click to insert</span></label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn outlined" data-rx-preset="\b\d{3}-?\d{2}-?\d{4}\b" type="button" style="padding:4px 8px;font-size:12px">SSN</button>
+        <button class="btn outlined" data-rx-preset="\b(?:\d[ -]*?){13,19}\b" type="button" style="padding:4px 8px;font-size:12px">Credit card</button>
+        <button class="btn outlined" data-rx-preset="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" type="button" style="padding:4px 8px;font-size:12px">Email</button>
+        <button class="btn outlined" data-rx-preset="\+?[\d][\d\s()-]{7,}\d" type="button" style="padding:4px 8px;font-size:12px">Phone</button>
+        <button class="btn outlined" data-rx-preset="\b[A-Z]{2}\d{2}[A-Z0-9]{4,30}\b" type="button" style="padding:4px 8px;font-size:12px">IBAN</button>
+        <button class="btn outlined" data-rx-preset="\b\d{6}\/?\d{3,4}\b" type="button" style="padding:4px 8px;font-size:12px">CZ rodné č.</button>
+      </div>
+      <label class="ps-label">Regular expression (JavaScript flavor)</label>
+      <input type="text" id="rxPattern" class="ps-text" placeholder="\b\d{3}-\d{2}-\d{4}\b">
+      <label class="check" style="margin-top:6px"><input type="checkbox" id="rxFlagI" checked> Case-insensitive</label>
+      <div id="rxStatus" style="font-size:12px;color:var(--muted);margin-top:10px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn outlined" id="rxPreview" type="button">Preview matches</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn" id="regexRedactCancel" type="button">Cancel</button>
+      <button class="btn primary" id="regexRedactGo" type="button">Redact all matches</button>
+    </div>
+  </div>
+</div>
+
+<!-- === DIFF (side-by-side visual) === -->
+<div class="modal-overlay" id="diffModal" role="dialog" aria-modal="true">
+  <div class="modal-card modal-card-diff" style="max-width:min(1500px,98vw);width:98vw;max-height:96vh;display:flex;flex-direction:column">
+    <div class="modal-head">
+      <h2 class="modal-title">⇄ Compare two PDFs</h2>
+      <button class="modal-close" id="diffClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub">Both PDFs are rendered side by side. <span style="background:#fecaca;padding:1px 6px;border-radius:3px;color:#7f1d1d">Red</span> = removed in the original, <span style="background:#bbf7d0;padding:1px 6px;border-radius:3px;color:#14532d">green</span> = added in the updated version. Unchanged text stays untouched.</div>
+
+    <!-- Controls row -->
+    <div class="ps-section" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <label class="upload-drop" style="flex:1;min-width:200px;height:56px;display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;padding:0 12px">
+        <input type="file" id="diffFileA" accept="application/pdf" hidden>
+        <span style="background:#fecaca;color:#7f1d1d;font-weight:700;padding:2px 6px;border-radius:3px;font-size:11px">A</span>
+        <span><strong id="diffNameA" style="font-size:13px">Original — click to pick</strong></span>
+      </label>
+      <label class="upload-drop" style="flex:1;min-width:200px;height:56px;display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;padding:0 12px">
+        <input type="file" id="diffFileB" accept="application/pdf" hidden>
+        <span style="background:#bbf7d0;color:#14532d;font-weight:700;padding:2px 6px;border-radius:3px;font-size:11px">B</span>
+        <span><strong id="diffNameB" style="font-size:13px">Updated — click to pick</strong></span>
+      </label>
+      <label class="check" style="font-size:13px;white-space:nowrap"><input type="checkbox" id="diffSyncScroll" checked> Sync scroll</label>
+      <button class="btn primary" id="diffGo" type="button" disabled>Compute diff</button>
+    </div>
+    <div id="diffStatus" style="font-size:12px;color:var(--muted);padding:4px 18px"></div>
+
+    <!-- Side-by-side panes -->
+    <div id="diffPanes" style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 12px 12px;min-height:0">
+      <div class="diff-pane" id="diffPaneA" style="background:#f3f4f6;border:1px solid var(--border);border-radius:6px;overflow:auto;min-height:300px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px"></div>
+      <div class="diff-pane" id="diffPaneB" style="background:#f3f4f6;border:1px solid var(--border);border-radius:6px;overflow:auto;min-height:300px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px"></div>
+    </div>
+    <div class="modal-actions" style="padding:8px 18px">
+      <button class="btn" id="diffCancel" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- === JSON FORM FILL === -->
+<div class="modal-overlay" id="jsonFillModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:560px">
+    <div class="modal-head">
+      <h2 class="modal-title">{ } Fill form from JSON</h2>
+      <button class="modal-close" id="jsonFillClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub">Paste a JSON object and we'll match its keys to the PDF's form-field names (case-insensitive, substring match). Or paste an array to produce multiple filled copies as a ZIP.</div>
+    <div class="ps-section">
+      <label class="ps-label">JSON payload</label>
+      <textarea id="jsonFillPayload" rows="10" class="ps-text" style="font-family:'JetBrains Mono', monospace;font-size:12px;width:100%" placeholder='{ "firstName": "John", "lastName": "Doe", "email": "john@example.com" }'></textarea>
+      <div id="jsonFillStatus" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn outlined" id="jsonFillPreview" type="button">Preview field matches</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn" id="jsonFillCancel" type="button">Cancel</button>
+      <button class="btn primary" id="jsonFillGo" type="button">Fill</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="splitModal" role="dialog" aria-modal="true" aria-labelledby="splitTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="modal-title" id="splitTitle">Split PDF</h2>
+      <button class="modal-close" id="splitClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub">Split the current PDF into multiple files. Each chunk downloads as its own PDF.</div>
+    <div class="compress-presets">
+      <button class="compress-card split-mode active" data-mode="ranges" type="button">
+        <span class="cc-title">Custom ranges</span>
+        <span class="cc-sub">e.g. 1-3, 5, 7-10</span>
+      </button>
+      <button class="compress-card split-mode" data-mode="every" type="button">
+        <span class="cc-title">Every N pages</span>
+        <span class="cc-sub">fixed-size chunks</span>
+      </button>
+      <button class="compress-card split-mode" data-mode="each" type="button">
+        <span class="cc-title">One per page</span>
+        <span class="cc-sub">each page → its own PDF</span>
+      </button>
+    </div>
+    <div class="ps-section" id="splitRangesRow">
+      <label class="ps-label">Page ranges <span id="splitRangesHint" style="color:var(--muted);font-weight:400">(pages 1–1)</span></label>
+      <input type="text" id="splitRangesInput" class="ps-text" placeholder="1-3, 5, 7-10">
+      <div class="settings-desc">Each range becomes one output PDF. Use commas to separate; dashes for inclusive ranges.</div>
+    </div>
+    <div class="ps-section" id="splitEveryRow" hidden>
+      <label class="ps-label">Pages per chunk</label>
+      <input type="number" id="splitEveryInput" class="ps-text" min="1" max="999" value="1">
+      <div class="settings-desc">e.g. 2 → produces files of pages 1-2, 3-4, 5-6, …</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="splitCancel" type="button">Cancel</button>
+      <button class="btn primary" id="splitGo" type="button">Split &amp; Download</button>
     </div>
   </div>
 </div>
@@ -3504,16 +4060,19 @@
 </div>
 
 <div class="modal-overlay" id="cropModal" role="dialog" aria-modal="true">
-  <div class="modal-card" style="max-width:520px">
+  <div class="modal-card" style="max-width:560px">
     <div class="modal-head">
-      <h2 class="modal-title">Crop / margins <span class="pro-badge">PRO</span></h2>
+      <h2 class="modal-title">Crop / Resize / Margins <span class="pro-badge">PRO</span></h2>
       <button class="modal-close" id="cropClose" type="button" aria-label="Close">✕</button>
     </div>
     <div class="ps-section">
       <label class="ps-label">Apply to pages</label>
       <input type="text" id="cropRange" class="ps-text" placeholder="all   or  1-3,7   or  2" value="all">
-      <label class="ps-label" style="margin-top:8px">Margins (PDF points — 72 pt = 1 inch)</label>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    </div>
+
+    <div class="ps-section" style="border-top:1px solid var(--border);padding-top:14px">
+      <label class="ps-label">Margins <span style="color:var(--muted);font-weight:400">— hide / trim edges, in PDF points (72 pt = 1 inch)</span></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
         <label class="ps-mini"><span>Top</span><input type="number" id="cropTop" class="ps-text" value="0" min="0"></label>
         <label class="ps-mini"><span>Right</span><input type="number" id="cropRight" class="ps-text" value="0" min="0"></label>
         <label class="ps-mini"><span>Bottom</span><input type="number" id="cropBottom" class="ps-text" value="0" min="0"></label>
@@ -3521,12 +4080,78 @@
       </div>
       <label class="check" style="margin-top:10px"><input type="checkbox" id="cropTrim"> Trim (set <code>MediaBox</code> too — removes content outside)</label>
       <div id="cropExisting" style="font-size:12px;color:var(--muted);margin-top:10px"></div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn outlined" id="cropClear" type="button">Clear all margins</button>
+        <button class="btn primary" id="cropApply" type="button">Apply margins</button>
+      </div>
     </div>
+
+    <div class="ps-section" style="border-top:1px solid var(--border);padding-top:14px">
+      <label class="ps-label">Normalize page size <span style="color:var(--muted);font-weight:400">— good for photos, scans, off-spec PDFs</span></label>
+      <select id="cropSizePreset" class="select-input" style="margin-top:4px;width:100%">
+        <option value="">— Pick a target size —</option>
+        <optgroup label="ISO (mm)">
+          <option value="a4">A4 portrait (210×297 mm)</option>
+          <option value="a4l">A4 landscape (297×210 mm)</option>
+          <option value="a3">A3 portrait (297×420 mm)</option>
+          <option value="a3l">A3 landscape (420×297 mm)</option>
+          <option value="a5">A5 portrait (148×210 mm)</option>
+          <option value="a5l">A5 landscape (210×148 mm)</option>
+        </optgroup>
+        <optgroup label="US (inches)">
+          <option value="letter">Letter (8.5×11 in)</option>
+          <option value="letterl">Letter landscape (11×8.5 in)</option>
+          <option value="legal">Legal (8.5×14 in)</option>
+          <option value="legall">Legal landscape (14×8.5 in)</option>
+          <option value="tabloid">Tabloid / Ledger (11×17 in)</option>
+          <option value="exec">Executive (7.25×10.5 in)</option>
+        </optgroup>
+        <optgroup label="Photo">
+          <option value="p4x6">4×6 in (10×15 cm)</option>
+          <option value="p5x7">5×7 in (13×18 cm)</option>
+          <option value="p8x10">8×10 in (20×25 cm)</option>
+          <option value="p10x15cm">10×15 cm</option>
+          <option value="p13x18cm">13×18 cm</option>
+        </optgroup>
+        <optgroup label="Other">
+          <option value="square">Square 8×8 in</option>
+          <option value="square10cm">Square 10×10 cm</option>
+          <option value="custom">Custom…</option>
+        </optgroup>
+      </select>
+      <div id="cropCustomSize" hidden style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;align-items:end">
+        <label class="ps-mini"><span>Width</span><input type="number" id="cropCustomW" class="ps-text" min="36" value="595"></label>
+        <label class="ps-mini"><span>Height</span><input type="number" id="cropCustomH" class="ps-text" min="36" value="842"></label>
+        <label class="ps-mini"><span>Unit</span><select id="cropCustomUnit" class="select-input">
+          <option value="pt" selected>points</option>
+          <option value="mm">mm</option>
+          <option value="in">inches</option>
+        </select></label>
+      </div>
+      <label class="ps-label" style="margin-top:10px">Fit mode</label>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px">
+        <label class="check"><input type="radio" name="cropFit" value="fit" checked> Fit <span style="color:var(--muted)">— pad with background</span></label>
+        <label class="check"><input type="radio" name="cropFit" value="fill"> Fill <span style="color:var(--muted)">— crop to cover</span></label>
+        <label class="check"><input type="radio" name="cropFit" value="stretch"> Stretch <span style="color:var(--muted)">— ignore aspect</span></label>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+        <label class="ps-mini"><span>Rotate content</span><select id="cropRotate" class="select-input">
+          <option value="0">No rotation</option>
+          <option value="90">90° clockwise</option>
+          <option value="180">180°</option>
+          <option value="270">90° counter-clockwise</option>
+        </select></label>
+        <label class="ps-mini"><span>Background</span><input type="color" id="cropBg" class="pcolor-input" value="#ffffff" title="Padding color (used by Fit mode)"></label>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">Tip: pre-rotation happens before fit math, so a 90° rotate of a portrait scan will fit a landscape target without distortion.</div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:12px;color:var(--muted);flex:1">Annotations are baked in before resizing. PDF reloads with the new dimensions.</span>
+        <button class="btn primary" id="cropResizeBtn" type="button"><span class="icon">⛶</span> Resize pages</button>
+      </div>
+    </div>
+
     <div class="modal-actions">
-      <button class="btn outlined" id="cropClear" type="button">Clear all crops</button>
-      <span class="spacer" style="flex:1"></span>
-      <button class="btn" id="cropCancel" type="button">Cancel</button>
-      <button class="btn primary" id="cropApply" type="button">Apply</button>
+      <button class="btn" id="cropCancel" type="button">Close</button>
     </div>
   </div>
 </div>
@@ -3662,6 +4287,8 @@ let annotations = [];
 let lastClickPos = null;
 let selected = null;
 let activeEditor = null, activeEditorAnn = null, isNewAnnotation = false;
+let editorJustCommitted = false;
+let _deselectLockUntil = 0;  // see deselect() — short grace window after commit
 let editorJustOpened = false;
 let workerReady = null;
 let currentZoom = 1.0;
@@ -3763,15 +4390,15 @@ if ('launchQueue' in window) {
 const CTX = {
   noFile:   { step: 1, text: 'Start by opening a PDF file — click "Open" or drag a file onto the page.' },
   select:   { step: 2, text: 'Click an existing object to select, drag to move, use handles to resize/rotate. PRO: double-click any text in the PDF itself to edit it. Press Esc anywhere to return to this mode.' },
-  text:     { step: 2, text: 'Click on the PDF to add text. Use Enter for new lines. Select any part to format it.' },
+  text:     { step: 2, text: 'Click on the PDF to add text. Enter finishes — Shift+Enter for a new line. Select any part to format it.' },
   typing:   { step: 3, text: 'Type your text. Select any part to format it. Press Esc to cancel, click outside or ✓ Done to finish.' },
   selected: { step: 3, text: 'Drag to move. Drag corners to resize, top handle to rotate. Press Delete to remove.' },
   draw:     { step: 2, text: 'Free drawing — click and drag (or use your finger) to draw on the PDF. Press Esc to switch back to Select.' },
   shape:    { step: 2, text: 'Click and drag on the PDF to draw a shape. Press Esc to switch back to Select.' },
   'edit-pdf':  { step: 2, text: 'PRO: Click any text in the PDF to edit, retype, or delete it. Or just double-click any text in any mode. The app matches the original font and size automatically.' },
-  'highlight': { step: 2, text: 'PRO: Click any text in the PDF to highlight it. Esc returns to Select.' },
-  'underline': { step: 2, text: 'PRO: Click any text in the PDF to underline it. Esc returns to Select.' },
-  'strike':    { step: 2, text: 'PRO: Click any text in the PDF to strike it out. Esc returns to Select.' },
+  'highlight': { step: 2, text: 'PRO: Drag across the PDF text to highlight a span (or click a single word). Use the Style color picker (top right) to change the highlight colour. Esc returns to Select.' },
+  'underline': { step: 2, text: 'PRO: Drag across the PDF text to underline a span (or click a single word). Style color sets the line colour. Esc returns to Select.' },
+  'strike':    { step: 2, text: 'PRO: Drag across the PDF text to strike it out (or click a single word). Style color sets the line colour. Esc returns to Select.' },
   'link':      { step: 2, text: 'PRO: Click and drag a rectangle, then enter a URL or page number — it becomes clickable in the saved PDF.' }
 };
 function setContext(key) {
@@ -3816,6 +4443,15 @@ function setTool(tool) {
   document.body.classList.toggle('link-mode', currentTool === 'link');
   document.body.classList.toggle('redact-mode', currentTool === 'redact');
   document.querySelectorAll('.overlay').forEach(o => o.classList.toggle('edit-pdf-cursor', currentTool === 'edit-pdf'));
+  // Sync the floating deco-color-bar with the new tool's stored colour
+  if (typeof _decoColors !== 'undefined' && (tool === 'highlight' || tool === 'underline' || tool === 'strike')) {
+    const c = _decoColors[tool] || (tool === 'highlight' ? '#ffeb3b' : '#dc2626');
+    document.querySelectorAll('.dcb-swatch').forEach(b => b.classList.toggle('active', b.dataset.color === c));
+    const _customInp = document.getElementById('decoCustomColor');
+    if (_customInp) _customInp.value = c;
+  }
+  // Sync the mobile dock's active-tool highlight
+  if (typeof window._syncMobileDockActive === 'function') window._syncMobileDockActive();
   if (changed && tool !== 'select' && typeof bumpUsage === 'function') {
     bumpUsage(tool === 'shape' ? ('shape:' + currentShape) : ('tool:' + tool));
   }
@@ -3824,10 +4460,6 @@ function setTool(tool) {
 document.querySelectorAll('.btn.tool').forEach(b => {
   b.addEventListener('click', e => {
     const tool = b.dataset.tool;
-    if (tool === 'shape') {
-      toggleDropdown('shapeDropdown', e);
-      return;
-    }
     if (tool === 'edit-pdf' && pdfJsDoc && pdfTotalTextItems === 0) {
       showImageOnlyPdfNotice();
       return;
@@ -3875,7 +4507,21 @@ document.body.addEventListener('drop', e => {
 async function loadPDF(file) {
   await workerReady;
   try {
-    const buf = await file.arrayBuffer();
+    let buf = await file.arrayBuffer();
+    // Sniff .pdfenc header — if it's our own AES envelope, prompt for password and decrypt first.
+    const sniff = new Uint8Array(buf, 0, Math.min(8, buf.byteLength));
+    const magic = new TextDecoder().decode(sniff);
+    if (magic === 'PDFMINIE' || /\.pdfenc$/i.test(file.name)) {
+      try {
+        buf = await _promptAndDecryptPdfenc(new Uint8Array(buf));
+        if (!buf) return;  // user cancelled
+        // Drop the .pdfenc suffix from the displayed name
+        file = new File([buf], file.name.replace(/\.pdfenc$/i, '.pdf'), { type: 'application/pdf' });
+      } catch (e) {
+        showToast('Couldn\'t decrypt this file: ' + (e.message || e), 'error');
+        return;
+      }
+    }
     pdfBytes = buf;
     pdfFileName = file.name.replace(/\.pdf$/i, '') + '-edited.pdf';
     pdfJsDoc = await loadPdfJsDoc(buf.slice(0));
@@ -3891,6 +4537,7 @@ async function loadPDF(file) {
     document.getElementById('exportBtn').disabled = false;
     document.getElementById('printBtn').disabled = false;
     document.getElementById('organizeBtn').disabled = false;
+    if (typeof _enableMainPdfTools === 'function') _enableMainPdfTools();
     document.getElementById('zoomBar').style.display = 'flex';
     updateAnnotCount();
     setContext(currentTool);
@@ -4353,6 +5000,15 @@ const TEXT_FONT_FAMILIES = {
   'Courier':     '"Courier New", Courier, monospace'
 };
 function applyTextAnnotationStyle(el, ann) {
+  // Defensive clamp: a corrupted ann.fontSize (NaN, Infinity, absurdly large from
+  // an OCR / Find-Replace edge case) would render as a page-sized text block
+  // that the user cannot resize back down via the normal handles. Cap at 200 CSS
+  // px (≈ 125 pt PDF at scale 1.6) which is larger than any legitimate body text
+  // but small enough to stay editable.
+  if (!isFinite(ann.fontSize) || ann.fontSize > 200 || ann.fontSize < 4) {
+    console.warn('[text] clamped invalid fontSize', ann.fontSize, '→ 14');
+    ann.fontSize = 14;
+  }
   el.style.fontSize = ann.fontSize + 'px';
   el.style.fontFamily = TEXT_FONT_FAMILIES[ann.fontFamily || 'Helvetica'] || TEXT_FONT_FAMILIES.Helvetica;
   el.style.lineHeight = String(ann.lineHeight || 1.15);
@@ -4361,10 +5017,18 @@ function applyTextAnnotationStyle(el, ann) {
   el.classList.toggle('from-pdf-edit', !!ann.fromPdfEdit);
   el.style.transform = ann.rotation ? `rotate(${ann.rotation}deg)` : '';
   el.dataset.rotation = Math.round(ann.rotation || 0);
+  // Re-sync opacity from the annotation model so watermarks survive every re-render.
+  if (ann.opacity != null && ann.opacity < 1) el.style.opacity = String(ann.opacity);
+  else if (el.style.opacity && el.style.opacity !== '1' && ann.opacity == null) el.style.opacity = '';
 }
 function renderTextAnnotation(ann) {
+  // innerHTML wipes ALL children, including the resize / rotate handles we
+  // attached in openTextEditor (or earlier). Re-add them afterwards so the
+  // annotation stays interactive — addTextHandles is idempotent and skips
+  // from-PDF-edit annotations on its own.
   ann.el.innerHTML = linesToHtml(ann.lines);
   applyTextAnnotationStyle(ann.el, ann);
+  addTextHandles(ann.el, ann);
 }
 
 // === OVERLAY INTERACTION (text + click-through) ===
@@ -4372,11 +5036,22 @@ function setupOverlay(overlay, pageNum) {
   overlay.addEventListener('pointerdown', e => {
     if (e.target !== overlay) return;
     if (e.button !== undefined && e.button !== 0) return;
+    // Pro tools (table extract, diff range select, …) take exclusive control
+    // of overlay clicks; bail so we don't deselect / start a new annotation
+    // underneath them.
+    if (typeof _tableExtractMode !== 'undefined' && _tableExtractMode) return;
     const rect = overlay.getBoundingClientRect();
     const x = (e.clientX - rect.left) / currentZoom;
     const y = (e.clientY - rect.top) / currentZoom;
 
-    if (activeEditor) { commitEditor(true); e.stopPropagation(); return; }
+    if (activeEditor) {
+      // Block the marquee-select pointerdown handler bound to the same overlay
+      // (it would otherwise start a marquee in 'select' mode after our commit
+      // switches the tool, and its pointerup would deselect the new annotation).
+      commitEditor(true);
+      e.stopPropagation(); e.stopImmediatePropagation();
+      return;
+    }
     deselect();
     lastClickPos = { pageNum, x, y, overlay };
 
@@ -4523,7 +5198,10 @@ function editParagraphFromSpans(overlay, spans) {
     if (g.x + g.w > maxX) maxX = g.x + g.w;
     if (g.y + g.h > maxY) maxY = g.y + g.h;
   }
-  const fontHeight = Math.max(12, Math.round(spans[0].fontHeight));
+  // Same defensive clamp as editOriginalPdfText — corrupted OCR / odd transforms
+  // can produce huge fontHeight values that would render as page-sized glyphs.
+  let fontHeight = Math.max(12, Math.round(spans[0].fontHeight));
+  if (!isFinite(fontHeight) || fontHeight > 120) fontHeight = 14;
   const pageNum = parseInt(spans[0].el.dataset.pageNum);
   // 1) Whiteout the whole region with bleed
   const bleed = Math.max(2, fontHeight * 0.1);
@@ -4776,6 +5454,13 @@ function cleanupStrayEmptyText() {
 function openTextEditor(overlay, pageNum, x, y, existingAnn) {
   if (activeEditor) commitEditor(true);
   let ann = existingAnn;
+  // If we're reopening an existing annotation that somehow has a corrupt fontSize
+  // (legacy bug — see clamps in applyTextAnnotationStyle), heal it on the spot so
+  // the editor doesn't open as a page-sized text box.
+  if (ann && (!isFinite(ann.fontSize) || ann.fontSize > 200 || ann.fontSize < 4)) {
+    console.warn('[openTextEditor] healing corrupt fontSize', ann.fontSize, '→ 14');
+    ann.fontSize = 14;
+  }
   if (!ann) {
     const el = document.createElement('div');
     el.className = 'annotation text-annotation';
@@ -4837,7 +5522,12 @@ function openTextEditor(overlay, pageNum, x, y, existingAnn) {
 
   editor.addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.preventDefault(); commitEditor(false); }
-    else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); commitEditor(true); }
+    // Enter alone commits; Shift+Enter (or Ctrl/Cmd+Enter) inserts a newline.
+    // Reversed from the contenteditable default so single-line text annotations
+    // — the common case — don't need a separate finish-key.
+    else if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault(); commitEditor(true);
+    }
   });
   editor.addEventListener('keyup', updatePropsForEditor);
   editor.addEventListener('mouseup', updatePropsForEditor);
@@ -4846,6 +5536,7 @@ function openTextEditor(overlay, pageNum, x, y, existingAnn) {
 function commitEditor(commit) {
   if (!activeEditor) return;
   const ann = activeEditorAnn;
+  const wasNew = isNewAnnotation;
   const newLines = commit ? htmlToLines(activeEditor.innerHTML) : ann.lines;
   activeEditor.remove();
   activeEditor = null; activeEditorAnn = null;
@@ -4891,24 +5582,51 @@ function commitEditor(commit) {
   }
   isNewAnnotation = false;
   updateAnnotCount();
+  // Match paste-text behaviour: after committing a freshly-created text via
+  // the Text tool, drop back to Select so handles work on the next click
+  // instead of starting another empty textbox.
+  if (commit && wasNew && currentTool === 'text' && !ann.fromPdfEdit) {
+    currentTool = 'select';
+    updateToolUI();
+  }
   setContext(selected === ann ? 'selected' : currentTool);
   if (selected === ann) { buildPropsPanel(ann); positionPropsPanel(ann); }
   if (commit) pushHistory('text-edit');
+  // Short grace window so the compat events that follow our pointerdown commit
+  // (mousedown, mouseup, click — any of them could land on a handler that calls
+  // deselect()) leave the new annotation selected.
+  editorJustCommitted = true;
+  setTimeout(() => { editorJustCommitted = false; }, 250);
+  _deselectLockUntil = Date.now() + 250;
 }
 
 // === TEXT DRAG (for text + rect annotations) ===
 function enableTextDrag(el, ann) {
   let dragging = false, downX = 0, downY = 0, startLeft = 0, startTop = 0, hasMoved = false;
+  // Cache the annotation's "resting" opacity so we restore it (not 1) after drag —
+  // otherwise a watermark dropped at opacity 0.25 becomes a solid block on first click.
+  let restOpacity = '1';
   el.addEventListener('mousedown', e => {
     if (activeEditor && activeEditorAnn === ann) return;
-    // Don't drag when the click is on a handle (resize / rotate)
     if (e.target && e.target.classList &&
         (e.target.classList.contains('img-handle') || e.target.classList.contains('rot-handle'))) return;
     e.stopPropagation();
     downX = e.clientX; downY = e.clientY;
     startLeft = ann.x; startTop = ann.y;
     hasMoved = false; dragging = true;
-    el.style.opacity = '0.85';
+    // Pull from the annotation model first (set by Page-Setup watermark), then
+    // the live inline style, then default to 1.
+    restOpacity = (ann.opacity != null && ann.opacity < 1)
+      ? String(ann.opacity)
+      : (el.style.opacity || '1');
+    // Watermarks (low-opacity, fromPageSetup) keep their original opacity through
+    // the entire drag — no "darken on grab" feedback. Otherwise the gentle 0.85x
+    // multiplier still gives a hint of activity.
+    if (parseFloat(restOpacity) < 0.6) {
+      el.style.opacity = restOpacity;
+    } else {
+      el.style.opacity = String(Math.max(0.15, parseFloat(restOpacity) * 0.85));
+    }
   });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
@@ -4928,7 +5646,7 @@ function enableTextDrag(el, ann) {
   window.addEventListener('mouseup', () => {
     if (!dragging) return;
     hideAlignmentGuides();
-    el.style.opacity = '1';
+    el.style.opacity = restOpacity;
     if (!hasMoved) select(ann);
     dragging = false;
   });
@@ -4968,7 +5686,8 @@ function attachTextCornerResize(h, ann, corner) {
     select(ann);
     try { h.setPointerCapture(e.pointerId); } catch (_) {}
     const startX = e.clientX, startY = e.clientY;
-    const startFs = ann.fontSize;
+    let startFs = ann.fontSize;
+    if (!isFinite(startFs) || startFs < 4 || startFs > 200) startFs = 14;  // recover from corrupt state
     const startW = ann.el.offsetWidth || 1;
     const startH = ann.el.offsetHeight || 1;
     const startAx = ann.x, startAy = ann.y;
@@ -4980,8 +5699,8 @@ function attachTextCornerResize(h, ann, corner) {
       const rW = (startW + sx * dx) / startW;
       const rH = (startH + sy * dy) / startH;
       const r = Math.abs(rW - 1) > Math.abs(rH - 1) ? rW : rH;
-      let newFs = Math.round(startFs * r);
-      newFs = Math.max(6, Math.min(160, newFs));
+      let newFs = Math.round(startFs * (isFinite(r) ? r : 1));
+      newFs = Math.max(6, Math.min(160, isFinite(newFs) ? newFs : 14));
       ann.fontSize = newFs;
       ann.el.style.fontSize = newFs + 'px';
       ann.width  = ann.el.offsetWidth;
@@ -5163,13 +5882,15 @@ function enableImageInteractions(container, ann) {
 
   // === MOVE: dragging the image body ===
   let mDragging = false, mDownX = 0, mDownY = 0, mStartX = 0, mStartY = 0, mMoved = false;
+  let mRestOpacity = '1';
   img.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
     e.stopPropagation();
     mDragging = true; mMoved = false;
     mDownX = e.clientX; mDownY = e.clientY;
     mStartX = ann.x; mStartY = ann.y;
-    container.style.opacity = '0.85';
+    mRestOpacity = (ann.opacity != null && ann.opacity < 1) ? String(ann.opacity) : (container.style.opacity || '1');
+    container.style.opacity = String(Math.max(0.15, parseFloat(mRestOpacity) * 0.85));
   });
   window.addEventListener('mousemove', e => {
     if (!mDragging) return;
@@ -5187,7 +5908,7 @@ function enableImageInteractions(container, ann) {
   });
   window.addEventListener('mouseup', () => {
     if (!mDragging) return;
-    container.style.opacity = '1';
+    container.style.opacity = mRestOpacity;
     hideAlignmentGuides();
     if (!mMoved) select(ann);
     mDragging = false;
@@ -5336,6 +6057,12 @@ function select(ann, opts) {
   if (!activeEditor) setContext('selected');
 }
 function deselect() {
+  // Guard: when a text editor just committed, the same click can bubble through
+  // several deselect-callers (overlay pointerdown, marquee pointerup, document
+  // mousedown). All of them are blocked for a short window so the freshly-
+  // committed annotation stays selected with handles visible — exact same UX
+  // as paste-from-clipboard.
+  if (Date.now() < _deselectLockUntil) return;
   if (!selectedSet.size) return;
   for (const a of selectedSet) { if (a.el) a.el.classList.remove('selected'); }
   selectedSet.clear();
@@ -5511,7 +6238,7 @@ function buildPropsPanel(ann) {
     const ag = mkGroup();
     if (editing) {
       const doneBtn = document.createElement('button');
-      doneBtn.className = 'pbtn primary'; doneBtn.innerHTML = '✓'; doneBtn.title = 'Done (Ctrl+Enter)';
+      doneBtn.className = 'pbtn primary'; doneBtn.innerHTML = '✓'; doneBtn.title = 'Done (Enter)';
       doneBtn.addEventListener('click', () => commitEditor(true));
       ag.appendChild(doneBtn);
     } else {
@@ -5532,7 +6259,7 @@ function buildPropsPanel(ann) {
     if (editing) {
       const hint = document.createElement('div');
       hint.className = 'panel-hint';
-      hint.innerHTML = 'Select text to format · <kbd>Enter</kbd> new line · <kbd>Esc</kbd> cancel';
+      hint.innerHTML = 'Select text to format · <kbd>Enter</kbd> finish · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line · <kbd>Esc</kbd> cancel';
       panel.appendChild(hint);
     }
   } else if (ann.type === 'image') {
@@ -5977,7 +6704,11 @@ document.addEventListener('mousedown', e => {
   if (editorJustOpened) return;
   if (e.target.closest('.annotation, .props-panel, .toolbar, .titlebar, .context-bar, .text-input-active, .banner, .zoom-bar')) return;
   if (activeEditor) commitEditor(true);
-  else deselect();
+  // Don't deselect right after a commit — the same click that committed the
+  // editor triggers two events (pointerdown then compat mousedown). The
+  // pointerdown path commits and leaves the new annotation selected; this
+  // mousedown would otherwise wipe that selection and hide the handles.
+  else if (!editorJustCommitted) deselect();
 });
 
 // === UNDO / REDO / CLEAR / DELETE ===
@@ -6306,6 +7037,11 @@ function recreateDecorationAnn(def, overlay) {
   el.className = 'annotation deco-annotation ' + (def.kind || 'highlight');
   el.style.left = def.x + 'px'; el.style.top = def.y + 'px';
   el.style.width = def.width + 'px'; el.style.height = def.height + 'px';
+  // Restore custom colour (highlight uses bg fill, underline/strike use --deco-color)
+  if (def.color) {
+    if ((def.kind || 'highlight') === 'highlight') el.style.background = _hexToRgba(def.color, 0.45);
+    else el.style.setProperty('--deco-color', def.color);
+  }
   overlay.appendChild(el);
   const ann = Object.assign({}, def, { el });
   enableWhiteoutInteractions(el, ann);
@@ -6561,22 +7297,28 @@ async function generatePdfBytes(saveOpts) {
       const xPdf = ann.x / scale;
       const yPdf = pageH - (ann.y + ann.height) / scale;
       const wPdf = ann.width / scale, hPdf = ann.height / scale;
+      // Convert stored hex colour to pdf-lib rgb (0-1 floats), with per-kind fallbacks.
+      const _hex2rgb = (hex, fallback) => {
+        const m = /^#([0-9a-f]{6})$/i.exec((hex || '').trim());
+        if (!m) return fallback;
+        return rgb(parseInt(m[1].slice(0,2),16)/255, parseInt(m[1].slice(2,4),16)/255, parseInt(m[1].slice(4,6),16)/255);
+      };
       if (ann.kind === 'highlight') {
         page.drawRectangle({
           x: xPdf, y: yPdf, width: wPdf, height: hPdf,
-          color: rgb(1, 0.92, 0.23), opacity: 0.45, borderWidth: 0
+          color: _hex2rgb(ann.color, rgb(1, 0.92, 0.23)), opacity: 0.45, borderWidth: 0
         });
       } else if (ann.kind === 'underline') {
         const y = yPdf + 1;
         page.drawLine({
           start: { x: xPdf, y: y }, end: { x: xPdf + wPdf, y: y },
-          thickness: Math.max(1, hPdf * 0.08), color: rgb(0.86, 0.15, 0.15)
+          thickness: Math.max(1, hPdf * 0.08), color: _hex2rgb(ann.color, rgb(0.86, 0.15, 0.15))
         });
       } else if (ann.kind === 'strike') {
         const y = yPdf + hPdf / 2;
         page.drawLine({
           start: { x: xPdf, y: y }, end: { x: xPdf + wPdf, y: y },
-          thickness: Math.max(1, hPdf * 0.08), color: rgb(0.86, 0.15, 0.15)
+          thickness: Math.max(1, hPdf * 0.08), color: _hex2rgb(ann.color, rgb(0.86, 0.15, 0.15))
         });
       }
     } else if (ann.type === 'link') {
@@ -7020,6 +7762,91 @@ async function generatePdfBytes(saveOpts) {
   } catch (e) {
     console.warn('[export] metadata step failed:', e);
   }
+
+  // Embed signature audit data into PDF metadata. Survives image cropping and
+  // is machine-readable from the Info dict (any PDF reader can show it).
+  try {
+    const signedAnns = annotations.filter(a => a && a.isSignature && a.auditData);
+    if (signedAnns.length && !_hasRedaction) {
+      // First (or only) signature drives the document-level fields.
+      const first = signedAnns[0].auditData;
+      const id = first.identity || {};
+      const signerName = [id.first, id.last].filter(Boolean).join(' ').trim();
+      if (signerName) {
+        try { doc.setAuthor(signerName + (id.role ? ` (${id.role})` : '')); } catch (_) {}
+      }
+      try { doc.setSubject(`Signed document — SHA-256 ${(first.documentSha256 || '').slice(0,16)}…`); } catch (_) {}
+      // Keywords carry the full audit summary, comma-delimited (visible in most PDF readers' "Properties" dialog).
+      const kw = [];
+      kw.push(`signed-at:${first.localTime || first.signedAt}`);
+      if (first.signedAt) kw.push(`signed-utc:${first.signedAt}`);
+      if (first.serverTime) kw.push(`server-time:${first.serverTime}`);
+      if (first.documentSha256) kw.push(`doc-sha256:${first.documentSha256}`);
+      if (first.ip) kw.push(`signer-ip:${first.ip}`);
+      const il = first.ipLocation || {};
+      if (il.city || il.country) kw.push(`ip-location:${[il.city, il.region, il.country].filter(Boolean).join(', ')}`);
+      if (typeof il.latitude === 'number' && typeof il.longitude === 'number') kw.push(`ip-geo:${il.latitude},${il.longitude}`);
+      if (il.org) kw.push(`signer-isp:${il.org}`);
+      if (first.location) kw.push(`gps:${first.location.latitude},${first.location.longitude},±${Math.round(first.location.accuracy)}m`);
+      if (first.address) kw.push(`gps-address:${first.address}`);
+      if (id.email) kw.push(`signer-email:${id.email}`);
+      if (id.phone) kw.push(`signer-phone:${id.phone}`);
+      if (id.role)  kw.push(`signer-role:${id.role}`);
+      kw.push(`signer-device:${sigShortDevice(first.userAgent, first.platform)}`);
+      kw.push(`signer-tz:${first.timezone}`);
+      try { doc.setKeywords(kw); } catch (_) {}
+      try { doc.setProducer('PDF Mini Editor Pro — Signed (PAdES-lite, client-side audit)'); } catch (_) {}
+      try { doc.setCreator('PDF Mini Editor Pro'); } catch (_) {}
+
+      // Custom Info dict entries — under /PDFMini namespace so they don't clash
+      // with any existing producer-specific keys. Stored as PDFString.
+      try {
+        const { PDFName, PDFString } = PDFLib;
+        const info = doc.context.lookup(doc.context.trailerInfo.Info);
+        if (info && typeof info.set === 'function') {
+          const writeKV = (key, val) => {
+            if (val === null || val === undefined || val === '') return;
+            try { info.set(PDFName.of(key), PDFString.of(String(val))); } catch (_) {}
+          };
+          writeKV('PDFMiniSignedAtLocal', first.localTime);
+          writeKV('PDFMiniSignedAtUTC', first.signedAt);
+          writeKV('PDFMiniServerTime', first.serverTime);
+          writeKV('PDFMiniTimezone', first.timezone);
+          writeKV('PDFMiniDocumentSHA256', first.documentSha256);
+          writeKV('PDFMiniSignerName', signerName || null);
+          writeKV('PDFMiniSignerEmail', id.email);
+          writeKV('PDFMiniSignerPhone', id.phone);
+          writeKV('PDFMiniSignerRole', id.role);
+          writeKV('PDFMiniSignerIP', first.ip);
+          writeKV('PDFMiniSignerISP', il.org);
+          if (il.city || il.country) writeKV('PDFMiniIPLocation', [il.city, il.region, il.postal, il.country].filter(Boolean).join(', '));
+          if (typeof il.latitude === 'number') writeKV('PDFMiniIPLatitude', il.latitude.toFixed(4));
+          if (typeof il.longitude === 'number') writeKV('PDFMiniIPLongitude', il.longitude.toFixed(4));
+          if (first.location) {
+            writeKV('PDFMiniGPSLatitude', first.location.latitude.toFixed(6));
+            writeKV('PDFMiniGPSLongitude', first.location.longitude.toFixed(6));
+            writeKV('PDFMiniGPSAccuracyMeters', Math.round(first.location.accuracy));
+          }
+          writeKV('PDFMiniGPSAddress', first.address);
+          writeKV('PDFMiniDevice', sigShortDevice(first.userAgent, first.platform));
+          writeKV('PDFMiniUserAgent', first.userAgent);
+          writeKV('PDFMiniLanguage', first.language);
+          writeKV('PDFMiniScreen', first.screen);
+          writeKV('PDFMiniCanvasFingerprint', first.canvasFp);
+          writeKV('PDFMiniSignatureCount', String(signedAnns.length));
+          // Full JSON of every signature's audit for downstream tooling
+          try {
+            const compact = signedAnns.map(a => a.auditData);
+            writeKV('PDFMiniAuditJSON', JSON.stringify(compact));
+          } catch (_) {}
+        }
+      } catch (e) {
+        console.warn('[sig metadata] custom info dict failed:', e);
+      }
+    }
+  } catch (e) {
+    console.warn('[sig metadata] failed:', e);
+  }
   // Redaction triggers a metadata wipe: title/author/subject/keywords/producer/creator
   // get blanked out so they don't leak identity info on the redacted document.
   if (_hasRedaction) {
@@ -7224,7 +8051,8 @@ function showToast(msg, type = 'success') {
 
 // === DROPDOWNS ===
 function closeAllDropdowns() {
-  document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+  document.querySelectorAll('.dropdown.open, .dropdown-submenu.open')
+    .forEach(d => d.classList.remove('open'));
 }
 function toggleDropdown(id, e) {
   if (e) { e.stopPropagation(); e.preventDefault(); }
@@ -7233,13 +8061,24 @@ function toggleDropdown(id, e) {
   closeAllDropdowns();
   if (!wasOpen) dd.classList.add('open');
 }
-document.querySelectorAll('#shapeDropdown .dropdown-item').forEach(item => {
+document.querySelectorAll('[data-shape]').forEach(item => {
   item.addEventListener('click', () => {
     currentShape = item.dataset.shape;
     setTool('shape');
+    closeAllDropdowns && closeAllDropdowns();
     if (typeof bumpUsage === 'function') bumpUsage('shape:' + currentShape);
   });
 });
+
+// Shapes submenu — click toggles open state (CSS :hover handles mouse users,
+// this gives keyboard / touch users an explicit way to open it too).
+const _shapesSubTrigger = document.getElementById('shapesSubmenuTrigger');
+if (_shapesSubTrigger) {
+  _shapesSubTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('shapesSubmenu').classList.toggle('open');
+  });
+}
 
 // === Toolbar v2 — new dropdown triggers + menu item proxies ===
 ['addDropdown', 'moreDropdown', 'saveMenu'].forEach(id => {
@@ -7282,18 +8121,22 @@ function _proxy(menuId, originalId) {
 _proxy('stampsBtnMenu', 'stampsBtn');
 _proxy('signatureBtnMenu', 'signatureBtn');
 // Certified (PAdES-B-B) signing — opens the cert modal
-(function () {
-  const b = document.getElementById('digitalSigBtnMenu');
-  if (b) b.addEventListener('click', () => {
-    closeAllDropdowns && closeAllDropdowns();
-    openCertSignModal();
-  });
-})();
+// (function () {
+//   const b = document.getElementById('digitalSigBtnMenu');
+//   if (b) b.addEventListener('click', () => {
+//     closeAllDropdowns && closeAllDropdowns();
+//     openCertSignModal();
+//   });
+// })();
 _proxy('pageSetupBtnMenu', 'pageSetupBtn');
 _proxy('templatesBtnMenu', 'templatesBtn');
 _proxy('bookmarksBtnMenu', 'bookmarksBtn');
 _proxy('cropBtnMenu', 'cropBtn');
 _proxy('findBtnMenu', 'findBtn');
+(function () {
+  const b = document.getElementById('passwordBtnMenu');
+  if (b) b.addEventListener('click', () => { closeAllDropdowns && closeAllDropdowns(); openPasswordModal(); });
+})();
 _proxy('exportBtnMenu', 'exportBtn');
 _proxy('printBtnMenu', 'printBtn');
 _proxy('clearBtnMenu', 'clearBtn');
@@ -8226,14 +9069,16 @@ const SIG_FONTS = [
 let sigState = {
   open: false, tab: 'draw', color: '#000000',
   drawHasInk: false, typeFontId: 'caveat', typeText: '',
-  uploadDataURL: null, callback: null
+  uploadDataURL: null, callback: null,
+  auditLocation: null, auditAddress: null
 };
 function openSignatureModal(onInsert) {
   const modal = document.getElementById('sigModal');
   sigState = {
     open: true, tab: 'draw', color: '#000000',
     drawHasInk: false, typeFontId: 'caveat', typeText: '',
-    uploadDataURL: null, callback: onInsert
+    uploadDataURL: null, callback: onInsert,
+    auditLocation: null, auditAddress: null
   };
   modal.classList.add('show');
   sigSetupTabs();
@@ -8241,10 +9086,349 @@ function openSignatureModal(onInsert) {
   sigSetupType();
   sigSetupUpload();
   sigSetupControls();
+  sigSetupAudit();
   sigSetupSavedSignatures();
   sigSwitchTab('draw');
   document.getElementById('sigSaveCheckbox').checked = false;
+  document.getElementById('sigAuditCheckbox').checked = false;
+  document.getElementById('sigAuditPanel').hidden = true;
+  document.getElementById('sigAuditLocStatus').textContent = 'Optional — adds coordinates + street address to the stamp.';
+  _sigLocationInFlight = null;
   requestAnimationFrame(() => requestAnimationFrame(sigSizeDrawPad));
+}
+
+// === SIGNATURE AUDIT METADATA (client-side, no backend) ===
+const SIG_AUDIT_KEY = 'pdfMiniPro.sigAuditIdentity.v1';
+function sigSetupAudit() {
+  const cb = document.getElementById('sigAuditCheckbox');
+  const panel = document.getElementById('sigAuditPanel');
+  cb.onchange = () => { panel.hidden = !cb.checked; };
+  document.getElementById('sigAuditLocBtn').onclick = sigCaptureLocation;
+  // Restore signer fields from localStorage (if previously remembered)
+  try {
+    const saved = JSON.parse(localStorage.getItem(SIG_AUDIT_KEY) || 'null');
+    if (saved) {
+      if (saved.first) document.getElementById('sigAuditFirst').value = saved.first;
+      if (saved.last)  document.getElementById('sigAuditLast').value  = saved.last;
+      if (saved.email) document.getElementById('sigAuditEmail').value = saved.email;
+      if (saved.phone) document.getElementById('sigAuditPhone').value = saved.phone;
+      if (saved.role)  document.getElementById('sigAuditRole').value  = saved.role;
+      document.getElementById('sigAuditRemember').checked = true;
+    } else {
+      document.getElementById('sigAuditRemember').checked = false;
+      ['sigAuditFirst','sigAuditLast','sigAuditEmail','sigAuditPhone','sigAuditRole']
+        .forEach(id => { document.getElementById(id).value = ''; });
+    }
+  } catch (_) {}
+}
+function sigGetSignerIdentity() {
+  const id = {
+    first: document.getElementById('sigAuditFirst').value.trim(),
+    last:  document.getElementById('sigAuditLast').value.trim(),
+    email: document.getElementById('sigAuditEmail').value.trim(),
+    phone: document.getElementById('sigAuditPhone').value.trim(),
+    role:  document.getElementById('sigAuditRole').value.trim()
+  };
+  // Persist (or clear) per checkbox
+  const remember = document.getElementById('sigAuditRemember').checked;
+  try {
+    if (remember && (id.first || id.last || id.email || id.phone || id.role)) {
+      localStorage.setItem(SIG_AUDIT_KEY, JSON.stringify(id));
+    } else if (!remember) {
+      localStorage.removeItem(SIG_AUDIT_KEY);
+    }
+  } catch (_) {}
+  return id;
+}
+
+// Tracks the in-flight GPS+reverse-geocode promise so Create can wait for it
+// instead of inserting a half-finished audit stamp.
+let _sigLocationInFlight = null;
+// Hand-off between sigOnInsert (which composes the stamped image) and the
+// signature-insertion callback (which creates the annotation and needs to
+// attach the audit data to it for later PDF-metadata embedding).
+let _sigPendingAuditData = null;
+
+function sigCaptureLocation() {
+  // Already in-flight (user double-clicked) — return the same promise
+  if (_sigLocationInFlight) return _sigLocationInFlight;
+  _sigLocationInFlight = (async () => {
+    const status = document.getElementById('sigAuditLocStatus');
+    const btn = document.getElementById('sigAuditLocBtn');
+    if (!navigator.geolocation) { status.textContent = '⚠ Geolocation API not available in this browser.'; return; }
+    btn.disabled = true; status.textContent = 'Requesting GPS permission…';
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 });
+      });
+      sigState.auditLocation = {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracy: pos.coords.accuracy
+      };
+      status.textContent = `Captured ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} (±${Math.round(pos.coords.accuracy)}m) — resolving address…`;
+      try {
+        // Always ask Nominatim for English so the stamp is universally readable.
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&zoom=14&accept-language=en`, {
+          headers: { 'Accept-Language': 'en' }
+        });
+        if (r.ok) {
+          const j = await r.json();
+          sigState.auditAddress = j.display_name || null;
+          status.textContent = '✓ ' + (j.display_name || `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`);
+        } else {
+          status.textContent = `✓ ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} (address lookup failed)`;
+        }
+      } catch (_) {
+        status.textContent = `✓ ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} (offline — no address)`;
+      }
+    } catch (e) {
+      status.textContent = '⚠ ' + (e.message || 'Permission denied / unavailable');
+    } finally {
+      btn.disabled = false;
+      _sigLocationInFlight = null;
+    }
+  })();
+  return _sigLocationInFlight;
+}
+
+// Gather everything we can without a backend. Best-effort: any field may be null.
+async function sigGatherAuditData() {
+  const now = new Date();
+  const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone) || 'UTC';
+  // Local-time string in the browser's TZ (what the user sees on their clock) +
+  // tz-aware UTC offset so the stamp is unambiguous when read later.
+  let localTime;
+  try {
+    const fmt = new Intl.DateTimeFormat('en-CA', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false, timeZone: tz, timeZoneName: 'short'
+    });
+    localTime = fmt.format(now).replace(',', '');
+  } catch (_) {
+    localTime = now.toString();
+  }
+  const out = {
+    signedAt: now.toISOString(),     // UTC ISO
+    localTime,                        // human-readable wall-clock in browser TZ
+    timezone: tz,                     // IANA name (e.g. America/New_York)
+    documentSha256: null,
+    serverTime: null,
+    ip: null,
+    ipLocation: null,                 // { city, region, country, loc, org, postal, tz }
+    userAgent: navigator.userAgent || '',
+    platform: navigator.platform || '',
+    language: navigator.language || '',
+    screen: `${screen.width}×${screen.height}@${window.devicePixelRatio || 1}x`,
+    canvasFp: null,
+    location: sigState.auditLocation || null,
+    address: sigState.auditAddress || null,
+    identity: sigGetSignerIdentity()
+  };
+  // Document SHA-256 (over the bytes the user would save right now)
+  try {
+    const bytes = annotations.length ? await generatePdfBytes() : pdfBytes;
+    if (bytes && crypto?.subtle?.digest) {
+      const buf = await crypto.subtle.digest('SHA-256', bytes);
+      out.documentSha256 = Array.from(new Uint8Array(buf))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+  } catch (_) {}
+  // External time + IP + IP-geolocation (best-effort; may fail offline / blocked).
+  // ipapi.co returns IP, city, region, country, lat/lon, ISP — all in one call.
+  // Falls back to ipinfo.io then ipify.org if the first one is blocked.
+  await Promise.allSettled([
+    (async () => {
+      try {
+        const r = await fetch('https://ipapi.co/json/', { cache: 'no-store' });
+        if (r.ok) {
+          const j = await r.json();
+          if (!j.error) {
+            out.ip = j.ip || null;
+            out.ipLocation = {
+              city: j.city || null,
+              region: j.region || j.region_code || null,
+              country: j.country_name || j.country || null,
+              countryCode: j.country_code || null,
+              postal: j.postal || null,
+              latitude: typeof j.latitude === 'number' ? j.latitude : null,
+              longitude: typeof j.longitude === 'number' ? j.longitude : null,
+              org: j.org || null,
+              asn: j.asn || null,
+              timezone: j.timezone || null
+            };
+            return;
+          }
+        }
+      } catch (_) {}
+      // Fallback 1: ipinfo.io (similar data shape but "loc": "lat,lon" string)
+      try {
+        const r = await fetch('https://ipinfo.io/json', { cache: 'no-store' });
+        if (r.ok) {
+          const j = await r.json();
+          out.ip = j.ip || null;
+          const [lat, lon] = (j.loc || '').split(',').map(parseFloat);
+          out.ipLocation = {
+            city: j.city || null,
+            region: j.region || null,
+            country: j.country || null,
+            countryCode: j.country || null,
+            postal: j.postal || null,
+            latitude: isFinite(lat) ? lat : null,
+            longitude: isFinite(lon) ? lon : null,
+            org: j.org || null,
+            asn: null,
+            timezone: j.timezone || null
+          };
+          return;
+        }
+      } catch (_) {}
+      // Fallback 2: just the IP, no location
+      try {
+        const r = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
+        if (r.ok) out.ip = (await r.json()).ip;
+      } catch (_) {}
+    })(),
+    (async () => {
+      try {
+        const r = await fetch('https://worldtimeapi.org/api/ip', { cache: 'no-store' });
+        if (r.ok) out.serverTime = (await r.json()).utc_datetime;
+      } catch (_) {}
+    })()
+  ]);
+  // Canvas fingerprint hash (short)
+  try {
+    const c = document.createElement('canvas'); c.width = 200; c.height = 50;
+    const ctx = c.getContext('2d');
+    ctx.textBaseline = 'top'; ctx.font = '14px Arial';
+    ctx.fillStyle = '#f60'; ctx.fillRect(0, 0, 100, 50);
+    ctx.fillStyle = '#069'; ctx.fillText('audit-fp', 10, 10);
+    const blob = await new Promise(r => c.toBlob(r));
+    if (blob && crypto?.subtle?.digest) {
+      const buf = await blob.arrayBuffer();
+      const h = await crypto.subtle.digest('SHA-256', buf);
+      out.canvasFp = Array.from(new Uint8Array(h)).slice(0, 8)
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+  } catch (_) {}
+  return out;
+}
+
+// Compose a signature image with an audit stamp baked into the canvas — the user
+// can no longer separate them. Returns a dataURL ready for addImageAnnotation.
+async function sigComposeWithAudit(signatureDataURL, audit) {
+  const sigImg = await new Promise((res, rej) => {
+    const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = signatureDataURL;
+  });
+  // Layout: signature on top, audit block below in a thin gray frame.
+  const W = Math.max(360, sigImg.naturalWidth);
+  const sigH = Math.round(sigImg.naturalHeight * (W / sigImg.naturalWidth));
+  const stampLineH = 14;
+  const stampPad = 8;
+  const lines = sigBuildStampLines(audit);
+  const stampH = stampPad * 2 + lines.length * stampLineH;
+  const H = sigH + stampH + 4;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(255,255,255,0)'; ctx.fillRect(0, 0, W, H);
+  // Signature
+  ctx.drawImage(sigImg, 0, 0, W, sigH);
+  // Stamp frame
+  const sy = sigH + 4;
+  ctx.fillStyle = 'rgba(245,247,250,0.95)';
+  ctx.fillRect(0, sy, W, stampH);
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, sy + 0.5, W - 1, stampH - 1);
+  // Stamp text
+  ctx.fillStyle = '#1f2937';
+  ctx.textBaseline = 'top';
+  ctx.font = '600 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+  let ty = sy + stampPad;
+  for (const ln of lines) {
+    ctx.fillText(ln, stampPad, ty);
+    ty += stampLineH;
+  }
+  return canvas.toDataURL('image/png');
+}
+
+function sigBuildStampLines(a) {
+  const shortHash = a.documentSha256 ? a.documentSha256.slice(0, 16) + '…' + a.documentSha256.slice(-8) : 'n/a';
+  const lines = [];
+  const id = a.identity || {};
+  // Signer block first — the human-readable "who" is most important for legal weight.
+  const name = [id.first, id.last].filter(Boolean).join(' ');
+  if (name || id.role) {
+    let head = '✍ SIGNED BY ';
+    head += name || '(unnamed)';
+    if (id.role) head += `  ·  ${id.role}`;
+    lines.push(head);
+  }
+  if (id.email || id.phone) {
+    const parts = [];
+    if (id.email) parts.push(id.email);
+    if (id.phone) parts.push(id.phone);
+    lines.push(parts.join('  ·  '));
+  }
+  // Time: show the wall-clock the signer saw (their TZ) AND the UTC anchor.
+  lines.push(`🔒 ${a.localTime || a.signedAt}`);
+  lines.push(`   UTC ${a.signedAt}` + (a.serverTime ? `  ·  server ${a.serverTime}` : ''));
+  // Document integrity
+  lines.push(`SHA-256  ${shortHash}`);
+  // Signing context: IP + ISP (one line)
+  const il = a.ipLocation || {};
+  const ipBit = a.ip ? `IP ${a.ip}` : 'IP n/a';
+  const ispBit = il.org ? `  ·  ${String(il.org).slice(0, 40)}` : '';
+  lines.push(`${ipBit}${ispBit}`);
+  // Device line
+  const devBit = sigShortDevice(a.userAgent, a.platform);
+  lines.push(`${devBit}  ·  ${a.language}  ·  ${a.screen}`);
+  // Location lines — IP-based always (if we got it); GPS overrides / supplements
+  if (a.location) {
+    // GPS precise — primary line
+    lines.push(`GPS ${a.location.latitude.toFixed(5)}, ${a.location.longitude.toFixed(5)}  (±${Math.round(a.location.accuracy)}m)`);
+    if (a.address) {
+      const addr = a.address.length > 80 ? a.address.slice(0, 77) + '…' : a.address;
+      lines.push(addr);
+    }
+    // Still print IP-based location as a corroborating data point
+    const ipLoc = _sigFormatIpLocation(il);
+    if (ipLoc) lines.push(`IP location: ${ipLoc}`);
+  } else if (il.city || il.region || il.country || (il.latitude && il.longitude)) {
+    // No GPS — IP location is the only "where". Print coarsely + coordinates.
+    const ipLoc = _sigFormatIpLocation(il);
+    if (ipLoc) lines.push(`Location (IP): ${ipLoc}`);
+    if (typeof il.latitude === 'number' && typeof il.longitude === 'number') {
+      lines.push(`IP geo: ${il.latitude.toFixed(4)}, ${il.longitude.toFixed(4)} (city-level)`);
+    }
+  }
+  if (a.canvasFp) lines.push(`Device fingerprint  ${a.canvasFp}`);
+  return lines;
+}
+
+function _sigFormatIpLocation(il) {
+  if (!il) return null;
+  const parts = [];
+  if (il.city)    parts.push(il.city);
+  if (il.region && il.region !== il.city) parts.push(il.region);
+  if (il.postal)  parts.push(il.postal);
+  if (il.country) parts.push(il.country);
+  return parts.length ? parts.join(', ') : null;
+}
+
+function sigShortDevice(ua, platform) {
+  if (!ua) return platform || '?';
+  let os = platform || '';
+  if (/Windows NT 10/i.test(ua)) os = 'Windows 10/11';
+  else if (/Mac OS X/i.test(ua)) os = 'macOS';
+  else if (/Android/i.test(ua)) os = 'Android';
+  else if (/iPhone|iPad/i.test(ua)) os = 'iOS';
+  else if (/Linux/i.test(ua)) os = 'Linux';
+  let browser = 'Browser';
+  const m = ua.match(/(Edg|Chrome|Firefox|Safari)\/(\d+)/);
+  if (m) browser = m[1].replace('Edg', 'Edge') + ' ' + m[2];
+  return `${os} · ${browser}`;
 }
 function sigSetupSavedSignatures() {
   const section = document.getElementById('sigSavedSection');
@@ -8515,7 +9699,27 @@ async function sigOnInsert() {
       dataURL = sigState.uploadDataURL;
     }
     if (dataURL && document.getElementById('sigSaveCheckbox').checked) {
-      addSavedSignature(dataURL);
+      addSavedSignature(dataURL);  // save the bare signature, not the audit-stamped one
+    }
+    // Bake audit stamp into the signature image if requested
+    if (dataURL && document.getElementById('sigAuditCheckbox').checked) {
+      // If user clicked "Capture GPS" but it's still resolving, wait for it
+      // (allowed permission but the high-accuracy fix is still arriving).
+      if (_sigLocationInFlight) {
+        btn.textContent = 'Waiting for GPS…';
+        try { await _sigLocationInFlight; } catch (_) {}
+      }
+      btn.textContent = 'Collecting audit data…';
+      try {
+        const audit = await sigGatherAuditData();
+        dataURL = await sigComposeWithAudit(dataURL, audit);
+        // Stash the same data so the annotation can carry it through to the
+        // PDF Info dict at save time (machine-readable, survives image crop).
+        _sigPendingAuditData = audit;
+      } catch (e) {
+        console.error('[sig audit]', e);
+        showToast('Audit metadata failed: ' + (e.message || e) + '. Inserting plain signature.', 'warn');
+      }
     }
     const cb = sigState.callback;
     closeSignatureModal();
@@ -8559,6 +9763,12 @@ function insertSignatureFromDataURL(dataURL) {
   if (!pos) return;
   const newAnn = addImageAnnotation(pos, dataURL, 'image/png');
   newAnn.isSignature = true;
+  // Attach the audit data captured in sigOnInsert (if any) so generatePdfBytes
+  // can embed it into the PDF Info dict + keywords on save.
+  if (_sigPendingAuditData) {
+    newAnn.auditData = _sigPendingAuditData;
+    _sigPendingAuditData = null;
+  }
   const img = newAnn.imgEl;
   img.addEventListener('load', () => {
     const maxW = 220;
@@ -9036,6 +10246,7 @@ function openStampEditor(ann) {
 }
 function enableStampDrag(el, ann) {
   let dragging = false, downX = 0, downY = 0, startLeft = 0, startTop = 0, hasMoved = false;
+  let restOpacity = '1';
   el.addEventListener('pointerdown', e => {
     if (currentTool === 'draw' || currentTool === 'shape') return;
     if (e.button !== undefined && e.button !== 0) return;
@@ -9043,7 +10254,8 @@ function enableStampDrag(el, ann) {
     downX = e.clientX; downY = e.clientY;
     startLeft = ann.x; startTop = ann.y;
     hasMoved = false; dragging = true;
-    el.style.opacity = '0.85';
+    restOpacity = (ann.opacity != null && ann.opacity < 1) ? String(ann.opacity) : (el.style.opacity || '1');
+    el.style.opacity = String(Math.max(0.15, parseFloat(restOpacity) * 0.85));
     try { el.setPointerCapture(e.pointerId); } catch (er) {}
   });
   el.addEventListener('pointermove', e => {
@@ -9063,7 +10275,7 @@ function enableStampDrag(el, ann) {
   });
   const end = (e) => {
     if (!dragging) return;
-    el.style.opacity = '1';
+    el.style.opacity = restOpacity;
     try { el.releasePointerCapture(e.pointerId); } catch (er) {}
     hideAlignmentGuides();
     if (!hasMoved) select(ann);
@@ -9840,10 +11052,10 @@ async function splitSelected() {
 let compressChoice = { quality: 0.72, dpi: 120 };
 function openCompressModal() {
   document.getElementById('compressModal').classList.add('show');
-  document.querySelectorAll('.compress-card').forEach(c => {
+  document.querySelectorAll('#compressModal .compress-card').forEach(c => {
     c.classList.toggle('active', parseFloat(c.dataset.quality) === compressChoice.quality);
     c.onclick = () => {
-      document.querySelectorAll('.compress-card').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('#compressModal .compress-card').forEach(x => x.classList.remove('active'));
       c.classList.add('active');
       compressChoice = { quality: parseFloat(c.dataset.quality), dpi: parseInt(c.dataset.dpi) };
     };
@@ -9932,6 +11144,7 @@ async function loadPDFFromBytes(bytes, filename) {
   document.getElementById('saveBtn').disabled = false;
   document.getElementById('printBtn').disabled = false;
   document.getElementById('organizeBtn').disabled = false;
+  if (typeof _enableMainPdfTools === 'function') _enableMainPdfTools();
   document.getElementById('zoomBar').style.display = 'flex';
   updateAnnotCount();
   setContext(currentTool);
@@ -9940,38 +11153,1033 @@ async function loadPDFFromBytes(bytes, filename) {
 
 document.getElementById('organizeBtn').addEventListener('click', () => { bumpUsage('open:pages'); openOrganizeModal(); });
 
+// === Main-toolbar PDF tools: Merge / Split / Compress ===
+// These mirror the buttons inside Pages → Organize, but are reachable in one click.
+function _enableMainPdfTools() {
+  const ids = ['mergeMainBtn', 'splitMainBtn', 'compressMainBtn'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
+}
+// Merge PDF — open Organize, then trigger the merge file picker so the appended
+// pages are visible immediately and the user can rearrange before Apply.
+const _mergeMainInput = document.getElementById('mergeMainInput');
+if (_mergeMainInput) {
+  _mergeMainInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+    bumpUsage && bumpUsage('merge:main');
+    if (!organizeState) await openOrganizeModal();
+    if (organizeState) await mergePdfIntoOrganize(file);
+  });
+}
+const _splitMainBtn = document.getElementById('splitMainBtn');
+if (_splitMainBtn) {
+  _splitMainBtn.addEventListener('click', () => {
+    if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+    bumpUsage && bumpUsage('split:main');
+    openSplitModal();
+  });
+}
+
+// =====================================================================
+// =====================  PASSWORD PROTECTION  =========================
+// =====================================================================
+// Standard PDF password (RC4 / AES) requires a heavy WASM lib (qpdf-wasm
+// ≈ 5 MB). For now we use a 100%-client-side AES-256-GCM envelope: file
+// is wrapped as `.pdfenc`, re-opens via the normal Open flow which sniffs
+// the magic header and prompts for the password.
+const PDFENC_MAGIC = new TextEncoder().encode('PDFMINIE');  // 8 bytes
+const PDFENC_ITER = 250000;
+
+async function _pdfencDeriveKey(password, salt) {
+  const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: PDFENC_ITER, hash: 'SHA-256' },
+    km, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']
+  );
+}
+
+async function pdfencEncrypt(bytes, password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv   = crypto.getRandomValues(new Uint8Array(12));
+  const key  = await _pdfencDeriveKey(password, salt);
+  const ct   = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, bytes));
+  // Layout: magic(8) | salt(16) | iv(12) | ciphertext
+  const out  = new Uint8Array(PDFENC_MAGIC.length + salt.length + iv.length + ct.length);
+  out.set(PDFENC_MAGIC, 0);
+  out.set(salt, 8);
+  out.set(iv, 24);
+  out.set(ct, 36);
+  return out;
+}
+async function pdfencDecrypt(bytes, password) {
+  if (bytes.length < 36) throw new Error('File is too short to be encrypted.');
+  const head = new TextDecoder().decode(bytes.slice(0, 8));
+  if (head !== 'PDFMINIE') throw new Error('Not a PDF Mini encrypted file.');
+  const salt = bytes.slice(8, 24);
+  const iv   = bytes.slice(24, 36);
+  const ct   = bytes.slice(36);
+  const key  = await _pdfencDeriveKey(password, salt);
+  try {
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+    return new Uint8Array(pt).buffer;
+  } catch (_) {
+    throw new Error('Wrong password (or file corrupt).');
+  }
+}
+
+function openPasswordModal() {
+  if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+  document.getElementById('passwordInput').value = '';
+  document.getElementById('passwordConfirm').value = '';
+  document.getElementById('passwordError').textContent = '';
+  document.getElementById('passwordShow').checked = false;
+  document.getElementById('passwordInput').type = 'password';
+  document.getElementById('passwordConfirm').type = 'password';
+  document.getElementById('passwordModal').classList.add('show');
+  setTimeout(() => document.getElementById('passwordInput').focus(), 50);
+}
+function closePasswordModal() { document.getElementById('passwordModal').classList.remove('show'); }
+async function applyPassword() {
+  const pwd = document.getElementById('passwordInput').value;
+  const conf = document.getElementById('passwordConfirm').value;
+  const err = document.getElementById('passwordError');
+  err.textContent = '';
+  if (!pwd) { err.textContent = 'Enter a password.'; return; }
+  if (pwd.length < 8) { err.textContent = 'Use at least 8 characters.'; return; }
+  if (pwd !== conf) { err.textContent = 'Passwords don\'t match.'; return; }
+  const btn = document.getElementById('passwordEncrypt');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Encrypting…';
+  try {
+    const bytes = annotations.length ? await generatePdfBytes() : pdfBytes;
+    const enc = await pdfencEncrypt(bytes, pwd);
+    const blob = new Blob([enc], { type: 'application/octet-stream' });
+    const base = (pdfFileName || 'document.pdf').replace(/\.pdf$/i, '');
+    downloadBlob(blob, base + '.pdfenc');
+    closePasswordModal();
+    showToast('Encrypted file downloaded. Reopen via the Open button — same app prompts for the password.', 'success');
+  } catch (e) {
+    console.error('[encrypt]', e);
+    err.textContent = 'Encryption failed: ' + (e.message || e);
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+function _promptAndDecryptPdfenc(bytes) {
+  // Returns a Promise resolving to the decrypted ArrayBuffer, or null if cancelled.
+  return new Promise((resolve) => {
+    const modal = document.getElementById('passwordOpenModal');
+    const input = document.getElementById('passwordOpenInput');
+    const err = document.getElementById('passwordOpenError');
+    input.value = ''; err.textContent = '';
+    modal.classList.add('show');
+    setTimeout(() => input.focus(), 50);
+    const onClose = (result) => {
+      modal.classList.remove('show');
+      document.getElementById('passwordOpenGo').onclick = null;
+      document.getElementById('passwordOpenCancel').onclick = null;
+      document.getElementById('passwordOpenClose').onclick = null;
+      input.onkeydown = null;
+      resolve(result);
+    };
+    const tryDecrypt = async () => {
+      const pwd = input.value;
+      if (!pwd) { err.textContent = 'Enter the password.'; return; }
+      document.getElementById('passwordOpenGo').disabled = true;
+      try {
+        const buf = await pdfencDecrypt(bytes, pwd);
+        onClose(buf);
+      } catch (e) {
+        err.textContent = e.message || 'Decryption failed.';
+      } finally {
+        document.getElementById('passwordOpenGo').disabled = false;
+      }
+    };
+    document.getElementById('passwordOpenGo').onclick = tryDecrypt;
+    document.getElementById('passwordOpenCancel').onclick = () => onClose(null);
+    document.getElementById('passwordOpenClose').onclick = () => onClose(null);
+    input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); tryDecrypt(); } };
+  });
+}
+
+// Wire UI
+(function _initPasswordUI() {
+  const c = document.getElementById('passwordClose'); if (c) c.onclick = closePasswordModal;
+  const cn = document.getElementById('passwordCancel'); if (cn) cn.onclick = closePasswordModal;
+  const enc = document.getElementById('passwordEncrypt'); if (enc) enc.onclick = applyPassword;
+  const show = document.getElementById('passwordShow');
+  if (show) show.addEventListener('change', () => {
+    const t = show.checked ? 'text' : 'password';
+    document.getElementById('passwordInput').type = t;
+    document.getElementById('passwordConfirm').type = t;
+  });
+  document.getElementById('passwordModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'passwordModal') closePasswordModal();
+  });
+  // Enter key submits
+  document.getElementById('passwordConfirm')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); applyPassword(); }
+  });
+})();
+
+// =====================================================================
+// =====================  PRO TOOLS  ===================================
+// =====================================================================
+
+// === 1. ZERO-TRUST SANITIZATION ===
+function openSanitizeModal() {
+  if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+  document.getElementById('sanStatus').textContent = '';
+  document.getElementById('sanitizeModal').classList.add('show');
+}
+function closeSanitizeModal() { document.getElementById('sanitizeModal').classList.remove('show'); }
+async function doSanitize() {
+  const stripMeta = document.getElementById('sanStripMeta').checked;
+  const flatten   = document.getElementById('sanFlatten').checked;
+  const rasterize = document.getElementById('sanRasterize').checked;
+  const dpi       = parseInt(document.getElementById('sanRasterDpi').value) || 150;
+  const status = document.getElementById('sanStatus');
+  const btn = document.getElementById('sanitizeGo');
+  btn.disabled = true; const orig = btn.textContent;
+  try {
+    btn.textContent = 'Sanitizing…';
+    status.textContent = 'Baking annotations…';
+    // Step 1: bake annotations into the visible layer (flatten always happens during normal save)
+    let bytes = (flatten && annotations.length) ? await generatePdfBytes() : pdfBytes;
+    let doc = await PDFDocument.load(bytes.slice(0), PDF_LOAD_OPTS);
+
+    if (stripMeta) {
+      status.textContent = 'Stripping metadata…';
+      try { doc.setTitle(''); doc.setAuthor(''); doc.setSubject(''); doc.setKeywords([]); } catch (_) {}
+      try { doc.setProducer('PDF Mini Pro — sanitized'); doc.setCreator('PDF Mini Pro'); } catch (_) {}
+      // Reset dates so creation history doesn't leak
+      try { doc.setCreationDate(new Date()); doc.setModificationDate(new Date()); } catch (_) {}
+      // Wipe non-standard Info dict entries + XMP + actions. Use the dict's
+      // public iteration API (`.keys()`) — `.entries()` isn't on PDFDict.
+      try {
+        const { PDFName } = PDFLib;
+        const info = doc.context.lookup(doc.context.trailerInfo.Info);
+        if (info && typeof info.keys === 'function') {
+          const keep = new Set(['Title','Author','Subject','Keywords','Producer','Creator','CreationDate','ModDate']);
+          const toDelete = [];
+          for (const k of info.keys()) {
+            const name = (k && k.encodedName) ? k.encodedName.replace(/^\//,'') : String(k);
+            if (!keep.has(name)) toDelete.push(name);
+          }
+          for (const name of toDelete) {
+            try { info.delete(PDFName.of(name)); } catch (_) {}
+          }
+        }
+        // Remove XMP metadata stream + name tree + auto-actions
+        try { doc.catalog.delete(PDFName.of('Metadata')); } catch (_) {}
+        try { doc.catalog.delete(PDFName.of('Names')); } catch (_) {}
+        try { doc.catalog.delete(PDFName.of('OpenAction')); } catch (_) {}
+        try { doc.catalog.delete(PDFName.of('AA')); } catch (_) {}
+      } catch (e) { console.warn('[sanitize] info strip:', e); }
+    }
+
+    // Step 2: rasterize if requested — destroys text but guarantees nothing hidden
+    if (rasterize) {
+      status.textContent = 'Rasterizing pages…';
+      const pdfjs = await loadPdfJsDoc(await doc.save({ useObjectStreams: false }));
+      const newDoc = await PDFDocument.create();
+      for (let i = 1; i <= pdfjs.numPages; i++) {
+        btn.textContent = `Rasterizing… ${i}/${pdfjs.numPages}`;
+        const page = await pdfjs.getPage(i);
+        const vp = page.getViewport({ scale: dpi / 72 });
+        const c = document.createElement('canvas');
+        c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+        await page.render({ canvasContext: ctx, viewport: vp }).promise;
+        const jpeg = dataURLToBytes(c.toDataURL('image/jpeg', 0.92));
+        const img = await newDoc.embedJpg(jpeg);
+        const nat = page.getViewport({ scale: 1 });
+        const np = newDoc.addPage([nat.width, nat.height]);
+        np.drawImage(img, { x: 0, y: 0, width: nat.width, height: nat.height });
+      }
+      if (stripMeta) {
+        try { newDoc.setProducer('PDF Mini Pro — sanitized'); newDoc.setCreator('PDF Mini Pro'); } catch (_) {}
+      }
+      doc = newDoc;
+    }
+
+    status.textContent = 'Writing output…';
+    const out = await doc.save({ useObjectStreams: !rasterize });
+    const blob = new Blob([out], { type: 'application/pdf' });
+    const base = (pdfFileName || 'document.pdf').replace(/\.pdf$/i, '');
+    downloadBlob(blob, base + '-sanitized.pdf');
+    closeSanitizeModal();
+    showToast('Sanitized PDF downloaded.', 'success');
+  } catch (e) {
+    console.error('[sanitize]', e);
+    status.textContent = 'Failed: ' + (e.message || e);
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+// === 2. REGEX REDACT ===
+function openRegexRedactModal() {
+  if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+  document.getElementById('rxStatus').textContent = '';
+  document.getElementById('regexRedactModal').classList.add('show');
+}
+function closeRegexRedactModal() { document.getElementById('regexRedactModal').classList.remove('show'); }
+function _rxBuildRegex() {
+  const status = document.getElementById('rxStatus');
+  const pat = document.getElementById('rxPattern').value.trim();
+  if (!pat) { status.textContent = '⚠ Type or pick a pattern first.'; return null; }
+  const flags = 'g' + (document.getElementById('rxFlagI').checked ? 'i' : '');
+  try { return new RegExp(pat, flags); } catch (e) {
+    status.textContent = '⚠ Invalid regex: ' + e.message;
+    return null;
+  }
+}
+
+// Find every PDF text item whose text matches the regex.
+// Tries two strategies so we catch matches that span multiple text items too:
+//  1. Per-item: regex tested against each item's own .dataset.text (catches matches inside one item).
+//  2. Per-line: builds a left-to-right per-y-coord text line, finds match ranges, maps back to items.
+function _rxFindMatchingItems(re) {
+  const allItems = Array.from(document.querySelectorAll('.pdf-text-item:not(.pdf-text-item-consumed)'));
+  if (!allItems.length) return { items: [], itemsAvailable: 0 };
+  const hits = new Set();
+  // Pass 1 — per-item
+  for (const it of allItems) {
+    const t = it.dataset.text || '';
+    if (!t) continue;
+    re.lastIndex = 0;
+    if (re.test(t)) hits.add(it);
+  }
+  // Pass 2 — per-line (group items by overlay + similar yTop, then concat)
+  const byOverlay = new Map();
+  for (const it of allItems) {
+    const ov = it.closest('.overlay'); if (!ov) continue;
+    if (!byOverlay.has(ov)) byOverlay.set(ov, []);
+    byOverlay.get(ov).push(it);
+  }
+  for (const [ov, items] of byOverlay) {
+    // Sort by y then x
+    items.sort((a, b) => {
+      const ay = parseFloat(a.dataset.y) || 0, by = parseFloat(b.dataset.y) || 0;
+      if (Math.abs(ay - by) < 6) return (parseFloat(a.dataset.x) || 0) - (parseFloat(b.dataset.x) || 0);
+      return ay - by;
+    });
+    // Cluster items into visual lines (by y proximity)
+    const lines = [];
+    let curLine = []; let curY = null;
+    for (const it of items) {
+      const y = parseFloat(it.dataset.y) || 0;
+      const h = parseFloat(it.dataset.h) || 14;
+      if (curY === null || Math.abs(y - curY) < h * 0.6) {
+        curLine.push(it);
+        if (curY === null) curY = y;
+      } else {
+        lines.push(curLine);
+        curLine = [it]; curY = y;
+      }
+    }
+    if (curLine.length) lines.push(curLine);
+    // For each line, build text + character→item map, then run regex
+    for (const line of lines) {
+      const ranges = [];  // { start, end (exclusive), item }
+      let cursor = 0;
+      let lineText = '';
+      let prevItem = null;
+      for (const it of line) {
+        const t = it.dataset.text || '';
+        if (!t) continue;
+        // Insert a space between items if there's a visible gap (so cards-like words "AB CD" aren't joined)
+        if (prevItem) {
+          const px = parseFloat(prevItem.dataset.x) || 0;
+          const pw = parseFloat(prevItem.dataset.w) || 0;
+          const cx = parseFloat(it.dataset.x) || 0;
+          if (cx - (px + pw) > (parseFloat(it.dataset.h) || 14) * 0.25) {
+            lineText += ' '; cursor += 1;
+          }
+        }
+        ranges.push({ start: cursor, end: cursor + t.length, item: it });
+        lineText += t;
+        cursor += t.length;
+        prevItem = it;
+      }
+      re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(lineText)) !== null) {
+        const mStart = m.index, mEnd = mStart + m[0].length;
+        for (const r of ranges) {
+          if (r.end <= mStart || r.start >= mEnd) continue;
+          hits.add(r.item);
+        }
+        if (m[0].length === 0) re.lastIndex++;  // guard against zero-width infinite loops
+      }
+    }
+  }
+  return { items: Array.from(hits), itemsAvailable: allItems.length };
+}
+
+function regexRedactPreview() {
+  const re = _rxBuildRegex(); if (!re) return;
+  const status = document.getElementById('rxStatus');
+  document.querySelectorAll('.rx-preview-hit').forEach(el => el.remove());
+  const { items, itemsAvailable } = _rxFindMatchingItems(re);
+  if (!itemsAvailable) {
+    status.innerHTML = '⚠ No PDF text layer found. If this is a scanned image, run <strong>More → OCR</strong> first.';
+    return;
+  }
+  for (const it of items) {
+    const r = it.getBoundingClientRect();
+    const overlay = it.closest('.overlay'); if (!overlay) continue;
+    const orect = overlay.getBoundingClientRect();
+    const hl = document.createElement('div');
+    hl.className = 'rx-preview-hit';
+    hl.style.cssText = `position:absolute;left:${(r.left-orect.left)/currentZoom}px;top:${(r.top-orect.top)/currentZoom}px;width:${r.width/currentZoom}px;height:${r.height/currentZoom}px;background:rgba(220,38,38,0.30);border:1.5px solid #dc2626;pointer-events:none;z-index:90;border-radius:2px;animation:rxPulse 1s ease-in-out infinite alternate`;
+    overlay.appendChild(hl);
+  }
+  status.innerHTML = items.length
+    ? `<strong style="color:var(--accent)">${items.length}</strong> item${items.length === 1 ? '' : 's'} matched · scrolled into the document. Click <strong>Redact</strong> to remove permanently.`
+    : `<strong style="color:var(--danger)">0</strong> matches in ${itemsAvailable} searchable items. Try toggling <em>Case-insensitive</em> or check the pattern.`;
+  setTimeout(() => document.querySelectorAll('.rx-preview-hit').forEach(el => el.remove()), 8000);
+}
+
+function regexRedactApply() {
+  const re = _rxBuildRegex(); if (!re) return;
+  const { items, itemsAvailable } = _rxFindMatchingItems(re);
+  if (!itemsAvailable) {
+    showToast('No PDF text layer found. Run OCR first if this is a scan.', 'warn');
+    return;
+  }
+  let count = 0;
+  for (const it of items) {
+    const overlay = it.closest('.overlay'); if (!overlay) continue;
+    const pageNum = parseInt(it.dataset.pageNum);
+    const x = parseFloat(it.dataset.x);
+    const y = parseFloat(it.dataset.y);
+    const w = parseFloat(it.dataset.w);
+    const h = parseFloat(it.dataset.h);
+    const bleed = 2;
+    const el = document.createElement('div');
+    el.className = 'redact-annotation';
+    el.style.left = (x - bleed) + 'px'; el.style.top = (y - bleed) + 'px';
+    el.style.width = (w + bleed * 2) + 'px'; el.style.height = (h + bleed * 2) + 'px';
+    overlay.appendChild(el);
+    const ann = {
+      type: 'redact', pageNum,
+      x: x - bleed, y: y - bleed,
+      width: w + bleed * 2, height: h + bleed * 2,
+      el
+    };
+    if (typeof enableWhiteoutInteractions === 'function') enableWhiteoutInteractions(el, ann);
+    annotations.push(ann);
+    it.classList.add('pdf-text-item-consumed');
+    it.style.visibility = 'hidden';
+    count++;
+  }
+  if (count > 0) pushHistory('rx-redact');
+  closeRegexRedactModal();
+  if (count > 0) showToast(`${count} match${count === 1 ? '' : 'es'} redacted. Save the PDF to bake them in (metadata is auto-wiped on save).`, 'success');
+  else showToast('No matches found.', 'warn');
+}
+
+// === 3. TABLE → CSV EXTRACTION ===
+let _tableExtractMode = false;
+function openTableExtract() {
+  if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+  _tableExtractMode = true;
+  showToast('Click and drag a rectangle over the table you want to extract.', 'info');
+  document.body.style.cursor = 'crosshair';
+}
+function _tableExtractFromRect(overlay, rect) {
+  // rect: { x, y, w, h } in overlay coords
+  const items = Array.from(overlay.querySelectorAll('.pdf-text-item'));
+  const inside = [];
+  for (const it of items) {
+    const ix = parseFloat(it.dataset.x);
+    const iy = parseFloat(it.dataset.y);
+    const iw = parseFloat(it.dataset.w);
+    const ih = parseFloat(it.dataset.h);
+    const cx = ix + iw / 2;
+    const cy = iy + ih / 2;
+    if (cx >= rect.x && cx <= rect.x + rect.w && cy >= rect.y && cy <= rect.y + rect.h) {
+      inside.push({ x: ix, y: iy, w: iw, h: ih, text: it.dataset.text || '' });
+    }
+  }
+  if (!inside.length) { showToast('No text found inside the rectangle.', 'warn'); return; }
+  // Cluster by row (y-coordinate) using a tolerance derived from item heights
+  const avgH = inside.reduce((s, i) => s + i.h, 0) / inside.length;
+  inside.sort((a, b) => a.y - b.y || a.x - b.x);
+  const rows = [];
+  let curRow = []; let curY = inside[0].y;
+  for (const it of inside) {
+    if (Math.abs(it.y - curY) > avgH * 0.6) {
+      if (curRow.length) rows.push(curRow);
+      curRow = []; curY = it.y;
+    }
+    curRow.push(it);
+  }
+  if (curRow.length) rows.push(curRow);
+  // Determine column boundaries from the union of x ranges across rows
+  const colSeeds = [];
+  for (const row of rows) for (const it of row) colSeeds.push(it.x);
+  colSeeds.sort((a, b) => a - b);
+  const cols = [];
+  const colTol = avgH * 1.2;
+  for (const cx of colSeeds) {
+    if (!cols.length || cx - cols[cols.length - 1] > colTol) cols.push(cx);
+  }
+  // Place each row's items into the nearest column
+  const csvRows = rows.map(row => {
+    const cells = cols.map(() => '');
+    row.sort((a, b) => a.x - b.x);
+    for (const it of row) {
+      let bestCol = 0, bestDist = Infinity;
+      for (let c = 0; c < cols.length; c++) {
+        const d = Math.abs(it.x - cols[c]);
+        if (d < bestDist) { bestDist = d; bestCol = c; }
+      }
+      cells[bestCol] = (cells[bestCol] ? cells[bestCol] + ' ' : '') + it.text;
+    }
+    return cells;
+  });
+  // CSV escape
+  const esc = (v) => {
+    const s = String(v == null ? '' : v);
+    if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  };
+  const csv = csvRows.map(r => r.map(esc).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const base = (pdfFileName || 'document.pdf').replace(/\.pdf$/i, '');
+  downloadBlob(blob, base + '-table.csv');
+  showToast(`Extracted ${csvRows.length} rows × ${cols.length} cols → CSV downloaded.`, 'success');
+}
+(function _initTableExtractDragSelect() {
+  // Listen at document capture so it works regardless of currentTool
+  let start = null, preview = null, overlay = null;
+  document.addEventListener('pointerdown', (e) => {
+    if (!_tableExtractMode) return;
+    const ov = e.target.closest && e.target.closest('.overlay');
+    if (!ov) return;
+    e.preventDefault(); e.stopPropagation();
+    overlay = ov;
+    const r = ov.getBoundingClientRect();
+    start = { x: (e.clientX - r.left) / currentZoom, y: (e.clientY - r.top) / currentZoom };
+    preview = document.createElement('div');
+    preview.style.cssText = `position:absolute;left:${start.x}px;top:${start.y}px;width:0;height:0;background:rgba(37,99,235,0.18);border:1.5px dashed #2563eb;z-index:100;pointer-events:none`;
+    ov.appendChild(preview);
+    try { ov.setPointerCapture(e.pointerId); } catch (_) {}
+  }, true);
+  document.addEventListener('pointermove', (e) => {
+    if (!start || !preview || !overlay) return;
+    const r = overlay.getBoundingClientRect();
+    const cx = (e.clientX - r.left) / currentZoom;
+    const cy = (e.clientY - r.top) / currentZoom;
+    const x = Math.min(start.x, cx), y = Math.min(start.y, cy);
+    const w = Math.abs(cx - start.x), h = Math.abs(cy - start.y);
+    preview.style.left = x + 'px'; preview.style.top = y + 'px';
+    preview.style.width = w + 'px'; preview.style.height = h + 'px';
+  }, true);
+  document.addEventListener('pointerup', (e) => {
+    if (!start || !preview || !overlay) return;
+    const r = overlay.getBoundingClientRect();
+    const cx = (e.clientX - r.left) / currentZoom;
+    const cy = (e.clientY - r.top) / currentZoom;
+    const rect = {
+      x: Math.min(start.x, cx),
+      y: Math.min(start.y, cy),
+      w: Math.abs(cx - start.x),
+      h: Math.abs(cy - start.y)
+    };
+    preview.remove();
+    if (rect.w > 20 && rect.h > 20) _tableExtractFromRect(overlay, rect);
+    start = null; preview = null; overlay = null;
+    _tableExtractMode = false;
+    document.body.style.cursor = '';
+  }, true);
+})();
+
+// === 4. PDF DIFF — side-by-side visual ===
+// Both PDFs are rendered to canvas; text items are extracted with positions; an
+// item-level LCS marks which items survived (eq) vs were only-in-A (del) vs
+// only-in-B (add). Coloured boxes are overlaid on each pane at the items'
+// real positions so the user sees the change *where it lives* in the document.
+let _diffBytesA = null, _diffBytesB = null;
+const DIFF_RENDER_SCALE = 1.2;
+
+async function _diffExtractWithPositions(bytes) {
+  // Returns { pages: [ { width, height, items: [ { x, yTop, w, h, text } ] } ] }
+  const doc = await loadPdfJsDoc(bytes.slice(0));
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const p = await doc.getPage(i);
+    const vp = p.getViewport({ scale: DIFF_RENDER_SCALE });
+    const tc = await p.getTextContent();
+    const items = [];
+    for (const it of tc.items) {
+      if (!it.str || !it.str.trim()) continue;
+      const tx = pdfjsLib.Util.transform(vp.transform, it.transform);
+      const h = Math.sqrt(tx[2] * tx[2] + tx[3] * tx[3]);
+      const txXMag = Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1]);
+      const itemXMag = Math.sqrt(it.transform[0] * it.transform[0] + it.transform[1] * it.transform[1]) || 1;
+      const widthPx = (it.width || 0) * (txXMag / itemXMag);
+      items.push({
+        x: tx[4],
+        yTop: tx[5] - h,
+        w: widthPx,
+        h: h * 1.2,
+        text: it.str
+      });
+    }
+    pages.push({ width: vp.width, height: vp.height, items, page: p, viewport: vp });
+  }
+  return { doc, pages };
+}
+
+// Item-level LCS. A and B are arrays of strings (the .text of each item).
+// Returns parallel arrays `tagsA` / `tagsB`: each entry is 'eq' or 'del'/'add'.
+function _diffItemTags(A, B) {
+  const m = A.length, n = B.length;
+  // Cap to avoid OOM. 2M cells = ~8 MB Int32Array.
+  if (m * n > 2_000_000) {
+    // Fall back to identity diff: any item present in the other array (by exact text)
+    // is treated as 'eq'; everything else 'del'/'add'. Cheap but inaccurate for repeats.
+    const setB = new Set(B);
+    const setA = new Set(A);
+    return {
+      tagsA: A.map(t => setB.has(t) ? 'eq' : 'del'),
+      tagsB: B.map(t => setA.has(t) ? 'eq' : 'add'),
+      tooLarge: true
+    };
+  }
+  const W = n + 1;
+  const dp = new Int32Array((m + 1) * W);
+  for (let i = 1; i <= m; i++) {
+    const rb = i * W, pb = (i - 1) * W;
+    const ai = A[i - 1];
+    for (let j = 1; j <= n; j++) {
+      if (ai === B[j - 1]) dp[rb + j] = dp[pb + (j - 1)] + 1;
+      else {
+        const u = dp[pb + j], l = dp[rb + (j - 1)];
+        dp[rb + j] = u > l ? u : l;
+      }
+    }
+  }
+  const tagsA = new Array(m).fill('del');
+  const tagsB = new Array(n).fill('add');
+  let i = m, j = n;
+  while (i > 0 && j > 0) {
+    if (A[i - 1] === B[j - 1]) { tagsA[i - 1] = 'eq'; tagsB[j - 1] = 'eq'; i--; j--; }
+    else if (dp[i * W + (j - 1)] >= dp[(i - 1) * W + j]) { j--; }
+    else { i--; }
+  }
+  return { tagsA, tagsB, tooLarge: false };
+}
+
+async function _diffRenderPane(extracted, tags, paneEl, side) {
+  paneEl.innerHTML = '';
+  let flatIdx = 0;  // running index into the flat tags array (matches the order items were flattened)
+  for (let pi = 0; pi < extracted.pages.length; pi++) {
+    const pg = extracted.pages[pi];
+    // Wrapper holds canvas + absolutely-positioned highlight overlay
+    const wrap = document.createElement('div');
+    wrap.className = 'diff-page-wrap';
+    wrap.style.cssText = `position:relative;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.15);width:${pg.width}px;height:${pg.height}px;max-width:100%`;
+    const canvas = document.createElement('canvas');
+    canvas.width = pg.width; canvas.height = pg.height;
+    canvas.style.cssText = 'width:100%;height:auto;display:block';
+    wrap.appendChild(canvas);
+    const overlay = document.createElement('div');
+    overlay.className = 'diff-overlay';
+    overlay.style.cssText = `position:absolute;left:0;top:0;width:${pg.width}px;height:${pg.height}px;pointer-events:none`;
+    wrap.appendChild(overlay);
+    const pageLbl = document.createElement('div');
+    pageLbl.textContent = `Page ${pi + 1} / ${extracted.pages.length}`;
+    pageLbl.style.cssText = 'font-size:11px;color:var(--muted);font-family:JetBrains Mono, monospace;align-self:flex-start;padding:2px 4px';
+    paneEl.appendChild(pageLbl);
+    paneEl.appendChild(wrap);
+    // Render page
+    await pg.page.render({ canvasContext: canvas.getContext('2d'), viewport: pg.viewport }).promise;
+    // Paint highlights for items that aren't 'eq'
+    for (const it of pg.items) {
+      const tag = tags[flatIdx++];
+      if (tag === 'eq') continue;
+      const hl = document.createElement('div');
+      const isAdd = (tag === 'add');
+      hl.style.cssText = `position:absolute;left:${it.x - 1}px;top:${it.yTop - 1}px;width:${it.w + 2}px;height:${it.h + 2}px;background:${isAdd ? 'rgba(34,197,94,0.30)' : 'rgba(220,38,38,0.30)'};border:1.5px solid ${isAdd ? '#16a34a' : '#dc2626'};border-radius:2px;box-sizing:border-box`;
+      hl.title = (isAdd ? 'Added: ' : 'Removed: ') + it.text;
+      overlay.appendChild(hl);
+    }
+  }
+}
+
+function _escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function openDiffModal() {
+  _diffBytesA = null; _diffBytesB = null;
+  document.getElementById('diffNameA').textContent = 'Original — click to pick';
+  document.getElementById('diffNameB').textContent = 'Updated — click to pick';
+  document.getElementById('diffStatus').textContent = '';
+  document.getElementById('diffPaneA').innerHTML = '';
+  document.getElementById('diffPaneB').innerHTML = '';
+  document.getElementById('diffGo').disabled = true;
+  document.getElementById('diffModal').classList.add('show');
+}
+function closeDiffModal() { document.getElementById('diffModal').classList.remove('show'); }
+
+async function runDiff() {
+  const status = document.getElementById('diffStatus');
+  const paneA = document.getElementById('diffPaneA');
+  const paneB = document.getElementById('diffPaneB');
+  paneA.innerHTML = ''; paneB.innerHTML = '';
+  if (!_diffBytesA || !_diffBytesB) { status.textContent = 'Pick both files first.'; return; }
+  const btn = document.getElementById('diffGo');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Extracting…';
+  try {
+    status.textContent = 'Extracting text + positions from both PDFs…';
+    const [extA, extB] = await Promise.all([_diffExtractWithPositions(_diffBytesA), _diffExtractWithPositions(_diffBytesB)]);
+    // Flatten items into 1D arrays of text for LCS
+    const flatA = [];
+    for (const pg of extA.pages) for (const it of pg.items) flatA.push(it.text);
+    const flatB = [];
+    for (const pg of extB.pages) for (const it of pg.items) flatB.push(it.text);
+    status.textContent = `Original: ${flatA.length} items · Updated: ${flatB.length} items · computing diff…`;
+    btn.textContent = 'Diffing…';
+    // Yield to the browser so the status update repaints before the (potentially heavy) DP
+    await new Promise(r => setTimeout(r, 20));
+    const { tagsA, tagsB, tooLarge } = _diffItemTags(flatA, flatB);
+    const removed = tagsA.filter(t => t !== 'eq').length;
+    const added = tagsB.filter(t => t !== 'eq').length;
+    btn.textContent = 'Rendering…';
+    await Promise.all([
+      _diffRenderPane(extA, tagsA, paneA, 'A'),
+      _diffRenderPane(extB, tagsB, paneB, 'B')
+    ]);
+    const note = tooLarge ? ' <span style="color:var(--warn,#d97706)">(fast set-diff used — LCS would exceed memory)</span>' : '';
+    status.innerHTML = `<strong style="color:#dc2626">${removed}</strong> item${removed === 1 ? '' : 's'} removed · <strong style="color:#16a34a">${added}</strong> added${note}`;
+  } catch (e) {
+    console.error('[diff]', e);
+    status.textContent = 'Diff failed: ' + (e.message || e);
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+// Sync-scroll wiring for the two diff panes
+(function _initDiffSyncScroll() {
+  let syncing = false;
+  const paneA = () => document.getElementById('diffPaneA');
+  const paneB = () => document.getElementById('diffPaneB');
+  const onScroll = (src, dst) => () => {
+    if (!document.getElementById('diffSyncScroll')?.checked) return;
+    if (syncing) return;
+    syncing = true;
+    const a = src(), b = dst();
+    if (a && b) {
+      const ratio = a.scrollHeight > a.clientHeight ? (a.scrollTop / (a.scrollHeight - a.clientHeight)) : 0;
+      b.scrollTop = ratio * (b.scrollHeight - b.clientHeight);
+    }
+    requestAnimationFrame(() => { syncing = false; });
+  };
+  // Bind after modal is in DOM
+  setTimeout(() => {
+    const a = paneA(), b = paneB();
+    if (a) a.addEventListener('scroll', onScroll(paneA, paneB));
+    if (b) b.addEventListener('scroll', onScroll(paneB, paneA));
+  }, 100);
+})();
+
+// === 5. JSON FORM FILL ===
+function openJsonFillModal() {
+  if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+  document.getElementById('jsonFillStatus').textContent = '';
+  document.getElementById('jsonFillModal').classList.add('show');
+}
+function closeJsonFillModal() { document.getElementById('jsonFillModal').classList.remove('show'); }
+function _jsonFillParseInput() {
+  const txt = document.getElementById('jsonFillPayload').value.trim();
+  if (!txt) return { error: 'Paste a JSON object or array.' };
+  try { return { data: JSON.parse(txt) }; }
+  catch (e) { return { error: 'Invalid JSON: ' + e.message }; }
+}
+async function _jsonFillGetFields() {
+  // Extract form field names from current pdfBytes
+  try {
+    const doc = await PDFDocument.load(pdfBytes.slice(0), PDF_LOAD_OPTS);
+    const form = doc.getForm();
+    return form.getFields().map(f => ({
+      name: f.getName(),
+      type: f.constructor.name
+    }));
+  } catch (e) {
+    console.warn('[jsonFill] form load:', e);
+    return [];
+  }
+}
+async function jsonFillPreview() {
+  const p = _jsonFillParseInput();
+  const status = document.getElementById('jsonFillStatus');
+  if (p.error) { status.textContent = p.error; return; }
+  const fields = await _jsonFillGetFields();
+  if (!fields.length) { status.textContent = 'This PDF has no AcroForm fields. (Filled-PDF feature only works on form-enabled PDFs.)'; return; }
+  const data = Array.isArray(p.data) ? (p.data[0] || {}) : p.data;
+  const keys = Object.keys(data);
+  const matches = [];
+  for (const f of fields) {
+    const fn = f.name.toLowerCase();
+    const k = keys.find(kk => fn.includes(kk.toLowerCase()) || kk.toLowerCase().includes(fn));
+    matches.push({ field: f.name, jsonKey: k || '(no match)', value: k ? data[k] : '' });
+  }
+  status.innerHTML = `<strong>${fields.length} fields, ${matches.filter(m => m.jsonKey !== '(no match)').length} matched:</strong><br>` +
+    matches.map(m => `<code style="color:${m.jsonKey === '(no match)' ? 'var(--danger)' : 'var(--accent)'}">${m.field}</code> ← <code>${m.jsonKey}</code>${m.value !== undefined ? ` = "${String(m.value).slice(0,40)}"` : ''}`).join('<br>');
+}
+async function jsonFillApply() {
+  const p = _jsonFillParseInput();
+  const status = document.getElementById('jsonFillStatus');
+  if (p.error) { status.textContent = p.error; return; }
+  const btn = document.getElementById('jsonFillGo');
+  btn.disabled = true; const orig = btn.textContent; btn.textContent = 'Filling…';
+  try {
+    const records = Array.isArray(p.data) ? p.data : [p.data];
+    let totalFilled = 0;
+    for (let i = 0; i < records.length; i++) {
+      const rec = records[i];
+      const doc = await PDFDocument.load(pdfBytes.slice(0), PDF_LOAD_OPTS);
+      const form = doc.getForm();
+      const fields = form.getFields();
+      const recKeys = Object.keys(rec);
+      let filled = 0;
+      for (const f of fields) {
+        const fn = f.getName().toLowerCase();
+        const k = recKeys.find(kk => fn.includes(kk.toLowerCase()) || kk.toLowerCase().includes(fn));
+        if (!k) continue;
+        const v = rec[k];
+        try {
+          if (f.constructor.name === 'PDFCheckBox') {
+            if (v) f.check(); else f.uncheck();
+          } else if (f.constructor.name === 'PDFRadioGroup') {
+            f.select(String(v));
+          } else if (f.constructor.name === 'PDFDropdown' || f.constructor.name === 'PDFOptionList') {
+            f.select(String(v));
+          } else {
+            f.setText(String(v));
+          }
+          filled++;
+        } catch (_) {}
+      }
+      totalFilled += filled;
+      const bytes = await doc.save();
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const base = (pdfFileName || 'document.pdf').replace(/\.pdf$/i, '');
+      const suffix = records.length > 1 ? `-filled-${String(i + 1).padStart(String(records.length).length, '0')}` : '-filled';
+      downloadBlob(blob, base + suffix + '.pdf');
+      if (records.length > 1 && i < records.length - 1) await new Promise(r => setTimeout(r, 120));
+    }
+    closeJsonFillModal();
+    showToast(`Filled ${totalFilled} fields across ${records.length} document${records.length === 1 ? '' : 's'}.`, 'success');
+  } catch (e) {
+    console.error('[jsonFill]', e);
+    status.textContent = 'Failed: ' + (e.message || e);
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+// === Wire Pro tools UI ===
+(function _initProTools() {
+  // Sanitize
+  document.getElementById('sanitizeBtnMenu')?.addEventListener('click', () => { closeAllDropdowns && closeAllDropdowns(); openSanitizeModal(); });
+  document.getElementById('sanitizeClose')?.addEventListener('click', closeSanitizeModal);
+  document.getElementById('sanitizeCancel')?.addEventListener('click', closeSanitizeModal);
+  document.getElementById('sanitizeGo')?.addEventListener('click', doSanitize);
+  document.getElementById('sanitizeModal')?.addEventListener('click', (e) => { if (e.target.id === 'sanitizeModal') closeSanitizeModal(); });
+
+  // RegEx redact
+  document.getElementById('regexRedactBtnMenu')?.addEventListener('click', () => { closeAllDropdowns && closeAllDropdowns(); openRegexRedactModal(); });
+  document.getElementById('regexRedactClose')?.addEventListener('click', closeRegexRedactModal);
+  document.getElementById('regexRedactCancel')?.addEventListener('click', closeRegexRedactModal);
+  document.getElementById('rxPreview')?.addEventListener('click', regexRedactPreview);
+  document.getElementById('regexRedactGo')?.addEventListener('click', regexRedactApply);
+  document.querySelectorAll('[data-rx-preset]').forEach(b => {
+    b.addEventListener('click', () => { document.getElementById('rxPattern').value = b.dataset.rxPreset; });
+  });
+
+  // Table extract
+  document.getElementById('tableExtractBtnMenu')?.addEventListener('click', () => { closeAllDropdowns && closeAllDropdowns(); openTableExtract(); });
+
+  // Diff
+  document.getElementById('diffBtnMenu')?.addEventListener('click', () => { closeAllDropdowns && closeAllDropdowns(); openDiffModal(); });
+  document.getElementById('diffClose')?.addEventListener('click', closeDiffModal);
+  document.getElementById('diffCancel')?.addEventListener('click', closeDiffModal);
+  document.getElementById('diffGo')?.addEventListener('click', runDiff);
+  const dA = document.getElementById('diffFileA');
+  if (dA) dA.addEventListener('change', async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    _diffBytesA = new Uint8Array(await f.arrayBuffer());
+    document.getElementById('diffNameA').textContent = f.name;
+    document.getElementById('diffGo').disabled = !(_diffBytesA && _diffBytesB);
+  });
+  const dB = document.getElementById('diffFileB');
+  if (dB) dB.addEventListener('change', async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    _diffBytesB = new Uint8Array(await f.arrayBuffer());
+    document.getElementById('diffNameB').textContent = f.name;
+    document.getElementById('diffGo').disabled = !(_diffBytesA && _diffBytesB);
+  });
+
+  // JSON fill
+  document.getElementById('jsonFillBtnMenu')?.addEventListener('click', () => { closeAllDropdowns && closeAllDropdowns(); openJsonFillModal(); });
+  document.getElementById('jsonFillClose')?.addEventListener('click', closeJsonFillModal);
+  document.getElementById('jsonFillCancel')?.addEventListener('click', closeJsonFillModal);
+  document.getElementById('jsonFillPreview')?.addEventListener('click', jsonFillPreview);
+  document.getElementById('jsonFillGo')?.addEventListener('click', jsonFillApply);
+})();
+
+// === SPLIT PDF (standalone, not via Organize) ===
+let _splitMode = 'ranges';
+function openSplitModal() {
+  const modal = document.getElementById('splitModal');
+  const total = pdfJsDoc ? pdfJsDoc.numPages : 1;
+  document.getElementById('splitRangesHint').textContent = `(pages 1–${total})`;
+  document.getElementById('splitRangesInput').placeholder =
+    total > 6 ? `e.g. 1-3, 4-${Math.min(6, total)}, ${Math.min(7, total)}-${total}` : `e.g. 1-${total}`;
+  document.getElementById('splitEveryInput').max = String(Math.max(1, total));
+  modal.classList.add('show');
+  _splitMode = 'ranges';
+  document.querySelectorAll('#splitModal .split-mode').forEach(c => {
+    c.classList.toggle('active', c.dataset.mode === _splitMode);
+    c.onclick = () => {
+      _splitMode = c.dataset.mode;
+      document.querySelectorAll('#splitModal .split-mode').forEach(x => x.classList.toggle('active', x === c));
+      document.getElementById('splitRangesRow').hidden = (_splitMode !== 'ranges');
+      document.getElementById('splitEveryRow').hidden = (_splitMode !== 'every');
+    };
+  });
+  document.getElementById('splitRangesRow').hidden = false;
+  document.getElementById('splitEveryRow').hidden = true;
+  document.getElementById('splitClose').onclick = closeSplitModal;
+  document.getElementById('splitCancel').onclick = closeSplitModal;
+  document.getElementById('splitModal').onclick = (e) => { if (e.target.id === 'splitModal') closeSplitModal(); };
+  document.getElementById('splitGo').onclick = doSplit;
+}
+function closeSplitModal() { document.getElementById('splitModal').classList.remove('show'); }
+
+// "1-3, 5, 7-10" → [[1,2,3],[5],[7,8,9,10]] (1-indexed). Skips invalid / out-of-range parts silently.
+function parseRangesInput(text, total) {
+  const groups = [];
+  for (const raw of String(text || '').split(',')) {
+    const part = raw.trim(); if (!part) continue;
+    const m = part.match(/^(\d+)\s*(?:-\s*(\d+))?$/);
+    if (!m) continue;
+    let a = parseInt(m[1], 10), b = m[2] ? parseInt(m[2], 10) : a;
+    if (a > b) [a, b] = [b, a];
+    a = Math.max(1, a); b = Math.min(total, b);
+    if (a > total) continue;
+    const indices = [];
+    for (let i = a; i <= b; i++) indices.push(i);
+    if (indices.length) groups.push(indices);
+  }
+  return groups;
+}
+
+async function doSplit() {
+  const goBtn = document.getElementById('splitGo');
+  const orig = goBtn.textContent;
+  goBtn.disabled = true; goBtn.textContent = 'Splitting…';
+  try {
+    // Use annotation-baked bytes if there are annotations; otherwise raw pdfBytes.
+    const sourceBytes = annotations.length ? await generatePdfBytes() : pdfBytes;
+    const srcDoc = await PDFDocument.load(sourceBytes.slice(0), PDF_LOAD_OPTS);
+    const total = srcDoc.getPageCount();
+
+    // Build group list (each group → one output PDF). 1-indexed in UI, convert to 0-indexed for pdf-lib.
+    let groups = [];
+    if (_splitMode === 'ranges') {
+      groups = parseRangesInput(document.getElementById('splitRangesInput').value, total);
+      if (!groups.length) { showToast('No valid page ranges. Try something like "1-3, 5".', 'warn'); return; }
+    } else if (_splitMode === 'every') {
+      const n = Math.max(1, parseInt(document.getElementById('splitEveryInput').value, 10) || 1);
+      for (let i = 1; i <= total; i += n) {
+        const chunk = [];
+        for (let j = i; j < i + n && j <= total; j++) chunk.push(j);
+        groups.push(chunk);
+      }
+    } else { // 'each'
+      for (let i = 1; i <= total; i++) groups.push([i]);
+    }
+
+    const base = (pdfFileName || 'document.pdf').replace(/\.pdf$/i, '');
+    let pad = String(groups.length).length;
+    for (let g = 0; g < groups.length; g++) {
+      const indices = groups[g];
+      goBtn.textContent = `Splitting… ${g + 1}/${groups.length}`;
+      const newDoc = await PDFDocument.create();
+      const copied = await newDoc.copyPages(srcDoc, indices.map(i => i - 1));
+      for (const p of copied) newDoc.addPage(p);
+      const out = await newDoc.save();
+      const blob = new Blob([out], { type: 'application/pdf' });
+      const label = (indices.length === 1)
+        ? `p${String(indices[0]).padStart(pad, '0')}`
+        : `p${String(indices[0]).padStart(pad, '0')}-${String(indices[indices.length - 1]).padStart(pad, '0')}`;
+      downloadBlob(blob, `${base}-${label}.pdf`);
+      // Tiny pause between downloads — some browsers throttle bursts.
+      if (g < groups.length - 1) await new Promise(r => setTimeout(r, 150));
+    }
+    closeSplitModal();
+    showToast(`Split into ${groups.length} file${groups.length === 1 ? '' : 's'}.`, 'success');
+  } catch (e) {
+    console.error('[split]', e);
+    showToast('Split failed: ' + (e.message || e), 'error');
+  } finally {
+    goBtn.disabled = false; goBtn.textContent = orig;
+  }
+}
+const _compressMainBtn = document.getElementById('compressMainBtn');
+if (_compressMainBtn) {
+  _compressMainBtn.addEventListener('click', () => {
+    if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+    bumpUsage && bumpUsage('compress:main');
+    openCompressModal();
+  });
+}
+
 // === HELP MODAL ===
 const HELP_SECTIONS = [
   { icon: '🚀', title: 'Getting started in 60 seconds', body: `
     <ol>
-      <li><strong>Open</strong> a PDF — click the orange Open button or drag a file onto the page.</li>
+      <li><strong>Open</strong> a PDF — click the orange Open button or drag a file onto the page. Also accepts <code>.pdfenc</code> (encrypted) files.</li>
       <li>Pick a tool from the toolbar. Hover any button — every one has a tooltip.</li>
       <li>Work on the PDF. Hit <kbd>Ctrl</kbd>+<kbd>Z</kbd> any time to undo.</li>
-      <li>Click <strong>Save PDF</strong> when done. Use the small ▼ next to Save for Export / Print / Clear options.</li>
+      <li>Click <strong>Save PDF</strong> when done. Use the small ▼ next to Save for Export / Print / Clear options. For a locked-down output try <strong>More ▼ → Password protect</strong> or <strong>More ▼ → Sanitize document</strong>.</li>
     </ol>
-    <div class="help-tip"><strong>Privacy:</strong> Nothing ever leaves your device. No upload, no tracking. The app even works offline once it's loaded.</div>
+    <div class="help-tip"><strong>Privacy:</strong> Nothing ever leaves your device — no upload, no analytics, no cookies. The app works fully offline once loaded. AI features (when enabled) talk directly to your own local LLM, never to a third party.</div>
+    <div class="help-tip"><strong>Pro tools live in More ▼:</strong> Sanitize document · RegEx redact · Extract table → CSV · Compare two PDFs (diff) · Fill form from JSON · Password protect · Crop / Resize to A4 / Letter / photo dimensions.</div>
   ` },
-  { icon: '🧭', title: 'Toolbar layout (Apple-style)', body: `
-    <p>The toolbar is grouped into a small set of high-level actions:</p>
+  { icon: '🧭', title: 'Toolbar layout', body: `
+    <p>The desktop toolbar is grouped into clear sections:</p>
     <ul>
-      <li><strong>Open</strong> — load a PDF.</li>
+      <li><strong>Open</strong> — load a PDF (also accepts <code>.pdfenc</code> encrypted files).</li>
       <li><strong>↖ Select / ✎ Edit Text</strong> — selection mode and direct text editing on the PDF.</li>
-      <li><strong>＋ Add ▼</strong> — Text, Image, Free Draw, Highlight / Underline / Strike / Link, Stamps, Signature.</li>
-      <li><strong>▭ Shape ▼</strong> — Rect / Ellipse / Triangle / Line / Arrow / icons / templates.</li>
-      <li><strong>⊞ Pages</strong> — reorder, rotate, delete, merge, split, compress, replace pages.</li>
-      <li><strong>⋯ More ▼</strong> — Page Setup, Crop / Margins, Bookmarks, Templates, Find &amp; Replace, OCR.</li>
+      <li><strong>＋ Add ▼</strong> — Text, Image, Free Draw, <strong>Shapes ▸</strong> submenu (15 shapes in a grid), Highlight / Underline / Strike / Link / Redact, QR / Barcode, Stamps, Signature.</li>
+      <li><strong>⊞ Pages</strong> — reorder, rotate, delete, replace pages.</li>
+      <li><strong>＋ Merge PDF · ⤴ Split PDF · ⤓ Compress PDF</strong> — direct toolbar shortcuts (no need to open the Pages dialog).</li>
+      <li><strong>⋯ More ▼</strong> — Page Setup, Crop / Resize / Margins, Bookmarks, Templates, <strong>Password protect</strong>, plus Pro tools: <strong>Sanitize · RegEx redact · Extract table → CSV · Compare two PDFs · Fill from JSON</strong>. Search section: Find &amp; Replace, OCR.</li>
       <li><strong>🤖 AI ▼</strong> — only shows when a local AI server is configured and reachable (Settings → AI).</li>
-      <li><strong>Style</strong> — quick color and font-size defaults for new text / draws / shapes.</li>
+      <li><strong>Style</strong> — quick color and font-size defaults for new text / draws / shapes. A separate floating colour bar appears in Highlight / Underline / Strike modes.</li>
       <li><strong>↶ ↷</strong> — Undo / Redo.</li>
       <li><strong>⬇ Save PDF ▼</strong> — Save (Ctrl+S); the ▼ caret opens Export as… (HQ / Web / Archive), Print, and Clear all edits.</li>
     </ul>
+    <div class="help-tip"><strong>On phones / tablets</strong> the toolbar is replaced by a bottom dock and slim top bar — same actions, thumb-friendly. <strong>More</strong> in the dock opens a bottom sheet with every Pro tool.</div>
   ` },
   { icon: '✎', title: 'Editing existing PDF text', body: `
     <ol>
       <li>Click <strong>Edit Text</strong> in the toolbar (or just double-click any text in the PDF).</li>
       <li>The clicked text becomes a white-out plus an editable annotation matching font &amp; baseline.</li>
       <li>Type your replacement. Format with the floating props panel (B / I / U, color, size).</li>
-      <li>Click outside or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to commit; <kbd>Esc</kbd> + <kbd>Ctrl</kbd>+<kbd>Z</kbd> to abort.</li>
+      <li><kbd>Enter</kbd> or click outside to commit; <kbd>Shift</kbd>+<kbd>Enter</kbd> for a new line; <kbd>Esc</kbd> + <kbd>Ctrl</kbd>+<kbd>Z</kbd> to abort.</li>
     </ol>
     <div class="help-tip"><strong>Heads up:</strong> If a page has rotation baked into the PDF, Edit Text may misalign with the visible orientation. On rotated pages, prefer <strong>＋ Add → Text</strong>.</div>
     <div class="help-tip"><strong>Czech / Polish characters:</strong> the standard PDF fonts (Helvetica / Times / Courier) only support Latin-1. Accented letters like ň / ř / ć are automatically transliterated on save so the document never fails to write. For perfect diacritics, embed your text as an image, or insert it with the Stamp builder.</div>
@@ -9979,26 +12187,44 @@ const HELP_SECTIONS = [
   { icon: 'T', title: 'Adding new content', body: `
     <p>All of these live under the <strong>＋ Add ▼</strong> menu:</p>
     <ul>
-      <li><strong>Text</strong> — click anywhere on the PDF; type. Press <kbd>Enter</kbd> for new lines, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to commit.</li>
+      <li><strong>Text</strong> — click anywhere on the PDF; type. <kbd>Enter</kbd> commits, <kbd>Shift</kbd>+<kbd>Enter</kbd> adds a new line. The new annotation stays selected so you can immediately drag corners to resize or use the rotation puck — same as pasted clipboard text.</li>
       <li><strong>Image</strong> — file picker or just paste with <kbd>Ctrl</kbd>+<kbd>V</kbd>. Drag corners to resize, top handle to rotate. <kbd>Shift</kbd> while resizing breaks aspect ratio. Double-click to replace.</li>
       <li><strong>Free Draw</strong> — pick color + stroke width; draw with mouse / pen / finger.</li>
-      <li><strong>Highlight / Underline / Strike</strong> — click any text run in the PDF to mark it.</li>
+      <li><strong>Shapes ▸</strong> — fly-out submenu with 15 shapes in 3 groups: Basic (Rectangle, Ellipse, Triangle, Line, Arrow, Double Arrow), Icons (Heart, Star, Lightning, Cloud, Check, Cross), Templates (Checklist, Monthly / Weekly Calendar).</li>
+      <li><strong>Highlight / Underline / Strike</strong> — <strong>drag</strong> across PDF text to mark a span, or click a single word. A floating colour bar appears with 8 presets + custom picker. Each tool remembers its own colour.</li>
       <li><strong>Link</strong> — drag a rectangle to define a hyperlink area. Choose a URL or an internal page jump. Real clickable annotation in the saved PDF.</li>
+      <li><strong>Redact</strong> — drag a black rectangle. On save, metadata (Title / Author / Subject / Keywords / Producer / Creator) is wiped automatically. For pattern-based bulk redaction see <strong>RegEx redact</strong> in More.</li>
+      <li><strong>QR / Barcode</strong> — generate a code (URL, vCard, text…) and insert it as a vector annotation.</li>
       <li><strong>Stamps</strong> — gallery with Standard, Information, Custom tabs. Information stamps use your Profile.</li>
-      <li><strong>Signature</strong> — Draw / Type / Upload; "Save for future use" stores it locally.</li>
+      <li><strong>Signature</strong> — Draw / Type / Upload. "Save for future use" stores it locally. Tick <strong>Strengthen with audit metadata</strong> to bake a tamper-evident stamp into the signature image (SHA-256, timestamp, IP + ISP + city, optional GPS + street address, browser fingerprint, signer identity).</li>
     </ul>
   ` },
-  { icon: '⊞', title: 'Pages — reorder, rotate, delete, merge, split, crop, replace', body: `
+  { icon: '⊞', title: 'Pages — reorder, rotate, delete, merge, split, replace', body: `
     <p>Click <strong>Pages</strong> to open the Organize dialog. There you can:</p>
     <ul>
       <li>Drag thumbnails to reorder.</li>
       <li><strong>↻</strong> rotate · <strong>🗑</strong> delete · <strong>⤒</strong> replace one page from another PDF.</li>
-      <li>Checkbox top-left selects pages for <strong>Export Selected</strong> (split into a new PDF).</li>
-      <li><strong>Merge PDF</strong> appends pages from another file. <strong>Rotate All</strong> rotates everything 90°.</li>
-      <li><strong>Compress PDF…</strong> rasterises pages at a chosen DPI / JPEG quality to shrink file size.</li>
+      <li>Checkbox top-left selects pages for <strong>Export Selected</strong>.</li>
       <li><strong>Apply Changes</strong> commits the new layout. Edits on the page are baked first so they're preserved.</li>
     </ul>
-    <p><strong>Crop / Margins</strong> (More ▼ → Crop) sets each page's CropBox so margins can be trimmed.</p>
+    <p>The toolbar also has direct <strong>＋ Merge PDF</strong>, <strong>⤴ Split PDF</strong> and <strong>⤓ Compress PDF</strong> buttons:</p>
+    <ul>
+      <li><strong>Merge</strong> — pick another PDF and append its pages.</li>
+      <li><strong>Split</strong> — three modes: custom ranges (e.g. <code>1-3, 5, 7-10</code>), every N pages, or one-per-page. Downloads multiple files at once.</li>
+      <li><strong>Compress</strong> — rasterises pages at a chosen DPI / JPEG quality.</li>
+    </ul>
+  ` },
+  { icon: '✂', title: 'Crop / Resize / Margins (page normalization)', body: `
+    <p>More ▼ → <strong>Crop / Resize / Margins</strong>. Two independent flows:</p>
+    <p><strong>Margins</strong> — top / right / bottom / left in PDF points. Either set just the CropBox (content outside is hidden) or tick <em>Trim</em> to also set the MediaBox (content outside is removed).</p>
+    <p><strong>Normalize page size</strong> — pick a target dimension:</p>
+    <ul>
+      <li><strong>ISO:</strong> A4 portrait/landscape, A3 portrait/landscape, A5 portrait/landscape.</li>
+      <li><strong>US:</strong> Letter portrait/landscape, Legal portrait/landscape, Tabloid, Executive.</li>
+      <li><strong>Photo:</strong> 4×6", 5×7", 8×10", 10×15 cm, 13×18 cm.</li>
+      <li><strong>Other:</strong> Square 8×8" or 10×10 cm, or fully custom (pt / mm / inches).</li>
+    </ul>
+    <p>Then choose <strong>Fit</strong> (pad with background colour), <strong>Fill</strong> (crop to cover) or <strong>Stretch</strong> (ignore aspect). Optionally rotate the content 90 / 180 / 270°. Perfect for forcing a phone photo or off-spec scan into a real A4 PDF.</p>
   ` },
   { icon: '🛠', title: 'Page Setup — watermarks, headers, footers, page numbers', body: `
     <p>More ▼ → <strong>Page Setup</strong>. Three tabs:</p>
@@ -10073,6 +12299,72 @@ const HELP_SECTIONS = [
     </ul>
     <div class="help-tip"><strong>SMTP:</strong> Direct browser→SMTP isn't possible without a server. The mail-client button works everywhere; for fully automated SMTP delivery you'd add a small relay (Cloudflare Worker / Node) — wireable in this dialog.</div>
   ` },
+  { icon: '🔒', title: 'Password protection (.pdfenc)', body: `
+    <p>More ▼ → <strong>Password protect…</strong>. Wraps the current PDF in an AES-256-GCM envelope derived from your password (PBKDF2 with 250,000 SHA-256 rounds + 16-byte salt + 12-byte IV). Downloads as <code>filename.pdfenc</code>.</p>
+    <p>To re-open: drop the <code>.pdfenc</code> onto the page (or use Open) — the app sniffs the <code>PDFMINIE</code> magic header and prompts for the password. Wrong password = clean error, no half-decryption.</p>
+    <div class="help-tip"><strong>Privacy:</strong> Encryption is 100% client-side. Your password never leaves the browser, and the encrypted file can't be opened by anyone without it. <strong>There is no recovery</strong> — write down the password.</div>
+  ` },
+  { icon: '🧼', title: 'Sanitize document', body: `
+    <p>More ▼ → <strong>Sanitize document</strong>. Three independent toggles:</p>
+    <ul>
+      <li><strong>Strip metadata</strong> — Title, Author, Subject, Keywords, Producer, Creator, dates, custom Info-dict entries, XMP metadata stream, <code>/Names</code> tree, <code>/OpenAction</code>, <code>/AA</code> (auto-actions). Anything that could leak who-edited-when.</li>
+      <li><strong>Flatten annotations</strong> — bakes whiteouts, redactions, highlights, text and signatures into the page content so nothing remains "secretly editable" by the next reader.</li>
+      <li><strong>Rasterize</strong> (most aggressive) — every page becomes a JPEG at your chosen DPI (default 150). Destroys selectable text but absolutely guarantees no hidden content survives.</li>
+    </ul>
+    <p>Output is downloaded as <code>{name}-sanitized.pdf</code>. Use this before sharing externally.</p>
+  ` },
+  { icon: '🛡', title: 'RegEx redaction (bulk)', body: `
+    <p>More ▼ → <strong>RegEx redact…</strong>. Permanently remove sensitive data based on a regular expression.</p>
+    <p>Built-in presets:</p>
+    <ul>
+      <li><strong>SSN</strong> — <code>\\b\\d{3}-?\\d{2}-?\\d{4}\\b</code></li>
+      <li><strong>Credit card</strong> — <code>\\b(?:\\d[ -]*?){13,19}\\b</code></li>
+      <li><strong>Email</strong>, <strong>Phone</strong>, <strong>IBAN</strong>, <strong>Czech rodné č.</strong></li>
+    </ul>
+    <p>Click <strong>Preview matches</strong> to flash every match in a red outline for 6 seconds. Click <strong>Redact</strong> to drop a black rectangle over each one and hide the underlying text item. Metadata wipe runs automatically on save (because at least one redaction exists).</p>
+  ` },
+  { icon: '⇄', title: 'Compare two PDFs (diff)', body: `
+    <p>More ▼ → <strong>Compare two PDFs</strong>. Drop the original and the updated file into the two upload zones. We extract text from both via pdf.js, tokenise it into words, and compute a longest-common-subsequence diff.</p>
+    <p>Output: a Git-style inline diff — <ins style="background:#dcfce7;padding:1px 4px;text-decoration:none;color:#14532d">added words on green</ins>, <del style="background:#fecaca;padding:1px 4px;text-decoration:line-through;color:#7f1d1d">removed words on red</del>. Summary line at the top says "X added, Y removed".</p>
+    <div class="help-tip"><strong>Limits:</strong> Word-level DP needs O(m·n) memory. Capped at ~2 million cells (roughly 1500 words on each side). For larger documents we show a summary diff instead.</div>
+  ` },
+  { icon: '⊞', title: 'Extract table → CSV', body: `
+    <p>More ▼ → <strong>Extract table → CSV</strong>. The cursor changes to crosshair — drag a rectangle around the table on the PDF.</p>
+    <p>We collect every text item whose centre lies inside the rectangle, cluster them into rows (by y-coordinate proximity) and columns (by x-coordinate seeding), and emit a CSV. Cells are escaped according to RFC 4180 (quotes / commas / newlines auto-protected).</p>
+    <p>Works great on cleanly-formatted PDF tables. Heavily-merged or rotated tables may need a manual cleanup pass.</p>
+  ` },
+  { icon: '{ }', title: 'Fill forms from JSON', body: `
+    <p>More ▼ → <strong>Fill form from JSON…</strong>. Paste a JSON object (or an array of objects for batch generation).</p>
+    <p>Keys are matched to AcroForm field names with case-insensitive substring matching. Field types we handle:</p>
+    <ul>
+      <li><strong>Text fields</strong> — <code>setText(String(value))</code></li>
+      <li><strong>Check boxes</strong> — truthy / falsy → check / uncheck</li>
+      <li><strong>Radio groups / dropdowns / option lists</strong> — <code>select(String(value))</code></li>
+    </ul>
+    <p>Click <strong>Preview field matches</strong> first to see exactly which JSON key maps to which PDF field before filling. Array input → one filled PDF per record, downloaded as <code>name-filled-01.pdf</code>, <code>name-filled-02.pdf</code>, …</p>
+  ` },
+  { icon: '✍', title: 'Verifiable signatures (audit metadata)', body: `
+    <p>In the Signature dialog, tick <strong>Strengthen with audit metadata</strong>. We bake a tamper-evident stamp directly <em>into</em> the signature image — non-removable.</p>
+    <p>Stamp contents:</p>
+    <ul>
+      <li><strong>Signer identity</strong> (optional, remembered locally) — name, role, email, phone.</li>
+      <li><strong>Time</strong> — local wall-clock with timezone (e.g. EDT) and the UTC anchor; plus an independent server time from worldtimeapi.org when reachable.</li>
+      <li><strong>Document integrity</strong> — SHA-256 of the PDF bytes you're signing.</li>
+      <li><strong>Network identity</strong> — IP + ISP from ipapi.co (with ipinfo.io fallback) and a city-level location.</li>
+      <li><strong>Optional GPS</strong> — coordinates + an English street address resolved via Nominatim / OpenStreetMap.</li>
+      <li><strong>Device fingerprint</strong> — short canvas hash + UA / language / screen.</li>
+    </ul>
+    <p>Identity + audit data is also written into the PDF Info dictionary on save (Author, Subject, Keywords, plus custom <code>/PDFMini*</code> keys) so any PDF reader's Properties dialog reveals it.</p>
+  ` },
+  { icon: '📱', title: 'Mobile layout (phones / tablets)', body: `
+    <p>Below 760 px the desktop chrome is replaced by a touch-friendly UI:</p>
+    <ul>
+      <li><strong>Top bar</strong> (slim, 50 px): hamburger menu (toggles thumbs panel) · undo · redo · Help · Share · <strong>Download</strong> (primary).</li>
+      <li><strong>Bottom dock</strong>: Select · Text · Draw · Image · Shape · Sign · <strong>More</strong>. Tap to switch tool — active tool is highlighted in the accent colour.</li>
+      <li><strong>More sheet</strong> — bottom-anchored modal with a 3-column grid: Auto-Fill, Ask AI, Merge, Split, Rearrange, Page numbers, Rotate, Compress, Highlight, OCR, Find, Password.</li>
+    </ul>
+    <p>Modals (Crop, Page Setup, Find, etc.) auto-shrink to fit the screen and become scrollable.</p>
+  ` },
   { icon: '⌨', title: 'Keyboard shortcuts', body: `
     <table class="shortcut-table">
       <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
@@ -10132,12 +12424,12 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
     version: '1.0', icon: '👋', title: 'Welcome to PDF Mini Editor',
-    desc: 'Edit PDFs right in your browser — fast, free, and entirely private. Nothing is uploaded; everything stays on this device.'
+    desc: 'Edit, sign and assemble PDFs entirely in your browser. Nothing is uploaded — everything stays on this device, even when you\'re offline.'
   },
   {
     version: '1.0', icon: '📂', title: 'Open & edit any PDF',
@@ -10194,6 +12486,63 @@ const ONBOARD_SLIDES = [
   {
     version: '1.5', icon: '🧰', title: 'New annotation tools',
     desc: 'Highlight / Underline / Strike PDF text · clickable Hyperlinks · Page Setup (watermark / header / footer / numbers) · Bookmarks · Crop · Templates · Object groups (Ctrl+G) · Lock objects.'
+  },
+  // ===== 1.6 =====
+  {
+    version: '1.6', icon: '🚀', title: 'What\'s new in 1.6',
+    desc: 'A big release: <strong>password protection</strong>, <strong>document sanitization</strong>, <strong>PDF diff</strong>, <strong>table → CSV</strong>, <strong>JSON form fill</strong>, <strong>drag-to-highlight</strong> with a colour picker, <strong>page normalization</strong> (A4 / Letter / photo sizes) and a brand-new <strong>mobile dock</strong>.'
+  },
+  {
+    version: '1.6', icon: '🖍', title: 'Drag-to-highlight with colour picker',
+    desc: 'Highlight, Underline and Strike now work like a real marker: <strong>click and drag</strong> across PDF text to mark a span. A floating colour bar appears with 8 presets (yellow, cyan, green, red, pink, purple, orange, black) plus a custom picker — each tool remembers its own colour.'
+  },
+  {
+    version: '1.6', icon: '🔒', title: 'Password-protect your PDF',
+    desc: 'More ▼ → <strong>Password protect…</strong> wraps the PDF in an AES-256-GCM envelope (PBKDF2, 250k rounds). Downloads as <code>.pdfenc</code>; re-open it with the regular Open button and the app prompts for the password. 100% client-side — your password never leaves the browser.'
+  },
+  {
+    version: '1.6', icon: '🧼', title: 'Zero-trust sanitization',
+    desc: 'More ▼ → <strong>Sanitize document</strong>. Strips PDF metadata (Title, Author, dates, custom Info-dict keys, XMP stream, JavaScript actions), bakes annotations into the page, and optionally rasterises every page. After this, nothing hidden can leak from the file.'
+  },
+  {
+    version: '1.6', icon: '🛡', title: 'Smart RegEx redaction',
+    desc: 'More ▼ → <strong>RegEx redact…</strong>. Pick a preset (SSN, credit card, email, phone, IBAN, CZ rodné číslo) or write your own pattern. Preview every match, then permanently black-bar them. Document metadata is auto-wiped on save when any redaction exists.'
+  },
+  {
+    version: '1.6', icon: '⇄', title: 'Visual diff between two PDFs',
+    desc: 'More ▼ → <strong>Compare two PDFs</strong>. Pick the original and the updated file — a Git-style word diff renders inline (green = added, red = removed). Handles documents up to ~1500 words/page-equivalent comfortably.'
+  },
+  {
+    version: '1.6', icon: '⊞', title: 'Tables → CSV extraction',
+    desc: 'More ▼ → <strong>Extract table → CSV</strong>. Drag a rectangle around any table in the PDF; we cluster the text items into rows and columns and download a clean CSV. Great for invoices, lab results, financial reports.'
+  },
+  {
+    version: '1.6', icon: '{ }', title: 'Fill forms from JSON',
+    desc: 'More ▼ → <strong>Fill form from JSON…</strong>. Paste a JSON object and we match its keys to your PDF\'s AcroForm field names. Paste an <em>array</em> instead to generate dozens of personalised, filled copies in one go.'
+  },
+  {
+    version: '1.6', icon: '📐', title: 'Page normalization (A4 / Letter / photo)',
+    desc: 'More ▼ → <strong>Crop / Resize / Margins</strong>. Beyond CropBox margins, you can now <strong>resize</strong> every page to A4, A3, A5, Letter, Legal, Tabloid, Executive, photo sizes (4×6, 5×7, 8×10, 10×15 cm) or any custom dimension. Choose Fit (letterbox), Fill (crop) or Stretch — perfect for normalising a photo or off-spec scan into a real A4 PDF.'
+  },
+  {
+    version: '1.6', icon: '✍', title: 'Verifiable signatures with audit stamp',
+    desc: 'When you Sign, tick <strong>Strengthen with audit metadata</strong>. We bake into the signature image: SHA-256 of the document, UTC + local timestamp, your IP + ISP + city (IP-based), optional GPS coordinates with an English street address, browser fingerprint. Identity fields (name, email, phone, role) print on the stamp and are also embedded as machine-readable PDF metadata.'
+  },
+  {
+    version: '1.6', icon: '✂', title: 'Smarter merge & split on the toolbar',
+    desc: 'Three new toolbar buttons next to Pages: <strong>Merge PDF</strong> (append another file), <strong>Split PDF</strong> (custom ranges, every N pages, or one-per-page → multi-file download) and <strong>Compress PDF</strong>. No more digging into the Pages dialog for everyday operations.'
+  },
+  {
+    version: '1.6', icon: '📱', title: 'New mobile dock layout',
+    desc: 'On phones / tablets the toolbar is replaced by a thumb-friendly <strong>bottom dock</strong> (Select · Text · Draw · Image · Shape · Sign · More) plus a slim top bar (hamburger · undo · redo · Share · Download). <strong>More</strong> opens a 3-column bottom sheet with every Pro tool one tap away.'
+  },
+  {
+    version: '1.6', icon: '⌨', title: 'Text editing — Enter to commit',
+    desc: 'When typing in a text annotation, <kbd>Enter</kbd> now <strong>finishes</strong> the text (the common case) and <kbd>Shift</kbd>+<kbd>Enter</kbd> inserts a new line. Click outside still commits too, and the new annotation stays selected so you can immediately resize or rotate it.'
+  },
+  {
+    version: '1.6', icon: '🎯', title: 'Shapes moved into Add ▼',
+    desc: 'The toolbar is one button shorter: shapes now live in a fly-out submenu inside <strong>＋ Add ▼</strong>. The submenu shows a compact 3-column grid (Basic, Icons, Templates) — same 15 shapes, much less clicking.'
   }
 ];
 
@@ -10367,6 +12716,9 @@ function setupMarqueeSelect(overlay, pageNum) {
     if (e.target !== overlay) return;
     if (e.button !== undefined && e.button !== 0) return;
     if (activeEditor) return;
+    // Just committed a text editor on this same click — don't start a marquee,
+    // its pointerup would deselect the new annotation.
+    if (editorJustCommitted) return;
     e.preventDefault();
     const rect = overlay.getBoundingClientRect();
     startX = (e.clientX - rect.left) / currentZoom;
@@ -10709,6 +13061,7 @@ async function checkForDraft() {
       document.getElementById('saveBtn').disabled = false;
       document.getElementById('printBtn').disabled = false;
       document.getElementById('organizeBtn').disabled = false;
+      if (typeof _enableMainPdfTools === 'function') _enableMainPdfTools();
       document.getElementById('zoomBar').style.display = 'flex';
       setContext(currentTool);
       showToast('Draft restored.', 'success');
@@ -11233,38 +13586,245 @@ document.getElementById('psWmOpacity').addEventListener('input', (e) => {
 // =====================================================================
 // =====================  HIGHLIGHT / UNDERLINE / STRIKE  ==============
 // =====================================================================
-function addDecorationOnTextItem(overlay, span, kind) {
+function _hexToRgba(hex, alpha) {
+  const m = /^#([0-9a-f]{6})$/i.exec((hex || '').trim());
+  if (!m) return `rgba(255,235,59,${alpha})`;  // fallback yellow
+  const r = parseInt(m[1].slice(0,2), 16), g = parseInt(m[1].slice(2,4), 16), b = parseInt(m[1].slice(4,6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+// Per-tool current colour, controlled by the floating .deco-color-bar.
+let _decoColors = { highlight: '#ffeb3b', underline: '#dc2626', strike: '#dc2626' };
+function _decoCurrentColor(kind) {
+  return _decoColors[kind] || (kind === 'highlight' ? '#ffeb3b' : '#dc2626');
+}
+
+// === MOBILE DOCK / TOPBAR / SHEET BINDINGS ===
+(function _initMobileDock() {
+  const proxy = (mobId, deskId) => {
+    const m = document.getElementById(mobId), d = document.getElementById(deskId);
+    if (m && d) m.addEventListener('click', () => d.click());
+  };
+  proxy('mobileMenuBtn', 'sidePanelToggleHeader');
+  proxy('mobileUndoBtn', 'undoBtn');
+  proxy('mobileRedoBtn', 'redoBtn');
+  proxy('mobileDownloadBtn', 'saveBtn');
+  proxy('mobileHelpBtn', 'helpBtn');
+
+  // Share — find existing share button (varies by feature flag)
+  const mShare = document.getElementById('mobileShareBtn');
+  if (mShare) mShare.addEventListener('click', () => {
+    const sb = document.getElementById('shareBtn') || document.getElementById('shareBtnMenu');
+    if (sb) { sb.click(); return; }
+    if (navigator.share) {
+      navigator.share({ title: pdfFileName || 'PDF', text: 'Shared from PDF Mini Pro' }).catch(()=>{});
+    } else {
+      showToast('Sharing isn\'t available in this browser.', 'warn');
+    }
+  });
+
+  // Dock tool buttons map to existing setTool / file-pickers
+  document.querySelectorAll('.md-btn[data-mob-tool]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const t = btn.dataset.mobTool;
+      if (t === 'select') setTool('select');
+      else if (t === 'text') setTool('text');
+      else if (t === 'draw') setTool('draw');
+      else if (t === 'image') document.getElementById('imgInput')?.click();
+      else if (t === 'shape') { if (!currentShape) currentShape = 'rect'; setTool('shape'); }
+      else if (t === 'sign') {
+        if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+        if (typeof openSignatureModal === 'function') openSignatureModal(insertSignatureFromDataURL);
+      }
+      _syncMobileDockActive();
+    });
+  });
+
+  // Keep the dock's active highlight in sync with currentTool (covers keyboard
+  // shortcuts and any setTool() called from elsewhere — e.g. ESC → select).
+  function _syncMobileDockActive() {
+    document.querySelectorAll('.md-btn[data-mob-tool]').forEach(b => {
+      b.classList.toggle('active', b.dataset.mobTool === currentTool ||
+        (b.dataset.mobTool === 'shape' && currentTool === 'shape'));
+    });
+  }
+  window._syncMobileDockActive = _syncMobileDockActive;
+
+  // More → open sheet
+  const moreBtn = document.getElementById('mobileMoreBtn');
+  const sheet = document.getElementById('mobileMoreSheet');
+  if (moreBtn && sheet) {
+    moreBtn.addEventListener('click', () => sheet.classList.add('is-open'));
+    sheet.querySelector('.ms-backdrop').addEventListener('click', () => sheet.classList.remove('is-open'));
+  }
+
+  // Sheet tiles map to existing flows
+  document.querySelectorAll('.ms-tile').forEach(tile => {
+    tile.addEventListener('click', () => {
+      const act = tile.dataset.ms;
+      if (sheet) sheet.classList.remove('is-open');
+      if (!pdfJsDoc && act !== 'find') { showToast('Open a PDF first.', 'warn'); return; }
+      if (act === 'merge') document.getElementById('mergeMainInput')?.click();
+      else if (act === 'split') (typeof openSplitModal === 'function') && openSplitModal();
+      else if (act === 'compress') (typeof openCompressModal === 'function') && openCompressModal();
+      else if (act === 'rearrange') (typeof openOrganizeModal === 'function') && openOrganizeModal();
+      else if (act === 'rotate') {
+        if (typeof openOrganizeModal === 'function') {
+          openOrganizeModal();
+          setTimeout(() => document.getElementById('rotateAllBtn')?.click(), 250);
+        }
+      }
+      else if (act === 'pagenum') document.getElementById('pageSetupBtnMenu')?.click();
+      else if (act === 'find') document.getElementById('findBtnMenu')?.click();
+      else if (act === 'ocr') document.getElementById('ocrBtnMenu')?.click();
+      else if (act === 'highlight') setTool('highlight');
+      else if (act === 'ai') {
+        const aiBtn = document.getElementById('aiSummarizeBtn');
+        if (aiBtn) aiBtn.click(); else showToast('AI not configured yet. Open Settings to add your endpoint.', 'info');
+      }
+      else if (act === 'autofill') {
+        const af = document.getElementById('aiFormFillBtn');
+        if (af) af.click(); else showToast('Form fill needs an AI endpoint.', 'info');
+      }
+      else if (act === 'password') { if (typeof openPasswordModal === 'function') openPasswordModal(); }
+      else if (act === 'sanitize') { if (typeof openSanitizeModal === 'function') openSanitizeModal(); }
+      else if (act === 'rxredact') { if (typeof openRegexRedactModal === 'function') openRegexRedactModal(); }
+      else if (act === 'diff') { if (typeof openDiffModal === 'function') openDiffModal(); }
+      else if (act === 'table') { if (typeof openTableExtract === 'function') openTableExtract(); }
+      else if (act === 'jsonfill') { if (typeof openJsonFillModal === 'function') openJsonFillModal(); }
+    });
+  });
+})();
+
+// Wire the floating colour bar (preset swatches + custom picker)
+(function _initDecoColorBar() {
+  function setColor(c) {
+    // The visible swatch row tracks the per-tool colour. We set it for the
+    // currently-active deco tool, but if user hasn't activated one yet we
+    // default to highlight (the most common case).
+    const kind = (currentTool === 'highlight' || currentTool === 'underline' || currentTool === 'strike') ? currentTool : 'highlight';
+    _decoColors[kind] = c;
+    document.querySelectorAll('.dcb-swatch').forEach(b => {
+      b.classList.toggle('active', b.dataset.color === c);
+    });
+    const custom = document.getElementById('decoCustomColor');
+    if (custom) custom.value = c;
+  }
+  document.querySelectorAll('.dcb-swatch').forEach(btn => {
+    btn.addEventListener('click', () => setColor(btn.dataset.color));
+  });
+  const custom = document.getElementById('decoCustomColor');
+  if (custom) custom.addEventListener('input', (e) => setColor(e.target.value));
+})();
+
+function addDecorationOnTextItem(overlay, span, kind, color) {
   const pageNum = parseInt(span.dataset.pageNum);
   const x = parseFloat(span.dataset.x);
   const yTop = parseFloat(span.dataset.y);
   const w = parseFloat(span.dataset.w);
   const h = parseFloat(span.dataset.h);
+  const finalColor = color || _decoCurrentColor(kind);
   const el = document.createElement('div');
   el.className = 'annotation deco-annotation ' + kind;
   el.style.left = x + 'px'; el.style.top = yTop + 'px';
   el.style.width = w + 'px'; el.style.height = h + 'px';
+  // Apply chosen color: highlight uses semi-transparent fill, underline/strike use the line color.
+  if (kind === 'highlight') el.style.background = _hexToRgba(finalColor, 0.45);
+  else el.style.setProperty('--deco-color', finalColor);
   overlay.appendChild(el);
   const ann = {
     type: 'decoration', kind, pageNum,
-    x, y: yTop, width: w, height: h, el
+    x, y: yTop, width: w, height: h, el,
+    color: finalColor
   };
   annotations.push(ann);
   enableWhiteoutInteractions(el, ann);  // same drag semantics
   updateAnnotCount();
-  pushHistory('deco-' + kind);
   return ann;
 }
 
-// Listen for clicks on pdf-text-item in the new modes (highlight/underline/strike).
-// We hook at document capture so this fires regardless of which event listeners the span has.
-document.addEventListener('click', (e) => {
+// === Drag-to-select highlight / underline / strike ===
+// Users drag across PDF text — every text item the rectangle intersects gets the
+// decoration applied. A single click on a word still highlights just that word.
+let _decoDrag = null;
+
+document.addEventListener('pointerdown', (e) => {
   if (currentTool !== 'highlight' && currentTool !== 'underline' && currentTool !== 'strike') return;
+  if (e.button !== undefined && e.button !== 0) return;
   const span = e.target.closest && e.target.closest('.pdf-text-item:not(.pdf-text-item-consumed)');
   if (!span) return;
-  e.preventDefault(); e.stopPropagation();
   const overlay = span.closest('.overlay');
   if (!overlay) return;
-  addDecorationOnTextItem(overlay, span, currentTool);
+  e.preventDefault();
+  const overlayRect = overlay.getBoundingClientRect();
+  const sx = (e.clientX - overlayRect.left) / currentZoom;
+  const sy = (e.clientY - overlayRect.top)  / currentZoom;
+  const color = _decoCurrentColor(currentTool);
+  const preview = document.createElement('div');
+  preview.className = 'deco-drag-preview';
+  preview.style.left = sx + 'px'; preview.style.top = sy + 'px';
+  preview.style.width = '0px'; preview.style.height = '0px';
+  preview.style.background = (currentTool === 'highlight') ? _hexToRgba(color, 0.30) : 'transparent';
+  preview.style.border = '1px dashed ' + color;
+  overlay.appendChild(preview);
+  _decoDrag = {
+    overlay, kind: currentTool, color, startSpan: span, preview,
+    startX: sx, startY: sy, lastX: sx, lastY: sy,
+    startClient: { x: e.clientX, y: e.clientY },
+    lastClient:  { x: e.clientX, y: e.clientY },
+    moved: false, pointerId: e.pointerId
+  };
+  try { overlay.setPointerCapture(e.pointerId); } catch (_) {}
+}, true);
+
+document.addEventListener('pointermove', (e) => {
+  if (!_decoDrag) return;
+  if (_decoDrag.pointerId !== undefined && e.pointerId !== _decoDrag.pointerId) return;
+  const overlayRect = _decoDrag.overlay.getBoundingClientRect();
+  const cx = (e.clientX - overlayRect.left) / currentZoom;
+  const cy = (e.clientY - overlayRect.top)  / currentZoom;
+  _decoDrag.lastX = cx; _decoDrag.lastY = cy;
+  _decoDrag.lastClient = { x: e.clientX, y: e.clientY };
+  if (Math.abs(cx - _decoDrag.startX) > 2 || Math.abs(cy - _decoDrag.startY) > 2) _decoDrag.moved = true;
+  const x = Math.min(_decoDrag.startX, cx);
+  const y = Math.min(_decoDrag.startY, cy);
+  const w = Math.abs(cx - _decoDrag.startX);
+  const h = Math.abs(cy - _decoDrag.startY);
+  _decoDrag.preview.style.left = x + 'px'; _decoDrag.preview.style.top = y + 'px';
+  _decoDrag.preview.style.width = w + 'px'; _decoDrag.preview.style.height = h + 'px';
+}, true);
+
+document.addEventListener('pointerup', (e) => {
+  if (!_decoDrag) return;
+  const drag = _decoDrag; _decoDrag = null;
+  drag.preview.remove();
+  try { drag.overlay.releasePointerCapture(e.pointerId); } catch (_) {}
+  // Plain click (no drag) — highlight just the one span that was clicked
+  if (!drag.moved) {
+    addDecorationOnTextItem(drag.overlay, drag.startSpan, drag.kind, drag.color);
+    pushHistory('deco-' + drag.kind);
+    return;
+  }
+  // Drag — intersect drag rectangle (in viewport coords) with every text-item rect
+  const x1 = Math.min(drag.startClient.x, drag.lastClient.x);
+  const y1 = Math.min(drag.startClient.y, drag.lastClient.y);
+  const x2 = Math.max(drag.startClient.x, drag.lastClient.x);
+  const y2 = Math.max(drag.startClient.y, drag.lastClient.y);
+  const items = drag.overlay.querySelectorAll('.pdf-text-item:not(.pdf-text-item-consumed)');
+  let count = 0;
+  for (const span of items) {
+    const r = span.getBoundingClientRect();
+    if (r.right < x1 || r.left > x2 || r.bottom < y1 || r.top > y2) continue;
+    addDecorationOnTextItem(drag.overlay, span, drag.kind, drag.color);
+    count++;
+  }
+  if (count === 0) addDecorationOnTextItem(drag.overlay, drag.startSpan, drag.kind, drag.color);
+  pushHistory('deco-' + drag.kind);
+}, true);
+
+document.addEventListener('pointercancel', () => {
+  if (!_decoDrag) return;
+  _decoDrag.preview.remove();
+  _decoDrag = null;
 }, true);
 
 // =====================================================================
@@ -11870,6 +14430,136 @@ document.getElementById('cropClear').addEventListener('click', clearAllCrops);
 document.getElementById('cropModal').addEventListener('click', (e) => {
   if (e.target.id === 'cropModal') closeCropModal();
 });
+
+// === CROP / RESIZE — normalize page to standard size ===
+// All sizes in PDF points (72 pt = 1 inch; 25.4 mm = 1 inch).
+const CROP_SIZE_PRESETS = {
+  a4:        { w: 595,   h: 842   },  a4l:       { w: 842,   h: 595   },
+  a3:        { w: 842,   h: 1191  },  a3l:       { w: 1191,  h: 842   },
+  a5:        { w: 420,   h: 595   },  a5l:       { w: 595,   h: 420   },
+  letter:    { w: 612,   h: 792   },  letterl:   { w: 792,   h: 612   },
+  legal:     { w: 612,   h: 1008  },  legall:    { w: 1008,  h: 612   },
+  tabloid:   { w: 792,   h: 1224  },  exec:      { w: 522,   h: 756   },
+  p4x6:      { w: 288,   h: 432   },  p5x7:      { w: 360,   h: 504   },
+  p8x10:     { w: 576,   h: 720   },
+  p10x15cm:  { w: 283.5, h: 425.2 },  p13x18cm:  { w: 368.5, h: 510.2 },
+  square:    { w: 576,   h: 576   },  square10cm:{ w: 283.5, h: 283.5 }
+};
+
+function _cropResolveTargetSize() {
+  const preset = document.getElementById('cropSizePreset').value;
+  if (!preset) return null;
+  if (preset === 'custom') {
+    let w = parseFloat(document.getElementById('cropCustomW').value);
+    let h = parseFloat(document.getElementById('cropCustomH').value);
+    const unit = document.getElementById('cropCustomUnit').value;
+    if (!isFinite(w) || w <= 0 || !isFinite(h) || h <= 0) return null;
+    if (unit === 'mm') { w *= 72 / 25.4; h *= 72 / 25.4; }
+    else if (unit === 'in') { w *= 72; h *= 72; }
+    return { w, h };
+  }
+  return CROP_SIZE_PRESETS[preset] || null;
+}
+
+function _cropHexToColor(hex) {
+  const m = /^#([0-9a-f]{6})$/i.exec((hex || '').trim());
+  if (!m) return rgb(1, 1, 1);
+  return rgb(
+    parseInt(m[1].slice(0, 2), 16) / 255,
+    parseInt(m[1].slice(2, 4), 16) / 255,
+    parseInt(m[1].slice(4, 6), 16) / 255
+  );
+}
+
+// Preset dropdown toggles the custom row
+document.getElementById('cropSizePreset').addEventListener('change', (e) => {
+  document.getElementById('cropCustomSize').hidden = (e.target.value !== 'custom');
+});
+
+document.getElementById('cropResizeBtn').addEventListener('click', applyCropResize);
+
+async function applyCropResize() {
+  if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+  const size = _cropResolveTargetSize();
+  if (!size) { showToast('Pick a target size from the dropdown.', 'warn'); return; }
+  const fit = (document.querySelector('input[name="cropFit"]:checked') || {}).value || 'fit';
+  const rotate = parseInt(document.getElementById('cropRotate').value, 10) || 0;
+  const bg = _cropHexToColor(document.getElementById('cropBg').value);
+  const rangeStr = document.getElementById('cropRange').value || 'all';
+  const targetPages = new Set(parsePageRange(rangeStr, pdfJsDoc.numPages));
+  if (!targetPages.size) { showToast('No pages match the range.', 'warn'); return; }
+
+  const btn = document.getElementById('cropResizeBtn');
+  const orig = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<span class="icon">⏳</span> Working…';
+  try {
+    // 1) Bake annotations + margin-crops into a source PDF, so they survive the resize.
+    let workingBytes = annotations.length ? await generatePdfBytes() : pdfBytes;
+
+    // 2) If user wants rotation, pre-rotate the target pages by adjusting each
+    //    page's display rotation. embedPdf in step 3 will then see them already
+    //    rotated, so size() returns post-rotation dimensions and fit math is trivial.
+    if (rotate !== 0) {
+      const tmpDoc = await PDFDocument.load(workingBytes.slice(0), PDF_LOAD_OPTS);
+      const total = tmpDoc.getPageCount();
+      for (let i = 0; i < total; i++) {
+        if (!targetPages.has(i + 1)) continue;
+        const p = tmpDoc.getPage(i);
+        const cur = (p.getRotation && p.getRotation().angle) || 0;
+        p.setRotation(degrees(((cur + rotate) % 360 + 360) % 360));
+      }
+      workingBytes = await tmpDoc.save();
+    }
+
+    // 3) Embed (now-possibly-rotated) source pages into the new document.
+    const newDoc = await PDFDocument.create();
+    const probe = await PDFDocument.load(workingBytes.slice(0), PDF_LOAD_OPTS);
+    const total = probe.getPageCount();
+    const embedded = await newDoc.embedPdf(workingBytes, Array.from({ length: total }, (_, i) => i));
+
+    for (let i = 0; i < total; i++) {
+      const emb = embedded[i];
+      const src = emb.size();  // post-rotation bounding box
+      const pageNum = i + 1;
+      if (!targetPages.has(pageNum)) {
+        const np = newDoc.addPage([src.width, src.height]);
+        np.drawPage(emb, { x: 0, y: 0, width: src.width, height: src.height });
+        continue;
+      }
+      const tW = size.w, tH = size.h;
+      const np = newDoc.addPage([tW, tH]);
+      np.drawRectangle({ x: 0, y: 0, width: tW, height: tH, color: bg, borderWidth: 0 });
+
+      let dW, dH;
+      if (fit === 'stretch')   { dW = tW; dH = tH; }
+      else if (fit === 'fill') { const s = Math.max(tW / src.width, tH / src.height); dW = src.width * s; dH = src.height * s; }
+      else /* fit */           { const s = Math.min(tW / src.width, tH / src.height); dW = src.width * s; dH = src.height * s; }
+
+      np.drawPage(emb, {
+        x: (tW - dW) / 2,
+        y: (tH - dH) / 2,
+        width:  dW,
+        height: dH
+      });
+    }
+
+    // Detach current annotation DOM — they're now baked into the new PDF bytes
+    annotations.forEach(a => { try { a.el?.remove(); } catch (_) {} });
+    annotations = [];
+    deselect();
+    pageCrops = {};  // margin-crops were baked in too
+
+    const out = await newDoc.save();
+    closeCropModal();
+    await loadPDFFromBytes(out, pdfFileName);
+    showToast(`Resized ${targetPages.size} page${targetPages.size === 1 ? '' : 's'} to ${Math.round(size.w)}×${Math.round(size.h)} pt.`, 'success');
+  } catch (e) {
+    console.error('[crop-resize]', e);
+    showToast('Resize failed: ' + (e.message || e), 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = orig;
+  }
+}
 
 // =====================================================================
 // =====================  SIDE PANEL  ==================================
@@ -14108,9 +16798,13 @@ function injectOcrLines(overlay, lines, scale, pageNum) {
     const lbY1 = (line.bbox && line.bbox.y1) || 0;
     const lineH_canvas = Math.max(0, lbY1 - lbY0);
     if (lineH_canvas <= 0) continue;
-    // Estimate font size: line bbox includes ascenders + descenders → ≈ 1.15 × fontSize
-    const fontSize_design = (lineH_canvas / 1.15) * scale;
-    if (fontSize_design < 6) continue;
+    // Estimate font size: line bbox includes ascenders + descenders → ≈ 1.15 × fontSize.
+    // Clamp the upper end so an oversized OCR detection (zoomed-in scan with a single
+    // large heading) doesn't poison downstream Edit-PDF / Find-Replace with a 300-pt body
+    // text height — those flows then drop new annotations at the same massive size.
+    let fontSize_design = (lineH_canvas / 1.15) * scale;
+    if (!isFinite(fontSize_design) || fontSize_design < 6) continue;
+    if (fontSize_design > 96) fontSize_design = 96;
     // Baseline of the line — prefer Tesseract's, fall back to "~85% down the line bbox"
     const blCanvas = tesseractLineBaselineY(line);
     const baselineY_design = (blCanvas !== null ? blCanvas : (lbY0 + lineH_canvas * 0.85)) * scale;
@@ -14567,7 +17261,9 @@ function performInlinePdfReplacement(span, newText) {
   const yTop = parseFloat(span.dataset.y);
   const w = parseFloat(span.dataset.w);
   const h = parseFloat(span.dataset.h);
-  const fontHeight = parseFloat(span.dataset.fontHeight) || 14;
+  let fontHeight = parseFloat(span.dataset.fontHeight) || 14;
+  if (!isFinite(fontHeight) || fontHeight < 4) fontHeight = 14;
+  if (fontHeight > 120) fontHeight = 14;  // same defensive ceiling as Edit PDF
   const fontName = span.dataset.fontName || '';
   const cls = classifyPdfFontName(fontName);
   // Whiteout
