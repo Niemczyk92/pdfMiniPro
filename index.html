@@ -11271,33 +11271,21 @@ let organizeState = null;
 async function openOrganizeModal() {
   if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
   try {
-    let bakedBytes = pdfBytes;
-    let bakedDoc = pdfJsDoc;
-    let mainOwned = false;
-    if (annotations.length > 0) {
-      try {
-        bakedBytes = await generatePdfBytes();
-        // If generatePdfBytes returned the original bytes (XFA fallback path), there's
-        // no point in re-parsing — just use the existing pdfJsDoc as the source.
-        if (bakedBytes !== pdfBytes) {
-          bakedDoc = await loadPdfJsDoc(bakedBytes.slice(0));
-          mainOwned = true;
-        }
-      } catch (e) {
-        console.error('[organize] bake failed:', e);
-        showToast('Couldn\'t bake your edits into the PDF: ' + (e.message || e) + '. Opening Pages without baked edits — page rearrangement will lose annotations on Apply.', 'warn');
-        // Continue with the unbaked source so user can still organize pages
-      }
-    }
+    // Use the raw pdfBytes as the source — DO NOT bake annotations.
+    // Previously we baked annotations into the source PDF on dialog open;
+    // that meant any Pages → Apply turned editable annotations into static
+    // PDF content (user complaint: "after pages changes I can't edit my
+    // objects anymore"). Instead we keep annotations in JS, compute an
+    // old→new page mapping on Apply, and re-attach them to the new pages.
     organizeState = {
-      sources: { main: { bytes: bakedBytes, doc: bakedDoc, owned: mainOwned } },
+      sources: { main: { bytes: pdfBytes, doc: pdfJsDoc, owned: false } },
       pages: [],
       counter: 0
     };
-    if (!bakedDoc || typeof bakedDoc.numPages !== 'number') {
+    if (!pdfJsDoc || typeof pdfJsDoc.numPages !== 'number') {
       throw new Error('PDF is not loaded correctly (no numPages).');
     }
-    for (let i = 0; i < bakedDoc.numPages; i++) {
+    for (let i = 0; i < pdfJsDoc.numPages; i++) {
       organizeState.pages.push({ srcKey: 'main', srcIndex: i, rotation: 0, id: ++organizeState.counter, selected: false });
     }
     document.getElementById('organizeModal').classList.add('show');
@@ -11600,14 +11588,32 @@ async function applyOrganize() {
     return;
   }
 
-  // ---- Phase 2: close modal, reset button, then load the new PDF ----
+  // ---- Phase 2: compute old→new page mapping so existing annotations
+  // follow their pages through reorder / add / delete. We map by source
+  // index in the original document; annotations on a page that no longer
+  // appears in the new layout are dropped, and the page mapping uses the
+  // FIRST occurrence if a page was duplicated.
+  const pageMap = {};
+  const pageRotations = {};  // newPageNum → cumulative rotation applied
+  organizeState.pages.forEach((p, newIdx) => {
+    if (p.srcKey === 'main') {
+      const oldPage = p.srcIndex + 1;
+      if (!pageMap[oldPage]) pageMap[oldPage] = newIdx + 1;
+      pageRotations[newIdx + 1] = (pageRotations[newIdx + 1] || 0) + (p.rotation || 0);
+    }
+  });
+
   organizeState = null;
   document.getElementById('organizeModal').classList.remove('show');
   btn.disabled = false; btn.textContent = origLabel;
 
   try {
-    btn.textContent = origLabel; // (in case anything restored it)
-    await loadPDFFromBytes(newBytes, pdfFileName);
+    btn.textContent = origLabel;
+    await loadPDFFromBytes(newBytes, pdfFileName, {
+      preserveAnnotations: true,
+      pageMap,
+      pageRotations
+    });
     showToast('Pages updated.', 'success');
   } catch (e) {
     console.error('[organize] load failed:', e);
@@ -11752,12 +11758,39 @@ async function doCompress() {
   }
 }
 
-// Re-load PDF from in-memory bytes (used after organize / merge / compress)
-async function loadPDFFromBytes(bytes, filename) {
+// Re-load PDF from in-memory bytes (used after organize / merge / compress).
+// `opts` (optional):
+//   - preserveAnnotations: keep existing annotations in JS, re-attach them
+//     to the new page overlays after render. Used by Pages → Apply so the
+//     user's text / shapes / stamps remain editable after a reorder.
+//   - pageMap: { oldPageNum → newPageNum } applied to each annotation's
+//     `pageNum` before re-attach. Annotations whose page isn't in the map
+//     (deleted page) are dropped.
+async function loadPDFFromBytes(bytes, filename, opts) {
+  opts = opts || {};
   await workerReady;
   if (activeEditor) commitEditor(false);
+  // Snapshot existing annotations as plain defs (no .el reference) so we
+  // can re-create them on the new page overlays after render.
+  let preservedDefs = null;
+  if (opts.preserveAnnotations) {
+    preservedDefs = annotations.map(a => {
+      const def = Object.assign({}, a);
+      delete def.el;
+      return def;
+    });
+    // Apply page mapping: drop annotations whose old page no longer exists.
+    if (opts.pageMap) {
+      preservedDefs = preservedDefs.reduce((acc, def) => {
+        const newPage = opts.pageMap[def.pageNum];
+        if (newPage) { def.pageNum = newPage; acc.push(def); }
+        return acc;
+      }, []);
+    }
+  }
+  // Detach old DOM elements either way (the new render replaces all wrappers).
   annotations.forEach(a => { try { a.el?.remove(); } catch (_) {} });
-  annotations = [];
+  if (!opts.preserveAnnotations) annotations = [];
   selected = null;
   hidePropsPanel();
   // Fire-and-forget destroy of the previous pdfJsDoc.
@@ -11775,6 +11808,27 @@ async function loadPDFFromBytes(bytes, filename) {
   document.getElementById('fileInfo').textContent =
     (filename || 'document.pdf') + ' · ' + pdfJsDoc.numPages + ' page' + (pdfJsDoc.numPages > 1 ? 's' : '');
   await renderPages();
+  // Re-attach preserved annotations to the new page overlays. Each def is
+  // converted back into a live annotation (with a new .el bound to the new
+  // wrapper's overlay) via the same recreateAnnotation path used elsewhere.
+  if (opts.preserveAnnotations && preservedDefs && preservedDefs.length) {
+    // Wait for text-layer promises so getDocument-backed overlays exist.
+    try { await Promise.all(window._textLayerPromises || []); } catch (_) {}
+    window._textLayerPromises = [];
+    const rebuilt = [];
+    for (const def of preservedDefs) {
+      const overlay = document.querySelector(`.page-wrapper[data-page-num="${def.pageNum}"] .overlay`)
+                  || document.querySelectorAll('.overlay')[def.pageNum - 1];
+      if (!overlay) continue;
+      try {
+        const ann = recreateAnnotation(def, overlay);
+        if (ann) rebuilt.push(ann);
+      } catch (e) {
+        console.warn('[loadPDFFromBytes] failed to recreate annotation', def, e);
+      }
+    }
+    annotations = rebuilt;
+  }
   document.getElementById('saveBtn').disabled = false;
   document.getElementById('printBtn').disabled = false;
   document.getElementById('organizeBtn').disabled = false;
@@ -13058,7 +13112,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.18';
+const APP_VERSION = '1.20';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
@@ -15131,12 +15185,28 @@ async function applyCropResize() {
   const orig = btn.innerHTML;
   btn.disabled = true; btn.innerHTML = '<span class="icon">⏳</span> Working…';
   try {
-    // 1) Bake annotations + margin-crops into a source PDF, so they survive the resize.
-    let workingBytes = annotations.length ? await generatePdfBytes() : pdfBytes;
+    // We KEEP the user's annotations editable across resize:
+    //   1. Don't bake — use raw bytes as the source.
+    //   2. Compute a per-page transform (rotation around page center, then
+    //      scale + offset for fit/fill/stretch) in CSS-px units, in the same
+    //      coordinate system the annotations are stored in.
+    //   3. Apply the transform to each annotation on a target page in place.
+    //   4. loadPDFFromBytes(..., { preserveAnnotations: true }) → annotations
+    //      are re-attached to the new (resized) page overlays at their new
+    //      coordinates so the user can keep dragging / editing them.
+    let workingBytes = pdfBytes;
+    const RS = RENDER_SCALE;
 
-    // 2) If user wants rotation, pre-rotate the target pages by adjusting each
-    //    page's display rotation. embedPdf in step 3 will then see them already
-    //    rotated, so size() returns post-rotation dimensions and fit math is trivial.
+    // Capture each target page's PRE-rotation size in CSS px from the live
+    // page-wrapper elements — that's the same coordinate space ann.x/y live in.
+    const preRotSizeCss = {};
+    document.querySelectorAll('.page-wrapper').forEach(w => {
+      const n = parseInt(w.dataset.pageNum, 10);
+      const bw = parseFloat(w.dataset.baseW), bh = parseFloat(w.dataset.baseH);
+      if (n && bw && bh) preRotSizeCss[n] = { w: bw, h: bh };
+    });
+
+    // 2) Pre-rotate source pages if requested (existing behavior).
     if (rotate !== 0) {
       const tmpDoc = await PDFDocument.load(workingBytes.slice(0), PDF_LOAD_OPTS);
       const total = tmpDoc.getPageCount();
@@ -15149,19 +15219,23 @@ async function applyCropResize() {
       workingBytes = await tmpDoc.save();
     }
 
-    // 3) Embed (now-possibly-rotated) source pages into the new document.
+    // 3) Embed source pages into the new document, capturing per-page transforms.
     const newDoc = await PDFDocument.create();
     const probe = await PDFDocument.load(workingBytes.slice(0), PDF_LOAD_OPTS);
     const total = probe.getPageCount();
     const embedded = await newDoc.embedPdf(workingBytes, Array.from({ length: total }, (_, i) => i));
 
+    // Per-page annotation transform in CSS-px coords.
+    const annTransforms = {};
+
     for (let i = 0; i < total; i++) {
       const emb = embedded[i];
-      const src = emb.size();  // post-rotation bounding box
+      const src = emb.size();  // post-rotation bounding box (PDF pt)
       const pageNum = i + 1;
       if (!targetPages.has(pageNum)) {
         const np = newDoc.addPage([src.width, src.height]);
         np.drawPage(emb, { x: 0, y: 0, width: src.width, height: src.height });
+        annTransforms[pageNum] = null;  // unchanged
         continue;
       }
       const tW = size.w, tH = size.h;
@@ -15173,29 +15247,110 @@ async function applyCropResize() {
       else if (fit === 'fill') { const s = Math.max(tW / src.width, tH / src.height); dW = src.width * s; dH = src.height * s; }
       else /* fit */           { const s = Math.min(tW / src.width, tH / src.height); dW = src.width * s; dH = src.height * s; }
 
-      np.drawPage(emb, {
-        x: (tW - dW) / 2,
-        y: (tH - dH) / 2,
-        width:  dW,
-        height: dH
-      });
+      const offsetX_pt = (tW - dW) / 2;
+      const offsetY_pt = (tH - dH) / 2;
+      np.drawPage(emb, { x: offsetX_pt, y: offsetY_pt, width: dW, height: dH });
+
+      // Record transform for annotations on this page.
+      // dW/dH are post-fit content size in pt; src.width/height is post-rotation.
+      annTransforms[pageNum] = {
+        rotate,                                              // CSS degrees (0/90/180/270)
+        preRotSize: preRotSizeCss[pageNum] || { w: src.width * RS, h: src.height * RS },
+        postRotSize_pt: { w: src.width, h: src.height },     // post-rotation, pre-fit
+        scaleX: dW / src.width,                              // fit/fill/stretch scale
+        scaleY: dH / src.height,
+        offsetX_css: offsetX_pt * RS,
+        offsetY_css: offsetY_pt * RS
+      };
     }
 
-    // Detach current annotation DOM — they're now baked into the new PDF bytes
-    annotations.forEach(a => { try { a.el?.remove(); } catch (_) {} });
-    annotations = [];
+    // 4) Apply transforms to annotations IN PLACE (CSS-px space).
+    annotations.forEach(ann => {
+      const t = annTransforms[ann.pageNum];
+      if (!t) return;  // page not resized
+      _applyResizeTransformToAnn(ann, t);
+    });
+
     deselect();
-    pageCrops = {};  // margin-crops were baked in too
+    pageCrops = {};  // margin-crops were not applied here
 
     const out = await newDoc.save();
     closeCropModal();
-    await loadPDFFromBytes(out, pdfFileName);
-    showToast(`Resized ${targetPages.size} page${targetPages.size === 1 ? '' : 's'} to ${Math.round(size.w)}×${Math.round(size.h)} pt.`, 'success');
+    await loadPDFFromBytes(out, pdfFileName, { preserveAnnotations: true });
+    showToast(`Resized ${targetPages.size} page${targetPages.size === 1 ? '' : 's'} to ${Math.round(size.w)}×${Math.round(size.h)} pt — annotations follow.`, 'success');
   } catch (e) {
     console.error('[crop-resize]', e);
     showToast('Resize failed: ' + (e.message || e), 'error');
   } finally {
     btn.disabled = false; btn.innerHTML = orig;
+  }
+}
+
+// Apply a Crop/Resize transform to a single annotation, in CSS-px units.
+// Mutates `ann` in place. Transform order: rotate around page center → scale → offset.
+function _applyResizeTransformToAnn(ann, t) {
+  const RS = RENDER_SCALE;
+  const preW = t.preRotSize.w, preH = t.preRotSize.h;          // CSS px (pre-rotation)
+  const postW = t.postRotSize_pt.w * RS, postH = t.postRotSize_pt.h * RS;  // CSS px (post-rotation)
+
+  // ----- Step 1: rotation around page center (in CSS px) -----
+  if (t.rotate) {
+    const cx0 = preW / 2, cy0 = preH / 2;
+    const cx1 = postW / 2, cy1 = postH / 2;
+    // CSS rotation: positive = CW visually. With Y-down screen coords,
+    // CW around origin is: (x, y) → (cos·x - sin·y, sin·x + cos·y) with θ
+    // measured in screen space — i.e. for 90° CW: (x, y) → (-y, x).
+    const rad = t.rotate * Math.PI / 180;
+    const cosT = Math.cos(rad), sinT = Math.sin(rad);
+    const rotPoint = (x, y) => {
+      const dx = x - cx0, dy = y - cy0;
+      return { x: cx1 + (cosT * dx - sinT * dy), y: cy1 + (sinT * dx + cosT * dy) };
+    };
+    if (ann.points && Array.isArray(ann.points)) {
+      ann.points = ann.points.map(p => rotPoint(p.x, p.y));
+    }
+    if (ann.x1 !== undefined && ann.y1 !== undefined) {
+      const p1 = rotPoint(ann.x1, ann.y1); ann.x1 = p1.x; ann.y1 = p1.y;
+    }
+    if (ann.x2 !== undefined && ann.y2 !== undefined) {
+      const p2 = rotPoint(ann.x2, ann.y2); ann.x2 = p2.x; ann.y2 = p2.y;
+    }
+    // Position annotations are (x, y) top-left + width/height — rotate the
+    // CENTER, then back-derive top-left from the (possibly swapped for 90°
+    // / 270°) dimensions kept as-is. CSS rotation on the element handles
+    // the visual orientation via the bumped `ann.rotation`.
+    if (ann.x !== undefined && ann.y !== undefined) {
+      const cx = ann.x + (ann.width || 0) / 2;
+      const cy = ann.y + (ann.height || 0) / 2;
+      const c = rotPoint(cx, cy);
+      ann.x = c.x - (ann.width || 0) / 2;
+      ann.y = c.y - (ann.height || 0) / 2;
+    }
+    ann.rotation = ((ann.rotation || 0) + t.rotate) % 360;
+  }
+
+  // ----- Step 2: scale + offset (fit / fill / stretch) -----
+  if (ann.points && Array.isArray(ann.points)) {
+    ann.points = ann.points.map(p => ({
+      x: p.x * t.scaleX + t.offsetX_css,
+      y: p.y * t.scaleY + t.offsetY_css
+    }));
+  }
+  if (ann.x1 !== undefined) ann.x1 = ann.x1 * t.scaleX + t.offsetX_css;
+  if (ann.y1 !== undefined) ann.y1 = ann.y1 * t.scaleY + t.offsetY_css;
+  if (ann.x2 !== undefined) ann.x2 = ann.x2 * t.scaleX + t.offsetX_css;
+  if (ann.y2 !== undefined) ann.y2 = ann.y2 * t.scaleY + t.offsetY_css;
+  if (ann.x !== undefined && ann.y !== undefined) {
+    ann.x = ann.x * t.scaleX + t.offsetX_css;
+    ann.y = ann.y * t.scaleY + t.offsetY_css;
+  }
+  if (ann.width !== undefined) ann.width *= t.scaleX;
+  if (ann.height !== undefined) ann.height *= t.scaleY;
+  if (ann.fontSize) {
+    ann.fontSize = Math.max(4, ann.fontSize * Math.min(t.scaleX, t.scaleY));
+  }
+  if (ann.strokeWidth) {
+    ann.strokeWidth = Math.max(0.5, ann.strokeWidth * Math.min(t.scaleX, t.scaleY));
   }
 }
 
@@ -17953,8 +18108,8 @@ loadPDF = async function(file) {
   }
 };
 const _origLoadPDFFromBytes = loadPDFFromBytes;
-loadPDFFromBytes = async function(bytes, filename) {
-  await _origLoadPDFFromBytes(bytes, filename);
+loadPDFFromBytes = async function(bytes, filename, opts) {
+  await _origLoadPDFFromBytes(bytes, filename, opts);
   if (pdfJsDoc) {
     detectFormFields();
     // Don't clear sessionBookmarks/pageCrops on re-load (Organize Apply re-loads bytes mid-edit)
