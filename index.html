@@ -469,6 +469,33 @@
     pointer-events: none; white-space: nowrap;
     max-width: 300px; overflow: hidden; text-overflow: ellipsis;
   }
+  /* Link-as-property badge: a small "↗" pill in the top-right corner of any
+     annotation that has `ann.link` set. Lets the user see at a glance which
+     objects act as clickable links, without making them look like the old
+     standalone blue-dashed link rectangle. Tooltip shows the target. */
+  .annotation[data-has-link="1"]::before {
+    content: '🔗';
+    position: absolute;
+    top: -10px; right: -10px;
+    background: var(--accent); color: white;
+    font-size: 10px; line-height: 1;
+    padding: 3px 5px; border-radius: 999px;
+    box-shadow: 0 1px 4px rgba(37,99,235,0.35);
+    pointer-events: none; z-index: 5;
+  }
+  .annotation[data-has-link="1"]:hover { cursor: alias; }
+  /* Hint that Alt+click follows the link */
+  .annotation[data-has-link="1"][data-link-target]:hover::after {
+    content: 'Alt-click to open: ' attr(data-link-target);
+    position: absolute;
+    bottom: -22px; left: 0;
+    background: var(--text); color: var(--bg);
+    font-size: 10px; padding: 2px 6px; border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    pointer-events: none; white-space: nowrap;
+    max-width: 320px; overflow: hidden; text-overflow: ellipsis;
+    z-index: 6;
+  }
 
   /* Templates / Bookmarks lists */
   .tpl-list, .bm-list { max-height: 320px; overflow-y: auto; }
@@ -759,6 +786,64 @@
   @media (max-width: 640px) {
     .code-grid { grid-template-columns: 1fr; }
   }
+  /* QR wizard — template picker + step layout */
+  .qr-step-title {
+    font-size: 14px; font-weight: 600; margin: 6px 0 12px;
+    color: var(--text);
+  }
+  .qr-template-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .qr-template-card {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    cursor: pointer; transition: transform .12s, border-color .12s, background .12s;
+    font: inherit; color: var(--text); text-align: center;
+  }
+  .qr-template-card:hover {
+    border-color: var(--accent); background: var(--accent-subtle);
+    transform: translateY(-1px);
+  }
+  .qr-tpl-icon { font-size: 28px; line-height: 1; }
+  .qr-tpl-label { font-weight: 600; font-size: 13px; }
+  .qr-tpl-sub { font-size: 11px; color: var(--muted); line-height: 1.3; }
+  .qr-step2-head {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .qr-back-btn {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; padding: 5px 10px;
+    cursor: pointer; font: inherit; font-size: 13px; color: var(--text-soft);
+  }
+  .qr-back-btn:hover { background: var(--surface-2); color: var(--text); }
+  .qr-step2-title { font-weight: 600; font-size: 15px; }
+  .qr-style-section {
+    margin-top: 10px; padding: 10px 12px;
+    background: var(--surface-2); border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .qr-style-section summary {
+    cursor: pointer; font-weight: 600; font-size: 13px;
+    color: var(--text-soft); user-select: none;
+  }
+  .qr-style-section[open] summary { color: var(--text); margin-bottom: 6px; }
+  .qr-style-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border: 1px solid var(--border);
+    border-radius: 999px; font-size: 12px; cursor: pointer;
+    background: var(--surface);
+  }
+  .qr-style-pill input { accent-color: var(--accent); }
+  .qr-style-pill:has(input:checked) {
+    background: var(--accent-subtle); border-color: var(--accent);
+    color: var(--accent); font-weight: 600;
+  }
+  /* Pretty QR preview — softer shadow + bigger */
+  #qrStep2 .code-canvas { max-height: 280px; image-rendering: auto; }
 
   /* AI features — only shown when local AI connection is verified.
      `!important` on hide so no overriding rule can leak the button when
@@ -2290,6 +2375,50 @@
   }
   .cs-chip:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
   .cs-chip:active { transform: scale(0.96); }
+  /* Stamp kind picker (Text / Image) */
+  .cs-kind-row {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .cs-kind-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 12px; border: 1px solid var(--border);
+    border-radius: 999px; font-size: 13px; cursor: pointer;
+    background: var(--surface); color: var(--text-soft);
+    user-select: none;
+  }
+  .cs-kind-pill:has(input:checked) {
+    background: var(--accent-subtle); border-color: var(--accent);
+    color: var(--accent); font-weight: 600;
+  }
+  .cs-kind-pill input { accent-color: var(--accent); }
+  /* Image upload drop zone for image-stamp mode */
+  .cs-image-drop {
+    border: 2px dashed var(--border-strong);
+    border-radius: 10px;
+    background: var(--surface-2);
+    min-height: 120px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    overflow: hidden; padding: 12px;
+  }
+  .cs-image-drop:hover { border-color: var(--accent); background: var(--accent-subtle); }
+  .cs-image-drop.dragover { border-color: var(--accent); background: var(--accent-subtle); }
+  .cs-image-empty {
+    text-align: center;
+    display: flex; flex-direction: column; gap: 4px;
+    color: var(--text-soft);
+  }
+  .cs-image-icon { font-size: 32px; line-height: 1; }
+  .cs-image-cta { font-weight: 600; font-size: 14px; color: var(--text); }
+  .cs-image-hint { font-size: 11px; color: var(--muted); }
+  .cs-image-preview {
+    max-width: 100%; max-height: 140px;
+    object-fit: contain;
+    background: repeating-conic-gradient(#f4f4f5 0% 25%, #ffffff 0% 50%) 50%/12px 12px;
+    border-radius: 6px;
+  }
   .create-stamp-form .row {
     display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
   }
@@ -2422,11 +2551,49 @@
     color: var(--text-soft); margin-bottom: 5px;
     text-transform: uppercase; letter-spacing: 0.4px;
   }
-  .profile-form input[type="text"], .profile-form input[type="email"], .profile-form input[type="tel"] {
+  .profile-form input[type="text"],
+  .profile-form input[type="email"],
+  .profile-form input[type="tel"],
+  .profile-form input[type="url"],
+  .profile-form input[type="search"],
+  .profile-form input[type="number"] {
     width: 100%; padding: 9px 12px;
     background: var(--surface-2); border: 1px solid var(--border);
     border-radius: 4px; color: var(--text);
     font-family: 'Manrope', sans-serif; font-size: 14px;
+  }
+  .profile-photo-row {
+    display: flex; gap: 14px; align-items: center;
+    padding: 12px; margin-bottom: 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .profile-photo-circle {
+    width: 84px; height: 84px; border-radius: 50%;
+    background: var(--accent-subtle);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 3px solid #ffffff;
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  .profile-photo-initials {
+    font-weight: 700; font-size: 28px;
+    color: var(--accent);
+    font-family: 'Manrope', sans-serif;
+    letter-spacing: 0.5px;
+  }
+  .profile-photo-silhouette {
+    width: 64%; height: 64%;
+    color: var(--accent);
+  }
+  .profile-photo-img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .profile-photo-actions {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    align-items: center; flex: 1;
   }
   .profile-form input:focus { outline: 2px solid var(--accent-ring); border-color: var(--accent); }
   .profile-form .field-row { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -2736,11 +2903,14 @@
 </div>
 
 <div class="toolbar tb-v2">
-  <!-- 1. Open -->
+  <!-- 1. Open / New -->
   <label class="btn btn-lg outlined" title="Open a PDF file (Ctrl+O)">
     <input type="file" id="fileInput" accept="application/pdf,.pdfenc">
     <span class="icon">📂</span> <span class="lbl">Open</span>
   </label>
+  <button class="btn btn-lg outlined" id="newPdfBtn" type="button" title="Create a new blank PDF — pick a page size">
+    <span class="icon">📄</span> <span class="lbl">New</span>
+  </button>
 
   <div class="tb-sep"></div>
 
@@ -2797,7 +2967,10 @@
       <button class="dropdown-item pro-tool" data-act="tool:highlight" type="button"><span class="icon" style="color:#facc15">▓</span><span>Highlight</span></button>
       <button class="dropdown-item pro-tool" data-act="tool:underline" type="button"><span class="icon" style="color:#dc2626">U̲</span><span>Underline</span></button>
       <button class="dropdown-item pro-tool" data-act="tool:strike" type="button"><span class="icon" style="color:#dc2626">S̶</span><span>Strike</span></button>
-      <button class="dropdown-item pro-tool" data-act="tool:link" type="button"><span class="icon">🔗</span><span>Link</span></button>
+      <!-- Standalone Link tool removed v1.24 — links are now attached to
+           any object via the 🔗 button in the selected-object props panel.
+           The legacy `tool:link` path still exists for backward compat with
+           PDFs created in older versions. -->
       <button class="dropdown-item pro-tool" data-act="tool:redact" type="button"><span class="icon">▮</span><span>Redact (black-out)</span><span class="hint">strips metadata on save</span></button>
       <div class="dropdown-section">Codes</div>
       <button class="dropdown-item pro-tool" id="qrBarcodeBtnMenu" type="button"><span class="icon">▦</span><span>QR / Barcode…</span><span class="hint">generate &amp; insert</span></button>
@@ -3269,7 +3442,14 @@
         <div class="stamp-preview-box" id="createStampPreviewBox">DRAFT</div>
       </div>
       <div class="create-stamp-form">
-        <div class="field">
+        <!-- Stamp KIND picker — text-with-style vs. uploaded image (logo / scan) -->
+        <div class="field cs-kind-row">
+          <label class="cs-kind-pill"><input type="radio" name="csKind" value="text" checked> ✎ Text stamp</label>
+          <label class="cs-kind-pill"><input type="radio" name="csKind" value="image"> 🖼 Image stamp</label>
+          <span class="cs-hint" style="margin-left:auto">Image = upload a logo or scan of a real stamp.</span>
+        </div>
+        <!-- TEXT MODE inputs (default) -->
+        <div class="field" id="csTextField">
           <label for="csText">Stamp content* <span class="cs-hint">— one line per line; click a chip to insert a token at the cursor</span></label>
           <textarea id="csText" rows="3" maxlength="280" placeholder="DRAFT&#10;{USER} · {DATE} {TIME}" class="cs-template"></textarea>
           <div class="cs-chip-row">
@@ -3279,78 +3459,105 @@
             <button class="cs-chip" id="csInsertNL" type="button" data-token="&#10;" title="Insert a new line (you can also just press Enter)">↵ New line</button>
           </div>
         </div>
-        <div class="field">
-          <label>Font Style</label>
-          <div class="row">
-            <select id="csFont" class="select-input">
-              <option value="Helvetica">Helvetica</option>
-              <option value="Times-Roman">Times Roman</option>
-              <option value="Courier">Courier</option>
-            </select>
-            <button class="pbtn" id="csBold" type="button" title="Bold">B</button>
-            <button class="pbtn italic" id="csItalic" type="button" title="Italic">I</button>
-            <button class="pbtn underline" id="csUnderline" type="button" title="Underline">U</button>
+        <!-- IMAGE MODE inputs (shown when csKind=image) -->
+        <div class="field" id="csImageField" hidden>
+          <label>Stamp image*</label>
+          <div class="cs-image-drop" id="csImageDrop">
+            <input type="file" id="csImageInput" accept="image/*" hidden>
+            <div class="cs-image-empty" id="csImageEmpty">
+              <div class="cs-image-icon">🖼</div>
+              <div class="cs-image-cta">Click to choose a PNG / JPG / SVG…</div>
+              <div class="cs-image-hint">Transparent PNGs work best for logos and round stamps.</div>
+            </div>
+            <img id="csImagePreview" class="cs-image-preview" alt="Stamp image preview" hidden>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn outlined" id="csImageReplace" type="button" hidden>Replace image</button>
+            <button class="btn danger" id="csImageClear" type="button" hidden>Remove image</button>
+            <span id="csImageInfo" class="cs-hint" style="margin-left:auto"></span>
           </div>
         </div>
-        <div class="field">
-          <label>Text Color</label>
-          <div class="row swatch-row" id="csTextColorRow">
-            <button class="pswatch" data-color="#000000" style="background:#000000" type="button"></button>
-            <button class="pswatch" data-color="#ffffff" style="background:#ffffff;border-color:var(--border-strong)" type="button"></button>
-            <button class="pswatch" data-color="#dc2626" style="background:#dc2626" type="button"></button>
-            <button class="pswatch" data-color="#15803d" style="background:#15803d" type="button"></button>
-            <button class="pswatch" data-color="#1d4ed8" style="background:#1d4ed8" type="button"></button>
-            <input type="color" id="csTextColor" value="#dc2626" class="pcolor-input">
-            <button class="pbtn danger" id="csTextColorClear" type="button" title="Reset text color">🗑</button>
+        <!-- All text-styling controls live inside this wrapper so we can
+             hide them in one shot when the user switches to "Image stamp".
+             They don't apply to uploaded logos / scanned stamps. -->
+        <div id="csTextOnlyFields">
+          <div class="field">
+            <label>Font Style</label>
+            <div class="row">
+              <select id="csFont" class="select-input">
+                <option value="Helvetica">Helvetica</option>
+                <option value="Times-Roman">Times Roman</option>
+                <option value="Courier">Courier</option>
+              </select>
+              <button class="pbtn" id="csBold" type="button" title="Bold">B</button>
+              <button class="pbtn italic" id="csItalic" type="button" title="Italic">I</button>
+              <button class="pbtn underline" id="csUnderline" type="button" title="Underline">U</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Text Color</label>
+            <div class="row swatch-row" id="csTextColorRow">
+              <button class="pswatch" data-color="#000000" style="background:#000000" type="button"></button>
+              <button class="pswatch" data-color="#ffffff" style="background:#ffffff;border-color:var(--border-strong)" type="button"></button>
+              <button class="pswatch" data-color="#dc2626" style="background:#dc2626" type="button"></button>
+              <button class="pswatch" data-color="#15803d" style="background:#15803d" type="button"></button>
+              <button class="pswatch" data-color="#1d4ed8" style="background:#1d4ed8" type="button"></button>
+              <input type="color" id="csTextColor" value="#dc2626" class="pcolor-input">
+              <button class="pbtn danger" id="csTextColorClear" type="button" title="Reset text color">🗑</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Background Color</label>
+            <div class="row swatch-row" id="csBgColorRow">
+              <button class="pswatch" data-bg="#fde68a" style="background:#fde68a" type="button"></button>
+              <button class="pswatch" data-bg="#bbf7d0" style="background:#bbf7d0" type="button"></button>
+              <button class="pswatch" data-bg="#bfdbfe" style="background:#bfdbfe" type="button"></button>
+              <button class="pswatch" data-bg="#fecaca" style="background:#fecaca" type="button"></button>
+              <input type="color" id="csBgColor" value="#ffffff" class="pcolor-input">
+              <button class="pbtn danger" id="csBgClear" type="button" title="No background">🗑</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Border</label>
+            <div class="row">
+              <select id="csBorderStyle" class="select-input">
+                <option value="dashed">Dashed</option>
+                <option value="solid">Solid</option>
+                <option value="none">None</option>
+              </select>
+              <input type="color" id="csBorderColor" value="#dc2626" class="pcolor-input" title="Border color">
+              <input type="number" id="csBorderWidth" value="2" min="0" max="10" class="psize-input" title="Border width">
+            </div>
+          </div>
+          <div class="field">
+            <label>Token values <span class="cs-hint">— what {USER}, {DATE}, {TIME} resolve to</span></label>
+            <div class="row" id="csTimestampRow">
+              <input type="text" id="csUsernameVal" class="select-input" placeholder="Your name (used by {USER})" maxlength="40" style="flex:1;min-width:140px">
+            </div>
+            <div class="row" style="margin-top:6px">
+              <select id="csDateFormat" class="select-input" style="flex:1" title="Date format used by {DATE}">
+                <option value="MM/DD/YYYY" selected>MM/DD/YYYY (USA)</option>
+                <option value="MMM-DD-YYYY">Month DD, YYYY</option>
+                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+              </select>
+              <select id="csTimeFormat" class="select-input" style="flex:1" title="Time format used by {TIME}">
+                <option value="hh:mm A" selected>12-hour (hh:mm AM/PM)</option>
+                <option value="HH:mm">24-hour (HH:mm)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="csFontSize">Text Size</label>
+            <div class="row">
+              <input type="number" id="csFontSize" class="psize-input" value="24" min="8" max="96">
+            </div>
           </div>
         </div>
+        <!-- "Save to library" lives OUTSIDE csTextOnlyFields so image stamps
+             can also be saved to the user's custom-stamps gallery. -->
         <div class="field">
-          <label>Background Color</label>
-          <div class="row swatch-row" id="csBgColorRow">
-            <button class="pswatch" data-bg="#fde68a" style="background:#fde68a" type="button"></button>
-            <button class="pswatch" data-bg="#bbf7d0" style="background:#bbf7d0" type="button"></button>
-            <button class="pswatch" data-bg="#bfdbfe" style="background:#bfdbfe" type="button"></button>
-            <button class="pswatch" data-bg="#fecaca" style="background:#fecaca" type="button"></button>
-            <input type="color" id="csBgColor" value="#ffffff" class="pcolor-input">
-            <button class="pbtn danger" id="csBgClear" type="button" title="No background">🗑</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>Border</label>
-          <div class="row">
-            <select id="csBorderStyle" class="select-input">
-              <option value="dashed">Dashed</option>
-              <option value="solid">Solid</option>
-              <option value="none">None</option>
-            </select>
-            <input type="color" id="csBorderColor" value="#dc2626" class="pcolor-input" title="Border color">
-            <input type="number" id="csBorderWidth" value="2" min="0" max="10" class="psize-input" title="Border width">
-          </div>
-        </div>
-        <div class="field">
-          <label>Token values <span class="cs-hint">— what {USER}, {DATE}, {TIME} resolve to</span></label>
-          <div class="row" id="csTimestampRow">
-            <input type="text" id="csUsernameVal" class="select-input" placeholder="Your name (used by {USER})" maxlength="40" style="flex:1;min-width:140px">
-          </div>
-          <div class="row" style="margin-top:6px">
-            <select id="csDateFormat" class="select-input" style="flex:1" title="Date format used by {DATE}">
-              <option value="MM/DD/YYYY" selected>MM/DD/YYYY (USA)</option>
-              <option value="MMM-DD-YYYY">Month DD, YYYY</option>
-              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-            </select>
-            <select id="csTimeFormat" class="select-input" style="flex:1" title="Time format used by {TIME}">
-              <option value="hh:mm A" selected>12-hour (hh:mm AM/PM)</option>
-              <option value="HH:mm">24-hour (HH:mm)</option>
-            </select>
-          </div>
-        </div>
-        <div class="field">
-          <label for="csFontSize">Text Size</label>
-          <div class="row">
-            <input type="number" id="csFontSize" class="psize-input" value="24" min="8" max="96">
-            <label class="check"><input type="checkbox" id="csSaveLib"> Save to my custom stamps</label>
-          </div>
+          <label class="check"><input type="checkbox" id="csSaveLib"> Save to my custom stamps</label>
         </div>
       </div>
     </div>
@@ -3372,6 +3579,7 @@
         <input type="file" id="mergeInput" accept="application/pdf" hidden>
         <span class="icon">＋</span> Merge PDF
       </label>
+      <button class="btn outlined" id="addBlankPageBtn" type="button" title="Append a blank page — pick a page size"><span class="icon">📄</span> Blank page</button>
       <button class="btn outlined" id="splitBtn" type="button"><span class="icon">⤴</span> Export Selected</button>
       <button class="btn outlined" id="rotateAllBtn" type="button" title="Rotate every page 90° clockwise">↻ Rotate All</button>
       <button class="btn outlined" id="compressBtn" type="button"><span class="icon">⤓</span> Compress PDF…</button>
@@ -3681,51 +3889,123 @@
       <button class="settings-tab" data-codetab="bar" type="button">||||| Barcode</button>
     </div>
 
-    <!-- QR -->
+    <!-- QR — wizard with templates -->
     <div class="code-pane" data-codepane="qr">
-      <div class="code-grid">
-        <div class="code-form">
-          <label class="ps-label">Content (URL, text, vCard, Wi-Fi…)</label>
-          <textarea id="qrText" class="ps-text" style="height:90px" placeholder="https://example.com&#10;or:&#10;WIFI:T:WPA;S:MyNet;P:secret123;;"></textarea>
-          <div class="code-row">
-            <div>
-              <label class="ps-label">Size (px)</label>
-              <input type="number" id="qrSize" class="ps-text" value="240" min="80" max="800" step="20">
-            </div>
-            <div>
-              <label class="ps-label">Margin (modules)</label>
-              <input type="number" id="qrMargin" class="ps-text" value="2" min="0" max="8">
-            </div>
-          </div>
-          <div class="code-row">
-            <div>
-              <label class="ps-label">Error correction</label>
-              <select id="qrEcc" class="ps-text">
-                <option value="L">L (7% recovery — smallest)</option>
-                <option value="M" selected>M (15% recovery — default)</option>
-                <option value="Q">Q (25% recovery)</option>
-                <option value="H">H (30% recovery — best)</option>
-              </select>
-            </div>
-            <div>
-              <label class="ps-label">Dark colour</label>
-              <input type="color" id="qrDark" class="ps-text" value="#000000" style="height:38px;padding:2px">
-            </div>
-          </div>
-          <div class="code-row">
-            <div>
-              <label class="ps-label">Light (background)</label>
-              <input type="color" id="qrLight" class="ps-text" value="#ffffff" style="height:38px;padding:2px">
-            </div>
-            <div>
-              <label class="check" style="margin-top:24px"><input type="checkbox" id="qrTransparent"> Transparent background</label>
-            </div>
-          </div>
+      <!-- Step 1: pick what to encode -->
+      <div id="qrStep1" class="qr-step">
+        <div class="qr-step-title">What do you want to share?</div>
+        <div class="qr-template-grid">
+          <button class="qr-template-card" data-qr-tpl="url" type="button">
+            <span class="qr-tpl-icon">🌐</span>
+            <span class="qr-tpl-label">Website</span>
+            <span class="qr-tpl-sub">Open a URL on scan</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="vcard" type="button">
+            <span class="qr-tpl-icon">👤</span>
+            <span class="qr-tpl-label">Business card</span>
+            <span class="qr-tpl-sub">vCard — name, phone, email…</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="wifi" type="button">
+            <span class="qr-tpl-icon">📶</span>
+            <span class="qr-tpl-label">Wi-Fi</span>
+            <span class="qr-tpl-sub">Connect with one tap</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="email" type="button">
+            <span class="qr-tpl-icon">✉</span>
+            <span class="qr-tpl-label">Email</span>
+            <span class="qr-tpl-sub">Pre-filled mailto:</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="phone" type="button">
+            <span class="qr-tpl-icon">📞</span>
+            <span class="qr-tpl-label">Phone</span>
+            <span class="qr-tpl-sub">Tap to call</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="sms" type="button">
+            <span class="qr-tpl-icon">💬</span>
+            <span class="qr-tpl-label">SMS</span>
+            <span class="qr-tpl-sub">Pre-filled message</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="geo" type="button">
+            <span class="qr-tpl-icon">📍</span>
+            <span class="qr-tpl-label">Location</span>
+            <span class="qr-tpl-sub">Open in maps</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="text" type="button">
+            <span class="qr-tpl-icon">📝</span>
+            <span class="qr-tpl-label">Plain text</span>
+            <span class="qr-tpl-sub">Anything — notes, codes…</span>
+          </button>
         </div>
-        <div class="code-preview">
-          <div class="code-preview-label">Preview</div>
-          <canvas id="qrCanvas" class="code-canvas"></canvas>
-          <div id="qrStatus" class="code-status">Type something above to preview.</div>
+      </div>
+
+      <!-- Step 2: fill template fields + style + preview -->
+      <div id="qrStep2" class="qr-step" hidden>
+        <div class="qr-step2-head">
+          <button class="qr-back-btn" id="qrBackBtn" type="button" title="Back to template picker">← Back</button>
+          <div class="qr-step2-title"><span id="qrTplIcon">🌐</span> <span id="qrTplName">Website</span></div>
+        </div>
+        <div class="code-grid">
+          <div class="code-form">
+            <!-- Template-specific fields injected here -->
+            <div id="qrFields"></div>
+
+            <details class="qr-style-section">
+              <summary>🎨 Style &amp; appearance</summary>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+                <div>
+                  <label class="ps-label">Foreground</label>
+                  <input type="color" id="qrDark" class="ps-text" value="#000000" style="height:38px;padding:2px">
+                </div>
+                <div>
+                  <label class="ps-label">Background</label>
+                  <input type="color" id="qrLight" class="ps-text" value="#ffffff" style="height:38px;padding:2px">
+                </div>
+              </div>
+              <label class="check" style="margin-top:8px"><input type="checkbox" id="qrTransparent"> Transparent background</label>
+              <label class="ps-label" style="margin-top:10px">Module shape</label>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="qr-style-pill"><input type="radio" name="qrModuleShape" value="square" checked> ▪ Square</label>
+                <label class="qr-style-pill"><input type="radio" name="qrModuleShape" value="rounded"> ◐ Rounded</label>
+                <label class="qr-style-pill"><input type="radio" name="qrModuleShape" value="dot"> ● Dot</label>
+              </div>
+              <label class="ps-label" style="margin-top:10px">Eye style (3 corner squares)</label>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="qr-style-pill"><input type="radio" name="qrEyeShape" value="square" checked> Square</label>
+                <label class="qr-style-pill"><input type="radio" name="qrEyeShape" value="rounded"> Rounded</label>
+                <label class="qr-style-pill"><input type="radio" name="qrEyeShape" value="circle"> Circle</label>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+                <div>
+                  <label class="ps-label">Size (px)</label>
+                  <input type="number" id="qrSize" class="ps-text" value="320" min="120" max="800" step="20">
+                </div>
+                <div>
+                  <label class="ps-label">Error correction</label>
+                  <select id="qrEcc" class="ps-text">
+                    <option value="L">L · 7% recovery</option>
+                    <option value="M" selected>M · 15% (default)</option>
+                    <option value="Q">Q · 25%</option>
+                    <option value="H">H · 30% (best)</option>
+                  </select>
+                </div>
+              </div>
+              <label class="ps-label" style="margin-top:10px">Center logo (optional)</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <label class="btn outlined" style="font-size:13px;padding:6px 10px">
+                  <input type="file" id="qrLogoInput" accept="image/*" hidden>
+                  Choose image…
+                </label>
+                <button class="btn" id="qrLogoClear" type="button" style="font-size:13px;padding:6px 10px" hidden>Remove</button>
+                <span id="qrLogoStatus" style="font-size:12px;color:var(--muted)">No logo</span>
+              </div>
+              <input type="hidden" id="qrMargin" value="2">
+            </details>
+          </div>
+          <div class="code-preview">
+            <div class="code-preview-label">Preview</div>
+            <canvas id="qrCanvas" class="code-canvas"></canvas>
+            <div id="qrStatus" class="code-status">Fill in the fields above.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -3981,6 +4261,31 @@
     </div>
     <div class="modal-sub">Saved locally on this device. Used to pre-fill business cards, stamps with your info, and saved signatures.</div>
     <div class="profile-form">
+      <!-- Profile photo — round preview + Upload / Remove buttons.
+           When set, the photo replaces the auto-generated initials on the
+           business card avatar circle. Stored as a dataURL alongside the
+           rest of the profile in localStorage. -->
+      <div class="field profile-photo-row">
+        <div class="profile-photo-circle" id="prPhotoCircle" title="No photo set">
+          <!-- Generic person-silhouette avatar shown when neither a photo
+               nor a name is set. Plain SVG so it looks crisp on any DPI and
+               never triggers the broken-image icon. -->
+          <svg id="prPhotoSilhouette" class="profile-photo-silhouette" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="24" r="13" fill="currentColor" opacity="0.85"/>
+            <path d="M8 60 C 8 44, 24 38, 32 38 C 40 38, 56 44, 56 60 Z" fill="currentColor" opacity="0.85"/>
+          </svg>
+          <span id="prPhotoInitials" class="profile-photo-initials" hidden></span>
+          <img id="prPhotoImg" class="profile-photo-img" alt="Profile photo" hidden>
+        </div>
+        <div class="profile-photo-actions">
+          <label class="btn outlined" style="font-size:13px">
+            <input type="file" id="prPhotoInput" accept="image/*" hidden>
+            📷 Upload photo
+          </label>
+          <button class="btn danger" id="prPhotoClear" type="button" style="font-size:13px" hidden>Remove</button>
+          <div class="cs-hint" style="flex-basis:100%">Square photos work best. Goes on the business card.</div>
+        </div>
+      </div>
       <div class="field">
         <label>Full Name</label>
         <input type="text" id="prFullName" maxlength="80" placeholder="Jane Doe">
@@ -4015,9 +4320,33 @@
         <label>Country</label>
         <input type="text" id="prCountry" maxlength="60" placeholder="United States">
       </div>
+      <div class="field-row">
+        <div class="field" style="flex:1">
+          <label>Company / Organization</label>
+          <input type="text" id="prCompany" maxlength="80" placeholder="Acme Inc.">
+        </div>
+        <div class="field" style="flex:1">
+          <label>Job title</label>
+          <input type="text" id="prTitle" maxlength="80" placeholder="Director of Engineering">
+        </div>
+      </div>
       <div class="field">
-        <label>Company / Title (optional)</label>
-        <input type="text" id="prCompany" maxlength="80" placeholder="Acme Inc · Director">
+        <label>Website</label>
+        <input type="url" id="prWebsite" maxlength="120" placeholder="https://example.com">
+      </div>
+      <div class="field-row">
+        <div class="field" style="flex:1">
+          <label>LinkedIn (optional)</label>
+          <input type="text" id="prLinkedIn" maxlength="120" placeholder="linkedin.com/in/username">
+        </div>
+        <div class="field" style="flex:1">
+          <label>Other social (optional)</label>
+          <input type="text" id="prSocial" maxlength="120" placeholder="@username or URL">
+        </div>
+      </div>
+      <div class="field">
+        <label>Tagline / Notes (optional)</label>
+        <input type="text" id="prTagline" maxlength="120" placeholder="Short one-liner — shown on the business card">
       </div>
       <div class="profile-saved-sigs">
         <h3>Saved Signatures</h3>
@@ -4241,6 +4570,69 @@
     </div>
     <div class="modal-actions">
       <button class="btn" id="bmDone" type="button">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- New blank PDF: pick a page size, optionally orientation, then create a one-page doc. -->
+<div class="modal-overlay" id="newPdfModal" role="dialog" aria-modal="true" aria-labelledby="newPdfTitle">
+  <div class="modal-card" style="max-width:520px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="newPdfTitle">📄 New blank PDF</h2>
+      <button class="modal-close" id="newPdfClose" type="button" aria-label="Close">✕</button>
+    </div>
+    <div class="ps-section">
+      <div class="modal-sub">Creates a single blank page at the size you pick. You can add more pages later via <strong>Pages → + Blank page</strong>.</div>
+      <label class="ps-label" style="margin-top:10px">Page size</label>
+      <select id="newPdfSize" class="ps-text">
+        <optgroup label="ISO (mm)">
+          <option value="a4" selected>A4 portrait (210×297 mm)</option>
+          <option value="a4l">A4 landscape (297×210 mm)</option>
+          <option value="a3">A3 portrait (297×420 mm)</option>
+          <option value="a3l">A3 landscape (420×297 mm)</option>
+          <option value="a5">A5 portrait (148×210 mm)</option>
+          <option value="a5l">A5 landscape (210×148 mm)</option>
+        </optgroup>
+        <optgroup label="US (inches)">
+          <option value="letter">Letter (8.5×11 in)</option>
+          <option value="letterl">Letter landscape (11×8.5 in)</option>
+          <option value="legal">Legal (8.5×14 in)</option>
+          <option value="legall">Legal landscape (14×8.5 in)</option>
+          <option value="tabloid">Tabloid / Ledger (11×17 in)</option>
+          <option value="exec">Executive (7.25×10.5 in)</option>
+        </optgroup>
+        <optgroup label="Photo">
+          <option value="p4x6">4×6 in (10×15 cm)</option>
+          <option value="p5x7">5×7 in (13×18 cm)</option>
+          <option value="p8x10">8×10 in (20×25 cm)</option>
+          <option value="p10x15cm">10×15 cm</option>
+          <option value="p13x18cm">13×18 cm</option>
+        </optgroup>
+        <optgroup label="Other">
+          <option value="square">Square 8×8 in</option>
+          <option value="square10cm">Square 10×10 cm</option>
+          <option value="custom">Custom…</option>
+        </optgroup>
+      </select>
+      <!-- Dimensions row is always visible so the user sees the picked
+           preset's size. When "Custom…" is selected the inputs are
+           editable; for any other preset they're read-only and reflect
+           the preset's W × H in the chosen unit. -->
+      <div id="newPdfCustomRow" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;align-items:end">
+        <label class="ps-mini"><span>Width</span><input type="number" id="newPdfCustomW" class="ps-text" min="36" value="595"></label>
+        <label class="ps-mini"><span>Height</span><input type="number" id="newPdfCustomH" class="ps-text" min="36" value="842"></label>
+        <label class="ps-mini"><span>Unit</span><select id="newPdfCustomUnit" class="select-input">
+          <option value="pt" selected>points</option>
+          <option value="mm">mm</option>
+          <option value="in">inches</option>
+        </select></label>
+      </div>
+      <div id="newPdfPreview" style="margin-top:12px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono', monospace"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="newPdfCancel" type="button">Cancel</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn primary" id="newPdfCreate" type="button">Create blank PDF</button>
     </div>
   </div>
 </div>
@@ -4482,6 +4874,10 @@ const BASELINE_OFFSET = 0.82;
 
 let pdfBytes = null, pdfJsDoc = null, pdfFileName = 'edited.pdf';
 let pdfTotalTextItems = 0;  // set during renderPages — 0 means scanned / image-only PDF
+// Set by the "New" button when the document was just-created (single blank
+// page). Suppresses the OCR banner + the "no editable text" toast since the
+// emptiness is by design — the user wants to draw on a fresh canvas.
+let _isBlankPdf = false;
 let currentTool = 'select';
 let currentShape = 'rect';
 let defaultColor = '#000000', defaultSize = 14, defaultStroke = 2;
@@ -4709,6 +5105,9 @@ document.body.addEventListener('drop', e => {
 
 async function loadPDF(file) {
   await workerReady;
+  // Opening a real file → not a freshly-created blank, so the
+  // "looks like a scan" banner should work normally if applicable.
+  _isBlankPdf = false;
   try {
     let buf = await file.arrayBuffer();
     // Sniff .pdfenc header — if it's our own AES envelope, prompt for password and decrypt first.
@@ -4824,7 +5223,7 @@ async function renderPages() {
   const pending = window._textLayerPromises || [];
   window._textLayerPromises = [];
   Promise.all(pending).then(() => {
-    if (pdfJsDoc && pdfTotalTextItems === 0) {
+    if (pdfJsDoc && pdfTotalTextItems === 0 && !_isBlankPdf) {
       setTimeout(() => {
         showToast(
           "Heads up: this PDF has no editable text — it looks like a scan or image-only PDF. " +
@@ -5085,6 +5484,26 @@ function enableWhiteoutInteractions(el, ann) {
 }
 
 function applyZoom() {
+  // Mobile cap: on viewports < 760 px we ENFORCE that the rendered page can
+  // never exceed the available width — even if the user explicitly clicked
+  // the "+" zoom button. Without this cap, snapZoom would happily bump to
+  // the next ZOOM_LEVELS value (e.g. 47% → 50%) and push the page off the
+  // right edge, which is what the user reported in 033.jpg ("na mobilu
+  // stale odrezava"). Pinch-zoom (the browser-native gesture) still works
+  // for reading details — it's independent of this CSS scale.
+  if (window.innerWidth < 760) {
+    const probe = document.querySelector('.page-wrapper');
+    const baseW = probe ? parseFloat(probe.dataset.baseW) : 0;
+    if (baseW > 0) {
+      const mainEl = document.querySelector('main');
+      const s = mainEl ? getComputedStyle(mainEl) : null;
+      const padL = s ? parseFloat(s.paddingLeft) || 0 : 0;
+      const padR = s ? parseFloat(s.paddingRight) || 0 : 0;
+      const available = Math.max(120, (mainEl ? mainEl.clientWidth : window.innerWidth) - padL - padR - 8);
+      const maxZoom = available / baseW;
+      if (currentZoom > maxZoom) currentZoom = maxZoom;
+    }
+  }
   document.querySelectorAll('.page-zoom-shell').forEach(shell => {
     const wrapper = shell.querySelector('.page-wrapper');
     const baseW = parseFloat(wrapper.dataset.baseW), baseH = parseFloat(wrapper.dataset.baseH);
@@ -6894,6 +7313,38 @@ function buildPropsPanel(ann) {
     hint.className = 'panel-hint';
     hint.innerHTML = 'This rectangle hides the original PDF text below. Drag to move; delete to undo the edit.';
     panel.appendChild(hint);
+  } else if (ann.type === 'link') {
+    // Label + Edit + Open + Delete. Mirrors the "white-out" simple panel.
+    const ag = mkGroup();
+    const lbl = document.createElement('span');
+    lbl.style.cssText = 'font-size:12px;color:var(--text-soft);padding:0 8px;font-weight:600;'
+                     + 'max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+    lbl.textContent = ann.linkKind === 'page'
+      ? '🔗 ' + (ann.linkLabel || ann.linkTarget)
+      : '🔗 ' + (ann.linkLabel || ann.linkTarget || '(empty)');
+    lbl.title = ann.linkTarget || '';
+    ag.appendChild(lbl);
+    const editBtn = document.createElement('button');
+    editBtn.className = 'pbtn'; editBtn.innerHTML = '✎'; editBtn.title = 'Edit link target';
+    editBtn.addEventListener('click', () => openHyperlinkModal(ann));
+    ag.appendChild(editBtn);
+    const openBtn = document.createElement('button');
+    openBtn.className = 'pbtn'; openBtn.innerHTML = '↗'; openBtn.title = 'Open in new tab';
+    openBtn.addEventListener('click', () => {
+      if (ann.linkKind === 'page') {
+        const p = parseInt(String(ann.linkTarget).replace(/^#page=/, ''));
+        const wrap = document.querySelector(`.page-wrapper[data-page-num="${p}"]`);
+        if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (ann.linkTarget) {
+        try { window.open(ann.linkTarget, '_blank', 'noopener,noreferrer'); } catch (_) {}
+      }
+    });
+    ag.appendChild(openBtn);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'pbtn danger'; delBtn.innerHTML = '🗑'; delBtn.title = 'Delete (Del)';
+    delBtn.addEventListener('click', () => { removeAnnotation(ann); deselect(); });
+    ag.appendChild(delBtn);
+    panel.appendChild(ag);
   } else {
     const ag = mkGroup();
     const lbl = document.createElement('span');
@@ -6928,6 +7379,34 @@ function buildPropsPanel(ann) {
       buildPropsPanel(ann); positionPropsPanel(ann);
     });
     cz.appendChild(lockBtn);
+    // 🔗 Link toggle — attach / edit / remove a clickable link on this object.
+    // When set, the annotation gets a small "↗" badge in the editor and
+    // generatePdfBytes emits a real PDF Link annotation over its bbox.
+    if (ann.type !== 'link') {  // standalone-link type already manages its own link
+      const linkBtn = document.createElement('button');
+      const hasLink = !!(ann.link && ann.link.target);
+      linkBtn.className = 'pbtn' + (hasLink ? ' active' : '');
+      linkBtn.innerHTML = '🔗';
+      linkBtn.title = hasLink
+        ? ('Link: ' + (ann.link.label || ann.link.target) + ' — click to edit / remove')
+        : 'Attach a clickable link to this object';
+      linkBtn.addEventListener('click', () => openLinkAttachmentModal(ann));
+      cz.appendChild(linkBtn);
+      if (hasLink) {
+        const openLink = document.createElement('button');
+        openLink.className = 'pbtn';
+        openLink.innerHTML = '↗';
+        openLink.title = 'Open this link';
+        openLink.addEventListener('click', () => followAnnLink(ann));
+        cz.appendChild(openLink);
+        const rmLink = document.createElement('button');
+        rmLink.className = 'pbtn danger';
+        rmLink.innerHTML = '⛓‍💥';
+        rmLink.title = 'Remove the attached link';
+        rmLink.addEventListener('click', () => removeAnnLink(ann));
+        cz.appendChild(rmLink);
+      }
+    }
     // Group / Ungroup
     if (selectedSet.size > 1 && !ann.groupId) {
       const groupBtn = document.createElement('button');
@@ -7254,17 +7733,23 @@ function restoreFromSnapshot(snapshot) {
 }
 
 function recreateAnnotation(def, overlay) {
+  let ann = null;
   switch (def.type) {
-    case 'text':       return recreateTextAnn(def, overlay);
-    case 'image':      return recreateImageAnn(def, overlay);
-    case 'shape':      return recreateShapeAnn(def, overlay);
-    case 'draw':       return recreateDrawAnn(def, overlay);
-    case 'stamp':      return recreateStampAnn(def, overlay);
-    case 'whiteout':   return recreateWhiteoutAnn(def, overlay);
-    case 'decoration': return recreateDecorationAnn(def, overlay);
-    case 'link':       return recreateLinkAnn(def, overlay);
+    case 'text':       ann = recreateTextAnn(def, overlay); break;
+    case 'image':      ann = recreateImageAnn(def, overlay); break;
+    case 'shape':      ann = recreateShapeAnn(def, overlay); break;
+    case 'draw':       ann = recreateDrawAnn(def, overlay); break;
+    case 'stamp':      ann = recreateStampAnn(def, overlay); break;
+    case 'whiteout':   ann = recreateWhiteoutAnn(def, overlay); break;
+    case 'decoration': ann = recreateDecorationAnn(def, overlay); break;
+    case 'link':       ann = recreateLinkAnn(def, overlay); break;
   }
-  return null;
+  // Restore the link-as-property badge so re-attached annotations (after
+  // Pages reorder / Crop-Resize / draft restore) keep showing they're links.
+  if (ann && ann.link && ann.link.target) {
+    try { updateAnnLinkBadge(ann); } catch (_) {}
+  }
+  return ann;
 }
 function recreateTextAnn(def, overlay) {
   const el = document.createElement('div');
@@ -8136,9 +8621,47 @@ async function generatePdfBytes(saveOpts) {
   }
 
   // === Link annotations: add as a post-pass via low-level pdf-lib API ===
+  // Two sources of link rects in the saved PDF:
+  //   1. Legacy standalone link annotations (type === 'link') — kept for
+  //      backward compatibility with PDFs created in older versions.
+  //   2. NEW link-as-property — any annotation with an `ann.link` attribute,
+  //      using the annotation's own bbox (so the user clicks the SHAPE /
+  //      TEXT / STAMP itself, not a separate blue dashed rectangle).
   const linkAnnots = annotations.filter(a => a.type === 'link');
-  if (linkAnnots.length) {
+  const linkedObjects = annotations.filter(a => a.type !== 'link' && a.link && a.link.target);
+  if (linkAnnots.length || linkedObjects.length) {
     const { PDFName, PDFArray, PDFString } = PDFLib;
+    // Helper: build the PDFLib /Action object for a given target.
+    const buildAction = (linkKind, target) => {
+      if (linkKind === 'page') {
+        const targetPageNum = parseInt(String(target).replace(/^#page=/, '')) || 1;
+        const targetPage = doc.getPage(Math.min(doc.getPageCount(), Math.max(1, targetPageNum)) - 1);
+        return doc.context.obj({
+          S: 'GoTo',
+          D: [targetPage.ref, 'XYZ', null, null, null]
+        });
+      }
+      return doc.context.obj({
+        S: 'URI',
+        URI: PDFString.of(String(target))
+      });
+    };
+    // Helper: append a Link annot to a given page using a Rect in PDF coords.
+    const appendLink = (page, rect, action) => {
+      const linkDict = doc.context.obj({
+        Type: 'Annot',
+        Subtype: 'Link',
+        Rect: rect,
+        Border: [0, 0, 0],
+        A: action
+      });
+      const linkRef = doc.context.register(linkDict);
+      const Annots = PDFName.of('Annots');
+      let arr = page.node.lookupMaybe(Annots, PDFArray);
+      if (!arr) { arr = doc.context.obj([]); page.node.set(Annots, arr); }
+      arr.push(linkRef);
+    };
+    // 1. Legacy standalone link annotations
     for (const ann of linkAnnots) {
       try {
         const page = doc.getPage(ann.pageNum - 1);
@@ -8146,44 +8669,54 @@ async function generatePdfBytes(saveOpts) {
         if (!wrapper) continue;
         const scale = parseFloat(wrapper.dataset.scale);
         const pageH = page.getHeight();
-        // Convert design → PDF (Y flip)
         const x1 = ann.x / scale;
         const y2 = pageH - ann.y / scale;
         const x2 = (ann.x + ann.width) / scale;
         const y1 = pageH - (ann.y + ann.height) / scale;
-        let action;
-        if (ann.linkKind === 'page') {
-          // Internal: /A << /S /GoTo /D [ pageRef /XYZ null null null ] >>
-          const targetPageNum = parseInt(String(ann.linkTarget).replace(/^#page=/, '')) || 1;
-          const targetPage = doc.getPage(Math.min(doc.getPageCount(), Math.max(1, targetPageNum)) - 1);
-          action = doc.context.obj({
-            S: 'GoTo',
-            D: [targetPage.ref, 'XYZ', null, null, null]
-          });
-        } else {
-          action = doc.context.obj({
-            S: 'URI',
-            URI: PDFString.of(String(ann.linkTarget))
-          });
-        }
-        const linkDict = doc.context.obj({
-          Type: 'Annot',
-          Subtype: 'Link',
-          Rect: [x1, y1, x2, y2],
-          Border: [0, 0, 0],
-          A: action
-        });
-        const linkRef = doc.context.register(linkDict);
-        // Append to the page's Annots array (creating one if needed)
-        const Annots = PDFName.of('Annots');
-        let arr = page.node.lookupMaybe(Annots, PDFArray);
-        if (!arr) {
-          arr = doc.context.obj([]);
-          page.node.set(Annots, arr);
-        }
-        arr.push(linkRef);
+        appendLink(page, [x1, y1, x2, y2], buildAction(ann.linkKind, ann.linkTarget));
       } catch (e) {
-        console.warn('[link] failed to add link annotation:', e);
+        console.warn('[link] failed to add legacy link annotation:', e);
+      }
+    }
+    // 2. Link-as-property — bbox from the annotation itself. Handle the
+    //    different bbox shapes per annotation type: most have (x, y, width,
+    //    height); shape lines/arrows use (x1, y1, x2, y2); draw paths use
+    //    a `points` array (we union into a bbox).
+    for (const ann of linkedObjects) {
+      try {
+        const page = doc.getPage(ann.pageNum - 1);
+        const wrapper = document.querySelector(`.page-wrapper[data-page-num="${ann.pageNum}"]`);
+        if (!wrapper) continue;
+        const scale = parseFloat(wrapper.dataset.scale);
+        const pageH = page.getHeight();
+        let bbX, bbY, bbW, bbH;
+        if (ann.x !== undefined && ann.y !== undefined && ann.width !== undefined && ann.height !== undefined) {
+          bbX = ann.x; bbY = ann.y; bbW = ann.width; bbH = ann.height;
+        } else if (ann.x1 !== undefined && ann.y1 !== undefined && ann.x2 !== undefined && ann.y2 !== undefined) {
+          const xs = [ann.x1, ann.x2], ys = [ann.y1, ann.y2];
+          const minX = Math.min(...xs), minY = Math.min(...ys);
+          bbX = minX; bbY = minY;
+          bbW = Math.max(...xs) - minX; bbH = Math.max(...ys) - minY;
+          // Pad slightly so a horizontal/vertical line still has clickable area
+          const padPx = 6;
+          bbX -= padPx; bbY -= padPx; bbW += 2 * padPx; bbH += 2 * padPx;
+        } else if (Array.isArray(ann.points) && ann.points.length) {
+          const xs = ann.points.map(p => p.x), ys = ann.points.map(p => p.y);
+          const minX = Math.min(...xs), minY = Math.min(...ys);
+          bbX = minX; bbY = minY;
+          bbW = Math.max(...xs) - minX; bbH = Math.max(...ys) - minY;
+          const padPx = 6;
+          bbX -= padPx; bbY -= padPx; bbW += 2 * padPx; bbH += 2 * padPx;
+        } else {
+          continue;
+        }
+        const x1 = bbX / scale;
+        const y2 = pageH - bbY / scale;
+        const x2 = (bbX + bbW) / scale;
+        const y1 = pageH - (bbY + bbH) / scale;
+        appendLink(page, [x1, y1, x2, y2], buildAction(ann.link.kind, ann.link.target));
+      } catch (e) {
+        console.warn('[link] failed to add link-property:', e);
       }
     }
   }
@@ -10536,12 +11069,114 @@ function openProfileModal() {
   document.getElementById('prZip').value      = p.zip || '';
   document.getElementById('prCountry').value  = p.country || '';
   document.getElementById('prCompany').value  = p.company || '';
+  document.getElementById('prTitle').value    = p.title    || '';
+  document.getElementById('prWebsite').value  = p.website  || '';
+  document.getElementById('prLinkedIn').value = p.linkedin || '';
+  document.getElementById('prSocial').value   = p.social   || '';
+  document.getElementById('prTagline').value  = p.tagline  || '';
+  // Profile photo: clear any staged change from a previous open, then
+  // refresh the preview to show the persisted photo (or initials).
+  _profilePhotoStaged = undefined;
+  refreshProfilePhotoPreview();
   renderSavedSignaturesGrid();
   document.getElementById('profileModal').classList.add('show');
 }
 function closeProfileModal() {
   document.getElementById('profileModal').classList.remove('show');
 }
+
+// Compute initials from a full name string ("Jane Doe" → "JD",
+// "Jonathan" → "JO", "" → "?"). Same algorithm used on the business card.
+function _computeInitials(fullName) {
+  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return '?';
+}
+
+// Refresh the round photo preview in the Profile modal. Shows either the
+// saved photo (dataURL) or, when no photo is set, the user's initials.
+// Buffer for the photo that's been picked but not yet "Save"d.
+let _profilePhotoStaged = undefined;  // undefined = no pending change, '' = pending remove, string = pending new dataURL
+function refreshProfilePhotoPreview() {
+  const p = getProfile();
+  const img = document.getElementById('prPhotoImg');
+  const initEl = document.getElementById('prPhotoInitials');
+  const silhouette = document.getElementById('prPhotoSilhouette');
+  const clearBtn = document.getElementById('prPhotoClear');
+  // Effective photo = staged (if any) OR saved
+  const effective = (_profilePhotoStaged !== undefined) ? _profilePhotoStaged : (p.photo || '');
+  // Initials always reflect the LIVE name field so users see them update
+  // as they type, before saving.
+  const liveName = (document.getElementById('prFullName')?.value || p.fullName || '').trim();
+  const liveInitials = _computeInitials(liveName);
+  if (effective) {
+    // Photo wins — show the image, hide initials + silhouette.
+    img.src = effective; img.hidden = false;
+    initEl.hidden = true; silhouette.hidden = true;
+    clearBtn.hidden = false;
+  } else {
+    // No photo. Critically, REMOVE the src attribute instead of setting it
+    // to ''. Setting src='' makes Firefox / Safari draw a broken-image icon
+    // even when the element is `hidden`.
+    img.removeAttribute('src');
+    img.hidden = true;
+    clearBtn.hidden = true;
+    if (liveInitials && liveInitials !== '?') {
+      // We have a name → show initials
+      initEl.textContent = liveInitials;
+      initEl.hidden = false;
+      silhouette.hidden = true;
+    } else {
+      // No name either → show the generic person silhouette
+      initEl.hidden = true;
+      silhouette.hidden = false;
+    }
+  }
+}
+// Wire the photo input and clear button. Photos are scaled down to a max
+// of 512×512 px to keep localStorage usage reasonable.
+(function wireProfilePhoto() {
+  const input = document.getElementById('prPhotoInput');
+  const clearBtn = document.getElementById('prPhotoClear');
+  const nameInput = document.getElementById('prFullName');
+  if (input) input.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { showToast('Please pick an image file.', 'warn'); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const probe = new Image();
+      probe.onload = () => {
+        // Square-crop + downscale to 512×512 to keep localStorage usage small.
+        const SIZE = 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = SIZE; canvas.height = SIZE;
+        const ctx = canvas.getContext('2d');
+        const side = Math.min(probe.naturalWidth, probe.naturalHeight);
+        const sx = (probe.naturalWidth - side) / 2;
+        const sy = (probe.naturalHeight - side) / 2;
+        ctx.drawImage(probe, sx, sy, side, side, 0, 0, SIZE, SIZE);
+        _profilePhotoStaged = canvas.toDataURL('image/jpeg', 0.85);
+        refreshProfilePhotoPreview();
+      };
+      probe.onerror = () => showToast('Could not read that image.', 'error');
+      probe.src = reader.result;
+    };
+    reader.onerror = () => showToast('Could not read the file.', 'error');
+    reader.readAsDataURL(file);
+  });
+  if (clearBtn) clearBtn.addEventListener('click', () => {
+    _profilePhotoStaged = '';  // pending removal — applied on Save
+    refreshProfilePhotoPreview();
+  });
+  // Re-render initials as the user types their name (so the preview reacts
+  // before they save).
+  if (nameInput) nameInput.addEventListener('input', () => {
+    if (!_profilePhotoStaged) refreshProfilePhotoPreview();
+  });
+})();
 function renderSavedSignaturesGrid() {
   const grid = document.getElementById('savedSigsGrid');
   grid.innerHTML = '';
@@ -10591,8 +11226,20 @@ document.getElementById('profileSave').addEventListener('click', () => {
     state:    document.getElementById('prState').value.trim(),
     zip:      document.getElementById('prZip').value.trim(),
     country:  document.getElementById('prCountry').value.trim(),
-    company:  document.getElementById('prCompany').value.trim()
+    company:  document.getElementById('prCompany').value.trim(),
+    title:    document.getElementById('prTitle').value.trim(),
+    website:  document.getElementById('prWebsite').value.trim(),
+    linkedin: document.getElementById('prLinkedIn').value.trim(),
+    social:   document.getElementById('prSocial').value.trim(),
+    tagline:  document.getElementById('prTagline').value.trim(),
+    // Photo: take the staged value if the user picked/cleared one this
+    // session, otherwise carry over what's already persisted.
+    photo:    (_profilePhotoStaged !== undefined)
+                ? _profilePhotoStaged
+                : (getProfile().photo || '')
   };
+  // Clear staged state after persisting
+  _profilePhotoStaged = undefined;
   saveProfile(p);
   closeProfileModal();
   showToast('Profile saved.', 'success');
@@ -10893,6 +11540,42 @@ function makeStampCard(tpl, opts) {
   card.className = 'stamp-card';
   const box = document.createElement('div');
   box.className = 'stamp-preview-box';
+  // === Image stamp preview ===
+  if (tpl._kind === 'image' && tpl.dataURL) {
+    const img = document.createElement('img');
+    img.src = tpl.dataURL;
+    img.alt = tpl.name || 'Image stamp';
+    img.style.cssText = 'max-width:100%;max-height:90px;object-fit:contain;display:block;margin:auto';
+    box.style.background = 'transparent';
+    box.style.border = 'none';
+    box.style.padding = '6px';
+    box.appendChild(img);
+    if (tpl.name) {
+      const cap = document.createElement('div');
+      cap.style.cssText = 'font-size:10px;color:var(--muted);margin-top:4px;text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      cap.textContent = tpl.name;
+      box.appendChild(cap);
+    }
+    card.appendChild(box);
+    if (opts && opts.custom) {
+      const del = document.createElement('button');
+      del.className = 'stamp-delete';
+      del.type = 'button';
+      del.innerHTML = '🗑';
+      del.title = 'Delete custom stamp';
+      del.onclick = (e) => {
+        e.stopPropagation();
+        const list = loadCustomStamps();
+        list.splice(opts.idx, 1);
+        saveCustomStamps(list);
+        renderStampsGrids();
+      };
+      card.appendChild(del);
+    }
+    card.onclick = () => insertStampFromTemplate(tpl);
+    return card;
+  }
+  // === Text stamp preview (existing) ===
   // Resolve any {USER}/{DATE}/{TIME} tokens so the card preview shows what
   // the stamp will actually look like once inserted.
   const cardText = (typeof resolveStampTemplate === 'function' && tpl.text)
@@ -10956,6 +11639,24 @@ function insertStampFromTemplate(tpl) {
       bumpUsage((isCustom ? 'custom-stamp:' : 'stamp:') + tpl.id);
     }
   }
+  // === Image stamps: insert as image annotation ===
+  if (tpl && tpl._kind === 'image' && tpl.dataURL) {
+    closeStampsModal();
+    const pos = pickInsertPos(); if (!pos) return;
+    addImageAnnotation(pos, tpl.dataURL, 'image/png');
+    // Constrain initial size so a huge source image doesn't fill the page.
+    const last = annotations[annotations.length - 1];
+    if (last && last.type === 'image' && last.el) {
+      const maxW = 200;
+      const ratio = (tpl.h || 1) / Math.max(1, tpl.w || 1);
+      last.width = Math.min(maxW, tpl.w || maxW);
+      last.height = last.width * ratio;
+      last.el.style.width = last.width + 'px';
+      last.el.style.height = last.height + 'px';
+    }
+    showToast('Image stamp inserted — drag a corner to resize.', 'success');
+    return;
+  }
   // Resolve the stamp's text. New templates (v1.10+) carry {USER}/{DATE}/{TIME}
   // tokens inline; old custom stamps used a separate timestamp.{username,date,time}
   // checkbox bag that we appended on a second line. Support both so users
@@ -11009,30 +11710,298 @@ function insertInfo(id) {
       break;
     }
     case 'card': {
-      const p = getProfile();
-      fs = 13;
-      const nameLine = p.fullName || 'Full Name';
-      const companyLine = p.company || '';
-      const streetLine = p.street || 'Street Address';
-      const cityLine = [p.city, p.state, p.zip].filter(Boolean).join(', ') || 'City, State ZIP';
-      const phoneLine = p.phone ? `Phone: ${p.phone}` : 'Phone: (___) ___-____';
-      const emailLine = p.email ? `Email: ${p.email}` : 'Email: name@example.com';
-      lines = [plainLine(nameLine, { bold: true })];
-      if (companyLine) lines.push(plainLine(companyLine, { italic: true }));
-      lines.push(
-        plainLine(streetLine),
-        plainLine(cityLine),
-        plainLine(phoneLine),
-        plainLine(emailLine)
-      );
-      break;
+      // Modern Business Card — rendered to a high-res canvas (with a vCard
+      // QR on the right) and inserted as an IMAGE annotation rather than
+      // a plain-text block. This is async because the QR library lazy-loads;
+      // we return out of this `case` early and call the helper, which kicks
+      // off the toast on its own.
+      insertBusinessCardImage(pos);
+      return;
     }
     default: return;
   }
   createTextAnnotationFromLines(pos, lines, fs);
   const profile = getProfile();
-  const usedProfile = (id === 'address' && profile.street) || (id === 'card' && profile.fullName);
+  const usedProfile = (id === 'address' && profile.street);
   showToast(usedProfile ? 'Inserted using your saved profile — double-click to edit.' : 'Inserted — double-click to edit.', 'success');
+}
+
+// === Modern Business Card (image-based, with vCard QR) ===
+// Renders the saved profile onto a 960 × 560 px canvas (2× DPR for crisp
+// print). Layout: gradient header strip across the top with the user's
+// initials in a circle, name + title on the right; main area below has
+// section-labelled contact lines on the left and a generous vCard QR on
+// the right with a "SCAN TO ADD CONTACT" caption.
+async function insertBusinessCardImage(pos) {
+  const p = (typeof getProfile === 'function') ? getProfile() : {};
+  // If the user hasn't filled out at least their name, gently nudge them
+  // to the Profile dialog instead of inserting a card full of placeholders.
+  if (!String(p.fullName || '').trim()) {
+    showToast('Fill in at least your name in Profile first — the business card uses your saved info.', 'warn');
+    if (typeof openProfileModal === 'function') openProfileModal();
+    return;
+  }
+  // ---- Layout constants ----
+  const W = 960, H = 560;
+  const PAD = 44;
+  const ACCENT      = '#2563eb';
+  const ACCENT_DARK = '#1d4ed8';
+  const ACCENT_LITE = '#dbeafe';
+  const TEXT  = '#0f172a';
+  const MUTED = '#64748b';
+  const BG    = '#ffffff';
+  const SOFT  = '#f8fafc';
+  const QR_BOX = 260;
+  const FONT_STACK = '"Manrope", "Helvetica", "Arial", sans-serif';
+  const EMOJI = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+  // ---- Profile-derived values ----
+  const fullName = (p.fullName || 'Your Name').trim();
+  const title    = (p.title    || '').trim();
+  const company  = (p.company  || '').trim();
+  const phone    = (p.phone    || '').trim();
+  const email    = (p.email    || '').trim();
+  const website  = (p.website  || '').trim();
+  const tagline  = (p.tagline  || '').trim();
+  const linkedin = (p.linkedin || '').trim();
+  const social   = (p.social   || '').trim();
+  const street   = (p.street   || '').trim();
+  const city     = (p.city     || '').trim();
+  const state    = (p.state    || '').trim();
+  const zip      = (p.zip      || '').trim();
+  const country  = (p.country  || '').trim();
+  const cityLine = [city, state, zip].filter(Boolean).join(', ');
+  // Initials for the avatar circle ("Jane Doe" → "JD"; single word uses first 2 chars).
+  const nameParts = fullName.split(/\s+/).filter(Boolean);
+  const initials = (nameParts.length >= 2
+    ? (nameParts[0][0] + nameParts[nameParts.length - 1][0])
+    : (fullName.slice(0, 2))).toUpperCase();
+  // ---- Build vCard payload for the QR ----
+  const first = nameParts[0] || '';
+  const last  = nameParts.slice(1).join(' ');
+  const vcardLines = ['BEGIN:VCARD', 'VERSION:3.0'];
+  if (last || first) vcardLines.push(`N:${last};${first};;;`);
+  vcardLines.push('FN:' + fullName);
+  if (company) vcardLines.push('ORG:' + company);
+  if (title)   vcardLines.push('TITLE:' + title);
+  if (phone)   vcardLines.push('TEL;TYPE=CELL:' + phone);
+  if (email)   vcardLines.push('EMAIL:' + email);
+  if (website) vcardLines.push('URL:' + website);
+  if (street || city || zip || country) {
+    vcardLines.push(`ADR:;;${street};${city};${state};${zip};${country}`);
+  }
+  if (tagline) vcardLines.push('NOTE:' + tagline);
+  vcardLines.push('END:VCARD');
+  const vcard = vcardLines.join('\n');
+  // ---- Set up canvas ----
+  const canvas = document.createElement('canvas');
+  canvas.width = W * 2;
+  canvas.height = H * 2;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
+  ctx.textBaseline = 'top';
+  // ----- Card background (white) with subtle hairline frame -----
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, W, H);
+  // ----- Top gradient header strip (1/3 of the card height) -----
+  const HEAD_H = 200;
+  const headGrad = ctx.createLinearGradient(0, 0, W, 0);
+  headGrad.addColorStop(0, ACCENT_DARK);
+  headGrad.addColorStop(1, ACCENT);
+  ctx.fillStyle = headGrad;
+  ctx.fillRect(0, 0, W, HEAD_H);
+  // Decorative diagonal slash on the FAR right of the header (kept small so
+  // it never reaches the name text region — only the right ~140 px).
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.moveTo(W - 140, 0); ctx.lineTo(W, 0);
+  ctx.lineTo(W, 110); ctx.lineTo(W - 60, HEAD_H); ctx.lineTo(W - 200, HEAD_H);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+  // Decorative ring on the right inside header
+  ctx.save();
+  ctx.globalAlpha = 0.10; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(W - 80, 60, 50, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+  // ----- Avatar circle — fully inside the header strip on the left, next
+  // to the name. Shows the user's uploaded profile photo (square-cropped,
+  // clipped to a circle) when set, otherwise their initials. -----
+  const AVATAR_R = 52;
+  const avatarX = PAD + AVATAR_R;
+  const avatarY = HEAD_H / 2;
+  // White border around avatar so it pops against the gradient
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath(); ctx.arc(avatarX, avatarY, AVATAR_R + 5, 0, Math.PI * 2); ctx.fill();
+  // Inner colour (fallback for transparent photos / initials backdrop)
+  ctx.fillStyle = ACCENT_LITE;
+  ctx.beginPath(); ctx.arc(avatarX, avatarY, AVATAR_R, 0, Math.PI * 2); ctx.fill();
+  if (p.photo) {
+    // Draw the photo clipped to the avatar circle.
+    try {
+      const photo = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = p.photo;
+      });
+      ctx.save();
+      ctx.beginPath(); ctx.arc(avatarX, avatarY, AVATAR_R, 0, Math.PI * 2);
+      ctx.clip();
+      // cover-fit: scale to the larger of (2R / w) and (2R / h), then centre
+      const D = AVATAR_R * 2;
+      const r = Math.max(D / photo.naturalWidth, D / photo.naturalHeight);
+      const drawW = photo.naturalWidth * r;
+      const drawH = photo.naturalHeight * r;
+      ctx.drawImage(photo, avatarX - drawW / 2, avatarY - drawH / 2, drawW, drawH);
+      ctx.restore();
+    } catch (e) {
+      // Photo failed to load → fall through to initials.
+      console.warn('[business-card] photo failed to load, falling back to initials:', e);
+    }
+  } else {
+    // Initials fallback
+    ctx.fillStyle = ACCENT_DARK;
+    ctx.font = '700 40px ' + FONT_STACK;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(initials, avatarX, avatarY + 2);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  }
+
+  // ----- Name + title (right of avatar, white text on gradient) -----
+  // Text block sits to the right of the avatar, vertically centred in the
+  // header. Layout: NAME on top, then TITLE · COMPANY, then italic TAGLINE.
+  const TEXT_X = PAD + AVATAR_R * 2 + 28;
+  // Decoration on the right starts at W - 200, so cap the text block width.
+  const TEXT_MAX_W = W - TEXT_X - 200;
+  // Truncate over-long names so they don't run into the decoration.
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '700 44px ' + FONT_STACK;
+  let nameToDraw = fullName;
+  while (ctx.measureText(nameToDraw).width > TEXT_MAX_W && nameToDraw.length > 4) {
+    nameToDraw = nameToDraw.slice(0, -2);
+  }
+  if (nameToDraw !== fullName) nameToDraw = nameToDraw.slice(0, -1) + '…';
+  ctx.fillText(nameToDraw, TEXT_X, 48);
+  // Subtitle: title + company
+  if (title || company) {
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.font = '600 22px ' + FONT_STACK;
+    let sub = [title, company].filter(Boolean).join(' · ');
+    while (ctx.measureText(sub).width > TEXT_MAX_W && sub.length > 4) sub = sub.slice(0, -2);
+    ctx.fillText(sub, TEXT_X, 104);
+  }
+  // Tagline (italic, soft)
+  if (tagline) {
+    ctx.fillStyle = 'rgba(255,255,255,0.82)';
+    ctx.font = 'italic 17px ' + FONT_STACK;
+    let tag = tagline;
+    while (ctx.measureText(tag).width > TEXT_MAX_W && tag.length > 4) tag = tag.slice(0, -2);
+    if (tag !== tagline) tag = tag.slice(0, -1) + '…';
+    ctx.fillText(tag, TEXT_X, 140);
+  }
+
+  // ----- Body: contact list on the left, QR card on the right -----
+  // Section label
+  const bodyStartY = HEAD_H + 56;
+  ctx.fillStyle = MUTED;
+  ctx.font = '700 13px ' + FONT_STACK;
+  ctx.fillText('CONTACT', PAD, bodyStartY);
+  // Underline accent under the section label
+  ctx.fillStyle = ACCENT;
+  ctx.fillRect(PAD, bodyStartY + 22, 32, 3);
+
+  // Contact lines
+  let y = bodyStartY + 42;
+  ctx.font = '500 19px ' + FONT_STACK;
+  const lineH = 36;
+  const labelMaxW = W - QR_BOX - PAD * 2 - 30;
+  const addContactLine = (icon, text) => {
+    if (!text) return;
+    // Truncate over-long contact text so it doesn't overflow into the QR area.
+    let line = String(text);
+    ctx.font = '500 19px ' + FONT_STACK;
+    while (ctx.measureText(line).width > labelMaxW - 36 && line.length > 6) line = line.slice(0, -1);
+    if (line !== text) line = line.slice(0, -1) + '…';
+    // Icon (emoji glyphs render via the colour-emoji font on most systems)
+    ctx.fillStyle = ACCENT;
+    ctx.font = '22px ' + EMOJI;
+    ctx.fillText(icon, PAD, y - 2);
+    // Label
+    ctx.fillStyle = TEXT;
+    ctx.font = '500 19px ' + FONT_STACK;
+    ctx.fillText(line, PAD + 36, y);
+    y += lineH;
+  };
+  addContactLine('📞', phone);
+  addContactLine('✉', email);
+  addContactLine('🌐', website);
+  const addr = [street, cityLine, country].filter(Boolean).join(', ');
+  if (addr) addContactLine('📍', addr);
+  if (linkedin) addContactLine('in', linkedin);
+  if (social)   addContactLine('@',  social);
+
+  // ---- RIGHT BLOCK (vCard QR card) ----
+  try {
+    await loadQrLib();
+    const qr = window.qrcode(0, 'M');
+    qr.addData(vcard);
+    qr.make();
+    const modules = qr.getModuleCount();
+    const qrBoxX = W - QR_BOX - PAD;
+    // Vertically align the QR with the contact list
+    const qrBoxY = bodyStartY - 14;
+    // Light QR background card with rounded corners and a soft shadow
+    ctx.save();
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.10)';
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = SOFT;
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(qrBoxX - 14, qrBoxY - 14, QR_BOX + 28, QR_BOX + 28, 16);
+      ctx.fill();
+    } else {
+      ctx.fillRect(qrBoxX - 14, qrBoxY - 14, QR_BOX + 28, QR_BOX + 28);
+    }
+    ctx.restore();
+    // Subtle border on the QR card
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(qrBoxX - 14.5, qrBoxY - 14.5, QR_BOX + 29, QR_BOX + 29, 16);
+      ctx.stroke();
+    }
+    // Draw the QR modules
+    const cell = Math.floor(QR_BOX / modules);
+    const qrPx = cell * modules;
+    const startX = qrBoxX + (QR_BOX - qrPx) / 2;
+    const startY = qrBoxY + (QR_BOX - qrPx) / 2;
+    ctx.fillStyle = TEXT;
+    for (let r = 0; r < modules; r++) {
+      for (let c = 0; c < modules; c++) {
+        if (qr.isDark(r, c)) ctx.fillRect(startX + c * cell, startY + r * cell, cell, cell);
+      }
+    }
+    // Caption below the QR
+    ctx.fillStyle = MUTED;
+    ctx.font = '700 13px ' + FONT_STACK;
+    ctx.textAlign = 'center';
+    ctx.fillText('SCAN TO ADD CONTACT', qrBoxX + QR_BOX / 2, qrBoxY + QR_BOX + 24);
+    ctx.textAlign = 'left';
+  } catch (e) {
+    console.warn('[business-card] QR generation failed:', e);
+  }
+  // Final hairline frame around the card
+  ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1;
+  ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+  // Save the canvas as a PNG dataURL and insert as an image annotation
+  const dataURL = canvas.toDataURL('image/png');
+  addImageAnnotation(pos, dataURL, 'image/png');
+  const used = !!(p.fullName || p.email || p.phone);
+  showToast(used
+    ? 'Business card inserted — open Profile to edit your details.'
+    : 'Business card inserted with placeholder text — fill in Profile first for a personalised card.', 'success');
 }
 
 // === CREATE NEW STAMP MODAL ===
@@ -11075,6 +12044,8 @@ function openCreateStampModal() {
   // Default template seeds the textarea with the standard "DRAFT + sig line" layout.
   const defaultTemplate = 'DRAFT\n{USER} · {DATE} {TIME}';
   csState = {
+    kind: 'text',         // 'text' | 'image' — switches which inputs the modal collects
+    image: null,          // { dataURL, w, h, name } when kind === 'image'
     template: defaultTemplate,
     text: defaultTemplate,  // back-compat alias used by some downstream helpers
     fontFamily: 'Helvetica',
@@ -11084,6 +12055,17 @@ function openCreateStampModal() {
     borderColor: RED, borderStyle: 'dashed', borderWidth: 2,
     timestamp: { usernameVal: defaultUsername, dateFormat: 'MM/DD/YYYY', timeFormat: 'hh:mm A' }
   };
+  // Reset kind picker to "Text"; image preview empty
+  document.querySelectorAll('input[name="csKind"]').forEach(r => { r.checked = (r.value === 'text'); });
+  document.getElementById('csTextField').hidden = false;
+  document.getElementById('csImageField').hidden = true;
+  document.getElementById('csTextOnlyFields').hidden = false;
+  document.getElementById('csImagePreview').hidden = true;
+  document.getElementById('csImagePreview').src = '';
+  document.getElementById('csImageEmpty').hidden = false;
+  document.getElementById('csImageReplace').hidden = true;
+  document.getElementById('csImageClear').hidden = true;
+  document.getElementById('csImageInfo').textContent = '';
   // Populate form
   document.getElementById('csText').value = csState.template;
   document.getElementById('csFont').value = csState.fontFamily;
@@ -11167,7 +12149,122 @@ function bindCreateStampEvents() {
   $('csUsernameVal').oninput = (e) => { csState.timestamp.usernameVal = e.target.value; updateCreateStampPreview(); };
   $('csDateFormat').onchange = (e) => { csState.timestamp.dateFormat = e.target.value; updateCreateStampPreview(); };
   $('csTimeFormat').onchange = (e) => { csState.timestamp.timeFormat = e.target.value; updateCreateStampPreview(); };
+  // ===== Stamp KIND picker (text vs image) =====
+  document.querySelectorAll('input[name="csKind"]').forEach(r => {
+    r.onchange = () => {
+      csState.kind = r.value === 'image' ? 'image' : 'text';
+      $('csTextField').hidden = (csState.kind === 'image');
+      $('csImageField').hidden = (csState.kind === 'text');
+      // Hide the entire text-styling block (font, colors, border, tokens,
+      // text size) when the user picks "Image stamp" — none of those
+      // controls apply to an uploaded logo / scanned stamp.
+      $('csTextOnlyFields').hidden = (csState.kind === 'image');
+      updateCreateStampPreview();
+    };
+  });
+  // ===== Image upload =====
+  const imgDrop  = $('csImageDrop');
+  const imgInput = $('csImageInput');
+  const imgPrev  = $('csImagePreview');
+  const imgEmpty = $('csImageEmpty');
+  const imgInfo  = $('csImageInfo');
+  const imgRepl  = $('csImageReplace');
+  const imgClear = $('csImageClear');
+  function loadStampImageFromFile(file) {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      showToast('Please choose an image file (PNG / JPG / SVG / WebP).', 'warn'); return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataURL = reader.result;
+      const probe = new Image();
+      probe.onload = () => {
+        csState.image = { dataURL, w: probe.naturalWidth, h: probe.naturalHeight, name: file.name };
+        imgPrev.src = dataURL;
+        imgPrev.hidden = false;
+        imgEmpty.hidden = true;
+        imgRepl.hidden = false;
+        imgClear.hidden = false;
+        imgInfo.textContent = `${file.name} · ${probe.naturalWidth}×${probe.naturalHeight}`;
+        updateCreateStampPreview();
+      };
+      probe.onerror = () => showToast('That image couldn\'t be read.', 'error');
+      probe.src = dataURL;
+    };
+    reader.onerror = () => showToast('Could not read the file.', 'error');
+    reader.readAsDataURL(file);
+  }
+  imgDrop.onclick = (e) => {
+    if (e.target.tagName === 'BUTTON') return;
+    imgInput.click();
+  };
+  imgInput.onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) loadStampImageFromFile(f); };
+  imgRepl.onclick = (e) => { e.preventDefault(); imgInput.click(); };
+  imgClear.onclick = (e) => {
+    e.preventDefault();
+    csState.image = null;
+    imgPrev.src = ''; imgPrev.hidden = true;
+    imgEmpty.hidden = false;
+    imgRepl.hidden = true;
+    imgClear.hidden = true;
+    imgInfo.textContent = '';
+    updateCreateStampPreview();
+  };
+  // Drag-and-drop support
+  ['dragenter','dragover'].forEach(ev => imgDrop.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); imgDrop.classList.add('dragover');
+  }));
+  ['dragleave','drop'].forEach(ev => imgDrop.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); imgDrop.classList.remove('dragover');
+  }));
+  imgDrop.addEventListener('drop', e => {
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) loadStampImageFromFile(file);
+  });
   $('csCreate').onclick = () => {
+    // === IMAGE STAMP path ===
+    if (csState.kind === 'image') {
+      if (!csState.image || !csState.image.dataURL) {
+        showToast('Choose an image first (or switch to Text stamp).', 'warn'); return;
+      }
+      // Save to library if requested. Image stamps store the dataURL.
+      if ($('csSaveLib').checked) {
+        const list = loadCustomStamps();
+        list.push({
+          id: 'custom-img-' + Date.now(),
+          _kind: 'image',
+          dataURL: csState.image.dataURL,
+          w: csState.image.w,
+          h: csState.image.h,
+          name: csState.image.name || 'Image stamp'
+        });
+        saveCustomStamps(list);
+      }
+      closeCreateStampModal();
+      const pos = pickInsertPos(); if (!pos) return;
+      // Cap the inserted size so a 4000×3000 px logo doesn't fill the page.
+      const maxW = 200; // CSS px
+      const ratio = csState.image.h / Math.max(1, csState.image.w);
+      const insertW = Math.min(maxW, csState.image.w);
+      const insertH = insertW * ratio;
+      addImageAnnotation(
+        { ...pos, x: pos.x, y: pos.y },
+        csState.image.dataURL,
+        'image/png'
+      );
+      // addImageAnnotation sets its own width/height from the natural size;
+      // resize the just-added annotation down to insertW/insertH so the user
+      // doesn't get a giant image.
+      const last = annotations[annotations.length - 1];
+      if (last && last.type === 'image' && last.el) {
+        last.width = insertW; last.height = insertH;
+        last.el.style.width = insertW + 'px';
+        last.el.style.height = insertH + 'px';
+      }
+      showToast('Image stamp inserted — drag a corner to resize.', 'success');
+      return;
+    }
+    // === TEXT STAMP path (existing) ===
     const tpl = (csState.template || '').replace(/^\s+|\s+$/g, '');
     if (!tpl) { showToast('Stamp content is required.', 'warn'); return; }
     const stampTpl = buildStampTemplateFromState();
@@ -11213,6 +12310,24 @@ function buildStampTemplateFromState() {
 }
 function updateCreateStampPreview() {
   const box = document.getElementById('createStampPreviewBox');
+  // === IMAGE STAMP preview ===
+  if (csState.kind === 'image' && csState.image && csState.image.dataURL) {
+    box.textContent = '';
+    box.style.cssText = '';  // wipe text-stamp styles
+    box.style.background = 'transparent';
+    box.style.border = 'none';
+    box.style.padding = '0';
+    box.style.display = 'inline-flex';
+    // Render the image inside the preview box — sized so it always fits
+    box.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = csState.image.dataURL;
+    img.style.cssText = 'max-width:100%;max-height:240px;object-fit:contain;background:repeating-conic-gradient(#f4f4f5 0% 25%, #ffffff 0% 50%) 50%/14px 14px;border-radius:6px;';
+    box.appendChild(img);
+    return;
+  }
+  // === TEXT STAMP preview ===
+  box.innerHTML = '';
   // Resolve the template with a placeholder fallback so the preview never
   // shows a literal "{USER}" when the user has cleared the username field.
   const resolved = resolveStampTemplate(csState.template || '', {
@@ -11478,6 +12593,36 @@ function bindOrganizeEvents() {
     renderOrganizeGrid();
   };
   document.getElementById('compressBtn').onclick = openCompressModal;
+  document.getElementById('addBlankPageBtn').onclick = () => openNewPdfModal('organize');
+}
+
+// Append a blank page (current modal-selected size) to organizeState as a
+// new source. The page is real PDF bytes (single empty page) so subsequent
+// reorder / rotate / merge / compress work the same way as any other source.
+async function appendBlankPageToOrganize() {
+  if (!organizeState) return false;
+  const size = _newPdfResolveSize();
+  if (!size) { showToast('Pick a page size.', 'warn'); return false; }
+  try {
+    const doc = await PDFDocument.create();
+    doc.addPage([size.w, size.h]);
+    const bytes = await doc.save();
+    // Unique source key so multiple blanks coexist.
+    let key = 'blank', n = 1;
+    while (organizeState.sources[key]) { key = 'blank' + n; n++; }
+    const pdfJsBlank = await loadPdfJsDoc(bytes.slice(0));
+    organizeState.sources[key] = { bytes, doc: pdfJsBlank, owned: true };
+    organizeState.pages.push({
+      srcKey: key, srcIndex: 0, rotation: 0,
+      id: ++organizeState.counter, selected: false
+    });
+    renderOrganizeGrid();
+    showToast(`Blank page (${Math.round(size.w)}×${Math.round(size.h)} pt) added.`, 'success');
+    return true;
+  } catch (e) {
+    showToast('Couldn\'t add blank page: ' + (e.message || e), 'error');
+    return false;
+  }
 }
 
 async function mergePdfIntoOrganize(file) {
@@ -13112,7 +14257,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.21';
+const APP_VERSION = '1.31';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
@@ -14559,22 +15704,122 @@ function startLinkDrag(overlay, pageNum, x0, y0, pointerId) {
   overlay.addEventListener('pointerup', onUp);
   overlay.addEventListener('pointercancel', onUp);
 }
-function openHyperlinkModal() {
-  document.getElementById('hlUrl').value = '';
-  document.getElementById('hlPage').value = '';
-  document.getElementById('hlTypeUrl').checked = true;
+// ===== Link-as-property: attach a clickable link to ANY annotation =====
+// Stores `ann.link = { kind: 'url'|'page', target, label }`. Visual badge
+// on the element + PDF Link rect emitted on save (see generatePdfBytes
+// post-pass). Replaces the original standalone link-rectangle approach
+// — those big blue dashed boxes were ugly (per user feedback 034.jpg).
+let _linkAttachAnn = null;
+function openLinkAttachmentModal(ann) {
+  // Reuse the existing hyperlink modal with a special "attach to existing
+  // annotation" mode. The annotation already has a bbox — we just need to
+  // know the link target.
+  _linkAttachAnn = ann;
+  const hlUrl  = document.getElementById('hlUrl');
+  const hlPage = document.getElementById('hlPage');
+  const hlTU   = document.getElementById('hlTypeUrl');
+  const hlTP   = document.getElementById('hlTypePage');
+  if (ann.link && ann.link.kind === 'page') {
+    hlTP.checked = true; hlTU.checked = false;
+    hlPage.value = String(ann.link.target || '').replace(/^#page=/, '');
+    hlUrl.value = '';
+  } else {
+    hlTU.checked = true; hlTP.checked = false;
+    hlUrl.value = (ann.link && ann.link.target) || '';
+    hlPage.value = '';
+  }
+  // Clear other in-flight states from the standalone-link path
+  _linkPendingAnn = null;
+  _linkEditingAnn = null;
   document.getElementById('hyperlinkModal').classList.add('show');
-  setTimeout(() => document.getElementById('hlUrl').focus(), 60);
+  setTimeout(() => (ann.link && ann.link.kind === 'page' ? hlPage : hlUrl).focus(), 60);
 }
+function followAnnLink(ann) {
+  if (!ann || !ann.link || !ann.link.target) return;
+  if (ann.link.kind === 'page') {
+    const p = parseInt(String(ann.link.target).replace(/^#page=/, ''));
+    const wrap = document.querySelector(`.page-wrapper[data-page-num="${p}"]`);
+    if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else {
+    try { window.open(ann.link.target, '_blank', 'noopener,noreferrer'); } catch (_) {}
+  }
+}
+function updateAnnLinkBadge(ann) {
+  if (!ann || !ann.el) return;
+  const has = !!(ann.link && ann.link.target);
+  if (has) {
+    ann.el.dataset.hasLink = '1';
+    ann.el.dataset.linkTarget = ann.link.target;
+    ann.el.dataset.linkLabel = (ann.link.label || ann.link.target || '').slice(0, 60);
+  } else {
+    delete ann.el.dataset.hasLink;
+    delete ann.el.dataset.linkTarget;
+    delete ann.el.dataset.linkLabel;
+  }
+}
+// Alt+click (or Ctrl/⌘+click) on any annotation with a link → follow it
+// without going through the props panel.
+document.addEventListener('pointerdown', (e) => {
+  if (!(e.altKey || e.metaKey || e.ctrlKey)) return;
+  if (currentTool !== 'select') return;
+  const el = e.target && e.target.closest ? e.target.closest('.annotation') : null;
+  if (!el || !el.dataset.hasLink) return;
+  const ann = annotations.find(a => a.el === el);
+  if (!ann) return;
+  e.preventDefault();
+  e.stopPropagation();
+  followAnnLink(ann);
+}, true);
+
+// Pre-fill with values from an existing link annotation when editing,
+// otherwise reset for a new link.
+function openHyperlinkModal(editingAnn) {
+  const hlUrl  = document.getElementById('hlUrl');
+  const hlPage = document.getElementById('hlPage');
+  const hlTU   = document.getElementById('hlTypeUrl');
+  const hlTP   = document.getElementById('hlTypePage');
+  if (editingAnn) {
+    if (editingAnn.linkKind === 'page') {
+      hlTP.checked = true; hlTU.checked = false;
+      hlPage.value = String(editingAnn.linkTarget || '').replace(/^#page=/, '');
+      hlUrl.value = '';
+    } else {
+      hlTU.checked = true; hlTP.checked = false;
+      hlUrl.value = editingAnn.linkTarget || '';
+      hlPage.value = '';
+    }
+    _linkEditingAnn = editingAnn;
+  } else {
+    hlUrl.value = ''; hlPage.value = ''; hlTU.checked = true;
+    _linkEditingAnn = null;
+  }
+  document.getElementById('hyperlinkModal').classList.add('show');
+  setTimeout(() => (editingAnn && editingAnn.linkKind === 'page' ? hlPage : hlUrl).focus(), 60);
+}
+// Track an existing link we're editing (null = create new)
+let _linkEditingAnn = null;
 function closeHyperlinkModal(cancelled) {
   document.getElementById('hyperlinkModal').classList.remove('show');
   if (cancelled && _linkPendingAnn) {
     try { _linkPendingAnn.previewEl.remove(); } catch (_) {}
   }
   _linkPendingAnn = null;
+  _linkEditingAnn = null;
+  _linkAttachAnn = null;
+}
+
+// Add a "Remove link" affordance for annotations that already have one.
+function removeAnnLink(ann) {
+  if (!ann || !ann.link) return;
+  delete ann.link;
+  updateAnnLinkBadge(ann);
+  pushHistory('link-remove');
+  if (selected === ann) { buildPropsPanel(ann); positionPropsPanel(ann); }
+  showToast('Link removed.', 'success');
 }
 function confirmHyperlink() {
-  if (!_linkPendingAnn) { closeHyperlinkModal(true); return; }
+  // Two paths: editing an existing link (re-opened via double-click /
+  // "Edit" props button) OR finishing a fresh drag-to-create.
   const isUrl = document.getElementById('hlTypeUrl').checked;
   let target = '';
   let labelTxt = '';
@@ -14589,6 +15834,38 @@ function confirmHyperlink() {
     target = '#page=' + p;
     labelTxt = 'Page ' + p;
   }
+  if (_linkAttachAnn) {
+    // Attach-to-existing-annotation mode (the new link-as-property path).
+    // Set `ann.link` and refresh the props panel — the saved PDF will get a
+    // clickable Link rect over this annotation's bbox in generatePdfBytes.
+    const ann = _linkAttachAnn;
+    ann.link = {
+      kind: isUrl ? 'url' : 'page',
+      target: target,
+      label:  labelTxt
+    };
+    updateAnnLinkBadge(ann);
+    pushHistory('link-attach');
+    closeHyperlinkModal(false);
+    if (selected === ann) { buildPropsPanel(ann); positionPropsPanel(ann); }
+    showToast('Link attached.', 'success');
+    return;
+  }
+  if (_linkEditingAnn) {
+    // Edit mode — update the existing annotation in place.
+    const ann = _linkEditingAnn;
+    ann.linkKind   = isUrl ? 'url' : 'page';
+    ann.linkTarget = target;
+    ann.linkLabel  = labelTxt;
+    ann.el.dataset.linkLabel = labelTxt.length > 40 ? labelTxt.slice(0, 38) + '…' : labelTxt;
+    ann.el.title = labelTxt;
+    pushHistory('link-edit');
+    closeHyperlinkModal(false);
+    if (selected === ann) { buildPropsPanel(ann); positionPropsPanel(ann); }
+    showToast('Link updated.', 'success');
+    return;
+  }
+  if (!_linkPendingAnn) { closeHyperlinkModal(true); return; }
   const pending = _linkPendingAnn;
   const el = pending.previewEl;
   el.classList.remove('selected');
@@ -14635,6 +15912,15 @@ function enableLinkInteractions(el, ann) {
   };
   el.addEventListener('pointerup', end);
   el.addEventListener('pointercancel', end);
+  // Double-click → re-open the hyperlink modal pre-filled with this link's
+  // current values for editing (matches the double-click-to-edit convention
+  // used by text, stamps and signatures).
+  el.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    if (currentTool !== 'select') setTool('select');
+    select(ann);
+    openHyperlinkModal(ann);
+  });
 }
 document.getElementById('hlClose').addEventListener('click', () => closeHyperlinkModal(true));
 document.getElementById('hlCancel').addEventListener('click', () => closeHyperlinkModal(true));
@@ -15169,6 +16455,159 @@ document.getElementById('cropSizePreset').addEventListener('change', (e) => {
 });
 
 document.getElementById('cropResizeBtn').addEventListener('click', applyCropResize);
+
+// =====================================================================
+// =====================  NEW BLANK PDF  ===============================
+// =====================================================================
+// "New" button opens a small page-size picker, then builds a one-page
+// PDFDocument in memory and loads it as if the user had just opened a
+// file. Same Crop/Resize preset list so users can pick A4 / Letter /
+// photo sizes / custom. Also exposed as "+ Blank page" inside Organize
+// so users can append blank pages to an existing PDF.
+function _newPdfResolveSize() {
+  const sel = document.getElementById('newPdfSize').value;
+  // Width/height inputs are the source of truth — whether we got here via
+  // a preset (which auto-fills them) or via "Custom…" (user types them).
+  let w = parseFloat(document.getElementById('newPdfCustomW').value);
+  let h = parseFloat(document.getElementById('newPdfCustomH').value);
+  const unit = document.getElementById('newPdfCustomUnit').value;
+  if (!isFinite(w) || w <= 0 || !isFinite(h) || h <= 0) {
+    // Fall back to preset if inputs are blank/invalid.
+    return CROP_SIZE_PRESETS[sel] || null;
+  }
+  if (unit === 'mm') { w *= 72 / 25.4; h *= 72 / 25.4; }
+  else if (unit === 'in') { w *= 72; h *= 72; }
+  return { w, h };
+}
+// Reflect a preset's pt-dimensions in the visible W/H/Unit inputs so the
+// user always SEES the size that'll be created — not just a hidden number.
+// Picks the most readable unit for the preset (mm for ISO, in for US/photo).
+function _newPdfSyncInputsFromPreset() {
+  const sel = document.getElementById('newPdfSize').value;
+  if (sel === 'custom') {
+    // leave inputs alone — user is in custom-edit mode
+    return;
+  }
+  const preset = CROP_SIZE_PRESETS[sel];
+  if (!preset) return;
+  // ISO sizes (a4/a3/a5) read nicer in mm; US + photo sizes in inches.
+  const useMm = /^a\d/.test(sel) || /cm$/.test(sel);
+  const unitEl = document.getElementById('newPdfCustomUnit');
+  const wEl = document.getElementById('newPdfCustomW');
+  const hEl = document.getElementById('newPdfCustomH');
+  if (useMm) {
+    unitEl.value = 'mm';
+    wEl.value = (preset.w * 25.4 / 72).toFixed(0);
+    hEl.value = (preset.h * 25.4 / 72).toFixed(0);
+  } else {
+    unitEl.value = 'in';
+    wEl.value = (preset.w / 72).toFixed(2);
+    hEl.value = (preset.h / 72).toFixed(2);
+  }
+}
+function _newPdfUpdatePreview() {
+  const size = _newPdfResolveSize();
+  const el = document.getElementById('newPdfPreview');
+  if (!size) { el.textContent = ''; return; }
+  const mmW = (size.w * 25.4 / 72).toFixed(1);
+  const mmH = (size.h * 25.4 / 72).toFixed(1);
+  const inW = (size.w / 72).toFixed(2);
+  const inH = (size.h / 72).toFixed(2);
+  el.textContent = `→ ${Math.round(size.w)} × ${Math.round(size.h)} pt   ·   ${mmW} × ${mmH} mm   ·   ${inW} × ${inH} in`;
+}
+// 'new'  → builds a fresh single-page PDF and loads it as the working doc.
+// 'organize' → appends a blank page to the open Organize-Pages session.
+let _newPdfMode = 'new';
+function openNewPdfModal(mode) {
+  _newPdfMode = (mode === 'organize') ? 'organize' : 'new';
+  document.getElementById('newPdfTitle').textContent =
+    _newPdfMode === 'organize' ? '📄 Add a blank page' : '📄 New blank PDF';
+  document.getElementById('newPdfCreate').textContent =
+    _newPdfMode === 'organize' ? 'Add blank page' : 'Create blank PDF';
+  document.getElementById('newPdfModal').classList.add('show');
+  // Sync the W/H/Unit inputs to the currently-selected preset so the user
+  // sees real numbers (and can switch to "Custom…" to edit them).
+  _newPdfSyncInputsFromPreset();
+  _newPdfUpdatePreview();
+}
+function closeNewPdfModal() {
+  document.getElementById('newPdfModal').classList.remove('show');
+}
+async function createBlankPdfFromForm() {
+  const size = _newPdfResolveSize();
+  if (!size) { showToast('Pick a page size.', 'warn'); return; }
+  const btn = document.getElementById('newPdfCreate');
+  const origLabel = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<span class="icon">⏳</span> Working…';
+  try {
+    if (_newPdfMode === 'organize') {
+      // Inject into the live Organize session instead of opening a new doc.
+      const ok = await appendBlankPageToOrganize();
+      if (ok) closeNewPdfModal();
+      return;
+    }
+    const doc = await PDFDocument.create();
+    doc.addPage([size.w, size.h]);
+    const bytes = await doc.save();
+    closeNewPdfModal();
+    const filename = 'blank-' + Math.round(size.w) + 'x' + Math.round(size.h) + '.pdf';
+    pdfFileName = filename;
+    // Mark this load as a deliberately-blank document so renderPages
+    // doesn't show the "looks like a scan / run OCR" banner + toast —
+    // there's no text BY DESIGN, the user wants a fresh canvas.
+    _isBlankPdf = true;
+    await loadPDFFromBytes(bytes, filename);
+    // Hide the banner immediately too, in case the deferred maybeShowOcrBanner
+    // already fired before the flag took effect.
+    const _b = document.getElementById('ocrBanner');
+    if (_b) _b.style.display = 'none';
+    showToast('New blank PDF · ' + Math.round(size.w) + '×' + Math.round(size.h) + ' pt.', 'success');
+  } catch (e) {
+    console.error('[new-pdf]', e);
+    showToast('Could not create blank PDF: ' + (e.message || e), 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = origLabel;
+  }
+}
+// Wire the New button + modal events
+(function wireNewPdfModal() {
+  const openBtn = document.getElementById('newPdfBtn');
+  if (openBtn) openBtn.addEventListener('click', openNewPdfModal);
+  const closeBtn = document.getElementById('newPdfClose');
+  if (closeBtn) closeBtn.addEventListener('click', closeNewPdfModal);
+  const cancelBtn = document.getElementById('newPdfCancel');
+  if (cancelBtn) cancelBtn.addEventListener('click', closeNewPdfModal);
+  const create = document.getElementById('newPdfCreate');
+  if (create) create.addEventListener('click', createBlankPdfFromForm);
+  const sel = document.getElementById('newPdfSize');
+  if (sel) sel.addEventListener('change', () => {
+    // Preset change → fill the W/H inputs with that preset's dimensions in
+    // a sensible unit (mm for ISO, in for US/photo). Was previously only
+    // visible when "custom" was selected, so the user couldn't see the
+    // numbers for any other preset (the bug 1.24's user reported).
+    _newPdfSyncInputsFromPreset();
+    _newPdfUpdatePreview();
+  });
+  // If the user edits the W / H / Unit fields manually, automatically
+  // switch the preset dropdown to "Custom…" so what they see matches what
+  // gets created.
+  ['newPdfCustomW','newPdfCustomH','newPdfCustomUnit'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      if (sel && sel.value !== 'custom') sel.value = 'custom';
+      _newPdfUpdatePreview();
+    });
+    el.addEventListener('change', () => {
+      if (sel && sel.value !== 'custom') sel.value = 'custom';
+      _newPdfUpdatePreview();
+    });
+  });
+  const modal = document.getElementById('newPdfModal');
+  if (modal) modal.addEventListener('click', e => {
+    if (e.target.id === 'newPdfModal') closeNewPdfModal();
+  });
+})();
 
 async function applyCropResize() {
   if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
@@ -16767,28 +18206,259 @@ function _loadScript(url) {
 function loadQrLib()  { return _qrLibPromise  || (_qrLibPromise  = _loadScript(QR_LIB_URL)); }
 function loadBarLib() { return _barLibPromise || (_barLibPromise = _loadScript(BAR_LIB_URL)); }
 
-// --- Render QR onto qrCanvas based on form fields ---
+// ===== QR wizard state =====
+// `_qrTpl` is the chosen template (URL, vCard, …). `_qrLogo` is the optional
+// center-logo image (HTMLImageElement) — null when none.
+let _qrTpl = null;
+let _qrLogo = null;
+
+// ---- Template metadata ----
+// Each template knows: icon, display name, what fields to render, and how to
+// turn those field values into the actual QR string payload.
+const QR_TEMPLATES = {
+  url: {
+    icon: '🌐', name: 'Website',
+    fields: [
+      { id: 'qrf_url', label: 'URL', type: 'text', placeholder: 'https://example.com', required: true }
+    ],
+    build: v => {
+      let u = (v.qrf_url || '').trim();
+      if (!u) return '';
+      if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) u = 'https://' + u;
+      return u;
+    }
+  },
+  vcard: {
+    icon: '👤', name: 'Business card',
+    fields: [
+      { id: 'qrf_first', label: 'First name', type: 'text' },
+      { id: 'qrf_last',  label: 'Last name',  type: 'text' },
+      { id: 'qrf_org',   label: 'Company / Organization', type: 'text' },
+      { id: 'qrf_title', label: 'Job title',  type: 'text' },
+      { id: 'qrf_tel',   label: 'Phone',      type: 'tel',   placeholder: '+1 (555) 123-4567' },
+      { id: 'qrf_email', label: 'Email',      type: 'email', placeholder: 'name@example.com' },
+      { id: 'qrf_web',   label: 'Website',    type: 'text',  placeholder: 'https://example.com' },
+      { id: 'qrf_street',label: 'Street',     type: 'text' },
+      { id: 'qrf_city',  label: 'City',       type: 'text' },
+      { id: 'qrf_zip',   label: 'ZIP / Postcode', type: 'text' },
+      { id: 'qrf_country', label: 'Country',  type: 'text' }
+    ],
+    build: v => {
+      const fn = [v.qrf_first, v.qrf_last].filter(Boolean).join(' ').trim();
+      if (!fn && !v.qrf_tel && !v.qrf_email) return '';
+      const lines = ['BEGIN:VCARD', 'VERSION:3.0'];
+      if (v.qrf_last || v.qrf_first) lines.push(`N:${v.qrf_last || ''};${v.qrf_first || ''};;;`);
+      if (fn) lines.push('FN:' + fn);
+      if (v.qrf_org)   lines.push('ORG:' + v.qrf_org);
+      if (v.qrf_title) lines.push('TITLE:' + v.qrf_title);
+      if (v.qrf_tel)   lines.push('TEL;TYPE=CELL:' + v.qrf_tel);
+      if (v.qrf_email) lines.push('EMAIL:' + v.qrf_email);
+      if (v.qrf_web)   lines.push('URL:' + v.qrf_web);
+      if (v.qrf_street || v.qrf_city || v.qrf_zip || v.qrf_country) {
+        lines.push(`ADR:;;${v.qrf_street || ''};${v.qrf_city || ''};;${v.qrf_zip || ''};${v.qrf_country || ''}`);
+      }
+      lines.push('END:VCARD');
+      return lines.join('\n');
+    }
+  },
+  wifi: {
+    icon: '📶', name: 'Wi-Fi',
+    fields: [
+      { id: 'qrf_ssid', label: 'Network name (SSID)', type: 'text', required: true },
+      { id: 'qrf_pass', label: 'Password',            type: 'text', placeholder: 'leave empty for open networks' },
+      { id: 'qrf_enc',  label: 'Encryption', type: 'select', options: [
+          { value: 'WPA',     label: 'WPA / WPA2 / WPA3 (most common)' },
+          { value: 'WEP',     label: 'WEP (legacy)' },
+          { value: 'nopass',  label: 'Open (no password)' }
+      ] },
+      { id: 'qrf_hidden', label: 'Hidden network', type: 'checkbox' }
+    ],
+    build: v => {
+      const ssid = (v.qrf_ssid || '').trim();
+      if (!ssid) return '';
+      const enc = v.qrf_enc || 'WPA';
+      // Escape \ ; , : " per the Wi-Fi QR spec
+      const esc = s => String(s || '').replace(/([\\;,:"])/g, '\\$1');
+      let s = `WIFI:T:${enc};S:${esc(ssid)};`;
+      if (enc !== 'nopass' && v.qrf_pass) s += `P:${esc(v.qrf_pass)};`;
+      if (v.qrf_hidden) s += 'H:true;';
+      s += ';';
+      return s;
+    }
+  },
+  email: {
+    icon: '✉', name: 'Email',
+    fields: [
+      { id: 'qrf_to',   label: 'To',      type: 'email', placeholder: 'name@example.com', required: true },
+      { id: 'qrf_subj', label: 'Subject', type: 'text' },
+      { id: 'qrf_body', label: 'Message', type: 'textarea' }
+    ],
+    build: v => {
+      const to = (v.qrf_to || '').trim();
+      if (!to) return '';
+      const params = [];
+      if (v.qrf_subj) params.push('subject=' + encodeURIComponent(v.qrf_subj));
+      if (v.qrf_body) params.push('body=' + encodeURIComponent(v.qrf_body));
+      return 'mailto:' + to + (params.length ? '?' + params.join('&') : '');
+    }
+  },
+  phone: {
+    icon: '📞', name: 'Phone',
+    fields: [
+      { id: 'qrf_tel', label: 'Phone number', type: 'tel', placeholder: '+1 (555) 123-4567', required: true }
+    ],
+    build: v => {
+      const t = (v.qrf_tel || '').replace(/\s+/g, '');
+      return t ? 'tel:' + t : '';
+    }
+  },
+  sms: {
+    icon: '💬', name: 'SMS',
+    fields: [
+      { id: 'qrf_tel', label: 'Phone number', type: 'tel', placeholder: '+1 (555) 123-4567', required: true },
+      { id: 'qrf_msg', label: 'Pre-filled message', type: 'textarea' }
+    ],
+    build: v => {
+      const t = (v.qrf_tel || '').replace(/\s+/g, '');
+      if (!t) return '';
+      return 'SMSTO:' + t + (v.qrf_msg ? ':' + v.qrf_msg : '');
+    }
+  },
+  geo: {
+    icon: '📍', name: 'Location',
+    fields: [
+      { id: 'qrf_lat', label: 'Latitude',  type: 'text', placeholder: '50.0755', required: true },
+      { id: 'qrf_lon', label: 'Longitude', type: 'text', placeholder: '14.4378', required: true }
+    ],
+    build: v => {
+      const lat = parseFloat(v.qrf_lat), lon = parseFloat(v.qrf_lon);
+      if (!isFinite(lat) || !isFinite(lon)) return '';
+      return `geo:${lat},${lon}`;
+    }
+  },
+  text: {
+    icon: '📝', name: 'Plain text',
+    fields: [
+      { id: 'qrf_text', label: 'Text', type: 'textarea', required: true, placeholder: 'Any text you like — notes, codes, snippets…' }
+    ],
+    build: v => (v.qrf_text || '').trim()
+  }
+};
+
+// Render the step-2 field list for the selected template, with profile
+// pre-fill for vCard so the user's name / phone / email auto-populate.
+function renderQrFields() {
+  if (!_qrTpl) return;
+  const tpl = QR_TEMPLATES[_qrTpl]; if (!tpl) return;
+  document.getElementById('qrTplIcon').textContent = tpl.icon;
+  document.getElementById('qrTplName').textContent = tpl.name;
+  const wrap = document.getElementById('qrFields');
+  wrap.innerHTML = '';
+  // Profile pre-fill for vCard
+  let prefill = {};
+  if (_qrTpl === 'vcard') {
+    try {
+      const p = (typeof getProfile === 'function') ? getProfile() : {};
+      if (p.fullName) {
+        const parts = String(p.fullName).trim().split(/\s+/).filter(Boolean);
+        prefill.qrf_first = parts[0] || '';
+        prefill.qrf_last  = parts.slice(1).join(' ') || '';
+      }
+      prefill.qrf_tel     = p.phone   || '';
+      prefill.qrf_email   = p.email   || '';
+      prefill.qrf_org     = p.company || '';
+      prefill.qrf_street  = p.street  || '';
+      prefill.qrf_city    = p.city    || '';
+      prefill.qrf_zip     = p.zip     || '';
+      prefill.qrf_country = p.country || '';
+    } catch (_) {}
+  }
+  for (const f of tpl.fields) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;flex-direction:column;gap:4px;margin-bottom:8px';
+    if (f.type !== 'checkbox') {
+      const lbl = document.createElement('label');
+      lbl.className = 'ps-label'; lbl.textContent = f.label + (f.required ? ' *' : '');
+      row.appendChild(lbl);
+    }
+    let input;
+    if (f.type === 'textarea') {
+      input = document.createElement('textarea');
+      input.className = 'ps-text'; input.style.height = '70px';
+    } else if (f.type === 'select') {
+      input = document.createElement('select'); input.className = 'ps-text';
+      for (const o of (f.options || [])) {
+        const opt = document.createElement('option');
+        opt.value = o.value; opt.textContent = o.label;
+        input.appendChild(opt);
+      }
+    } else if (f.type === 'checkbox') {
+      const w = document.createElement('label');
+      w.className = 'check';
+      input = document.createElement('input');
+      input.type = 'checkbox';
+      w.appendChild(input);
+      w.appendChild(document.createTextNode(' ' + f.label));
+      row.appendChild(w);
+      input.id = f.id;
+      input.addEventListener('change', renderQrPreview);
+      wrap.appendChild(row);
+      continue;
+    } else {
+      input = document.createElement('input');
+      input.type = f.type || 'text';
+      input.className = 'ps-text';
+    }
+    input.id = f.id;
+    if (f.placeholder) input.placeholder = f.placeholder;
+    if (prefill[f.id]) input.value = prefill[f.id];
+    input.addEventListener('input', renderQrPreview);
+    input.addEventListener('change', renderQrPreview);
+    row.appendChild(input);
+    wrap.appendChild(row);
+  }
+  renderQrPreview();
+}
+
+// Collect the user's input into a plain object and run the template's
+// `build` function to produce the final QR payload string.
+function collectQrFieldValues() {
+  if (!_qrTpl) return '';
+  const tpl = QR_TEMPLATES[_qrTpl]; if (!tpl) return '';
+  const values = {};
+  for (const f of tpl.fields) {
+    const el = document.getElementById(f.id);
+    if (!el) continue;
+    values[f.id] = (f.type === 'checkbox') ? !!el.checked : (el.value || '');
+  }
+  return tpl.build(values);
+}
+
+// --- Render QR onto qrCanvas based on wizard fields + style options ---
 async function renderQrPreview() {
-  const text    = document.getElementById('qrText').value.trim();
-  const size    = parseInt(document.getElementById('qrSize').value)   || 240;
+  const status = document.getElementById('qrStatus');
+  const canvas = document.getElementById('qrCanvas');
+  if (!canvas || !status) return;
+  const text = collectQrFieldValues();
+  const size    = parseInt(document.getElementById('qrSize').value)   || 320;
   const margin  = parseInt(document.getElementById('qrMargin').value) || 2;
   const ecc     = document.getElementById('qrEcc').value || 'M';
   const dark    = document.getElementById('qrDark').value;
   const light   = document.getElementById('qrLight').value;
   const trans   = document.getElementById('qrTransparent').checked;
-  const status  = document.getElementById('qrStatus');
-  const canvas  = document.getElementById('qrCanvas');
+  const moduleShape = (document.querySelector('input[name="qrModuleShape"]:checked') || {}).value || 'square';
+  const eyeShape    = (document.querySelector('input[name="qrEyeShape"]:checked')    || {}).value || 'square';
   if (!text) {
     canvas.width = canvas.height = 1;
-    status.className = 'code-status'; status.textContent = 'Type something above to preview.';
+    status.className = 'code-status'; status.textContent = 'Fill in the fields above.';
     return;
   }
   try {
     status.className = 'code-status'; status.textContent = 'Loading QR library…';
     await loadQrLib();
-    // qrcode-generator: new typeNumber 0 = auto-detect best version
-    // The library exposes itself as `qrcode` global.
-    const qr = window.qrcode(0, ecc);
+    // Higher EC level when a logo is overlaid so the QR remains scannable.
+    const effEcc = _qrLogo ? (ecc === 'L' || ecc === 'M' ? 'H' : ecc) : ecc;
+    const qr = window.qrcode(0, effEcc);
     qr.addData(text);
     qr.make();
     const moduleCount = qr.getModuleCount();
@@ -16797,21 +18467,133 @@ async function renderQrPreview() {
     const px = cell * total;
     canvas.width = px; canvas.height = px;
     const ctx = canvas.getContext('2d');
+    // background
     if (trans) ctx.clearRect(0, 0, px, px);
     else { ctx.fillStyle = light; ctx.fillRect(0, 0, px, px); }
+
+    // Helper: tell whether (r,c) is part of one of the three "finder pattern"
+    // (eye) 7×7 boxes in the corners — we render those with a different shape
+    // so the QR looks polished without breaking scan recognition.
+    const inEye = (r, c) => {
+      if (r < 7 && c < 7) return 'tl';
+      if (r < 7 && c >= moduleCount - 7) return 'tr';
+      if (r >= moduleCount - 7 && c < 7) return 'bl';
+      return null;
+    };
+    // Draw data modules first (skipping eye regions which we'll re-draw)
     ctx.fillStyle = dark;
     for (let r = 0; r < moduleCount; r++) {
       for (let c = 0; c < moduleCount; c++) {
-        if (qr.isDark(r, c)) {
-          ctx.fillRect((c + margin) * cell, (r + margin) * cell, cell, cell);
+        if (inEye(r, c)) continue;
+        if (!qr.isDark(r, c)) continue;
+        const x = (c + margin) * cell, y = (r + margin) * cell;
+        if (moduleShape === 'dot') {
+          ctx.beginPath();
+          ctx.arc(x + cell / 2, y + cell / 2, cell * 0.42, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (moduleShape === 'rounded') {
+          const rr = cell * 0.30;
+          ctx.beginPath();
+          if (ctx.roundRect) { ctx.roundRect(x, y, cell, cell, rr); }
+          else {
+            ctx.moveTo(x + rr, y);
+            ctx.arcTo(x + cell, y, x + cell, y + cell, rr);
+            ctx.arcTo(x + cell, y + cell, x, y + cell, rr);
+            ctx.arcTo(x, y + cell, x, y, rr);
+            ctx.arcTo(x, y, x + cell, y, rr);
+          }
+          ctx.fill();
+        } else {
+          ctx.fillRect(x, y, cell, cell);
         }
       }
     }
-    status.className = 'code-status ok'; status.textContent = `${moduleCount}×${moduleCount} modules · ${px}×${px} px · ECC=${ecc}`;
+    // Draw the three eyes — keep their 7×7 outer ring + 3×3 center solid
+    // so scanners reliably find them. Outline of the ring can be square,
+    // rounded, or fully circular.
+    const drawEye = (cornerR, cornerC) => {
+      const x0 = (cornerC + margin) * cell;
+      const y0 = (cornerR + margin) * cell;
+      const outer = 7 * cell;
+      const inner = 3 * cell;
+      ctx.fillStyle = dark;
+      // outer ring (filled square with inner cut-out)
+      ctx.beginPath();
+      if (eyeShape === 'circle') {
+        ctx.arc(x0 + outer/2, y0 + outer/2, outer/2, 0, Math.PI * 2);
+      } else if (eyeShape === 'rounded') {
+        const rr = cell * 1.2;
+        if (ctx.roundRect) ctx.roundRect(x0, y0, outer, outer, rr);
+        else ctx.rect(x0, y0, outer, outer);
+      } else {
+        ctx.rect(x0, y0, outer, outer);
+      }
+      ctx.fill();
+      // hollow middle ring
+      ctx.fillStyle = trans ? '#ffffff' : light;
+      // For transparent we still want to "punch out" the ring — easiest is
+      // to draw with the light colour even if "trans" is on, since the
+      // surrounding modules are darker. A clean transparent ring is hard
+      // without compositing — accept the light-coloured ring.
+      const ringInset = cell;
+      ctx.beginPath();
+      if (eyeShape === 'circle') {
+        ctx.arc(x0 + outer/2, y0 + outer/2, outer/2 - ringInset, 0, Math.PI * 2);
+      } else if (eyeShape === 'rounded') {
+        const rr = cell * 0.8;
+        if (ctx.roundRect) ctx.roundRect(x0 + ringInset, y0 + ringInset, outer - 2*ringInset, outer - 2*ringInset, rr);
+        else ctx.rect(x0 + ringInset, y0 + ringInset, outer - 2*ringInset, outer - 2*ringInset);
+      } else {
+        ctx.rect(x0 + ringInset, y0 + ringInset, outer - 2*ringInset, outer - 2*ringInset);
+      }
+      ctx.fill();
+      // inner solid 3×3
+      ctx.fillStyle = dark;
+      ctx.beginPath();
+      if (eyeShape === 'circle') {
+        ctx.arc(x0 + outer/2, y0 + outer/2, inner/2, 0, Math.PI * 2);
+      } else if (eyeShape === 'rounded') {
+        const rr = cell * 0.5;
+        if (ctx.roundRect) ctx.roundRect(x0 + 2*cell, y0 + 2*cell, inner, inner, rr);
+        else ctx.rect(x0 + 2*cell, y0 + 2*cell, inner, inner);
+      } else {
+        ctx.rect(x0 + 2*cell, y0 + 2*cell, inner, inner);
+      }
+      ctx.fill();
+    };
+    drawEye(0, 0);
+    drawEye(0, moduleCount - 7);
+    drawEye(moduleCount - 7, 0);
+
+    // Optional center logo. Drawn over a small white "punch hole" so the
+    // logo edges look clean. We sized the hole to ~22% of QR width which
+    // most scanners tolerate at H-level error correction.
+    if (_qrLogo) {
+      const logoBoxSize = Math.round(px * 0.22);
+      const lx = (px - logoBoxSize) / 2, ly = (px - logoBoxSize) / 2;
+      ctx.fillStyle = trans ? '#ffffff' : light;
+      const pad = Math.round(cell * 0.6);
+      ctx.fillRect(lx - pad, ly - pad, logoBoxSize + 2 * pad, logoBoxSize + 2 * pad);
+      try { ctx.drawImage(_qrLogo, lx, ly, logoBoxSize, logoBoxSize); } catch (_) {}
+    }
+    status.className = 'code-status ok';
+    status.textContent = `${moduleCount}×${moduleCount} modules · ${px}×${px} px · ECC=${effEcc}` + (_qrLogo ? ' · with logo' : '');
   } catch (e) {
     status.className = 'code-status err'; status.textContent = 'Error: ' + (e.message || e);
     console.warn('[qr] render failed:', e);
   }
+}
+
+// Switch between Step 1 (template picker) and Step 2 (fields + preview)
+function showQrStep(n) {
+  document.getElementById('qrStep1').hidden = (n !== 1);
+  document.getElementById('qrStep2').hidden = (n !== 2);
+}
+function pickQrTemplate(name) {
+  if (!QR_TEMPLATES[name]) return;
+  _qrTpl = name;
+  showQrStep(2);
+  renderQrFields();
 }
 
 // --- Render Barcode onto barCanvas ---
@@ -16900,9 +18682,15 @@ function downloadCodeAsPng() {
 
 function openCodeModal() {
   document.getElementById('codeModal').classList.add('show');
-  // Default to QR tab + initial render
+  // Default to QR tab + show template picker (step 1)
   showCodeTab('qr');
-  setTimeout(renderQrPreview, 50);
+  _qrTpl = null;
+  _qrLogo = null;
+  const ls = document.getElementById('qrLogoStatus');
+  if (ls) ls.textContent = 'No logo';
+  const lc = document.getElementById('qrLogoClear');
+  if (lc) lc.hidden = true;
+  showQrStep(1);
 }
 function closeCodeModal() {
   document.getElementById('codeModal').classList.remove('show');
@@ -16929,9 +18717,45 @@ function showCodeTab(which) {
   if (dl) dl.addEventListener('click', downloadCodeAsPng);
   document.querySelectorAll('.settings-tab[data-codetab]').forEach(t =>
     t.addEventListener('click', () => showCodeTab(t.dataset.codetab)));
-  // Live preview on input changes
-  ['qrText','qrSize','qrMargin','qrEcc','qrDark','qrLight','qrTransparent']
-    .forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('input', () => renderQrPreview()); });
+  // ===== QR wizard =====
+  document.querySelectorAll('.qr-template-card[data-qr-tpl]').forEach(card =>
+    card.addEventListener('click', () => pickQrTemplate(card.dataset.qrTpl)));
+  const back = document.getElementById('qrBackBtn');
+  if (back) back.addEventListener('click', () => { _qrTpl = null; showQrStep(1); });
+  // Style controls re-render on change
+  ['qrSize','qrMargin','qrEcc','qrDark','qrLight','qrTransparent']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('input', renderQrPreview); });
+  document.querySelectorAll('input[name="qrModuleShape"], input[name="qrEyeShape"]').forEach(r =>
+    r.addEventListener('change', renderQrPreview));
+  // Logo picker — store as Image element for the canvas renderer.
+  const logoIn = document.getElementById('qrLogoInput');
+  const logoStatus = document.getElementById('qrLogoStatus');
+  const logoClear = document.getElementById('qrLogoClear');
+  if (logoIn) logoIn.addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        _qrLogo = img;
+        if (logoStatus) logoStatus.textContent = f.name + ' · ' + img.width + '×' + img.height;
+        if (logoClear) logoClear.hidden = false;
+        renderQrPreview();
+      };
+      img.onerror = () => { if (logoStatus) logoStatus.textContent = 'Could not load image.'; };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(f);
+  });
+  if (logoClear) logoClear.addEventListener('click', () => {
+    _qrLogo = null;
+    if (logoStatus) logoStatus.textContent = 'No logo';
+    logoClear.hidden = true;
+    renderQrPreview();
+  });
+  // ===== Barcode (unchanged) =====
   ['barFormat','barText','barWidth','barHeight','barColor','barDisplayValue']
     .forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('input', () => renderBarPreview()); });
   // Click outside modal closes
@@ -17814,7 +19638,9 @@ function injectOcrLines(overlay, lines, scale, pageNum) {
 function maybeShowOcrBanner() {
   const banner = document.getElementById('ocrBanner');
   if (!banner) return;
-  if (pdfJsDoc && pdfTotalTextItems === 0) banner.style.display = '';
+  // Hide the "looks like a scan" banner for blank documents the user just
+  // created via "New" — emptiness is the intent, not a missing OCR pass.
+  if (pdfJsDoc && pdfTotalTextItems === 0 && !_isBlankPdf) banner.style.display = '';
   else banner.style.display = 'none';
 }
 // Wrap renderPages so we re-evaluate banner visibility after layers are done
