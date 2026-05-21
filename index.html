@@ -779,6 +779,106 @@
     white-space: pre-wrap; word-wrap: break-word;
   }
 
+  /* === Floating "Ask AI about this PDF" chat === */
+  /* Toggle button — hidden unless html.ai-connected is on. */
+  #aiChatFab {
+    display: none;
+    position: fixed; right: 18px; bottom: 18px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+    color: white; border: 0; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35);
+    font-size: 24px; line-height: 56px; text-align: center;
+    z-index: 95;
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  #aiChatFab:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(37, 99, 235, 0.45); }
+  #aiChatFab:active { transform: translateY(0); }
+  html.ai-connected #aiChatFab { display: inline-flex; align-items: center; justify-content: center; }
+  /* On phones, the bottom dock takes the lower edge — push the FAB above it. */
+  @media (max-width: 760px) {
+    html.ai-connected #aiChatFab { bottom: 96px; }
+  }
+  /* Chat panel */
+  #aiChatPanel {
+    display: none;
+    position: fixed; right: 18px; bottom: 84px;
+    width: 380px; max-width: calc(100vw - 24px);
+    height: 520px; max-height: calc(100vh - 120px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.18);
+    z-index: 96;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #aiChatPanel.show { display: flex; }
+  @media (max-width: 760px) {
+    #aiChatPanel {
+      right: 8px; left: 8px; width: auto;
+      bottom: 158px;
+      height: calc(100vh - 200px);
+    }
+  }
+  .aichat-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, #7c3aed 0%, #2563eb 100%);
+    color: white;
+    flex-shrink: 0;
+  }
+  .aichat-head .title { flex: 1; font-weight: 600; font-size: 14px; }
+  .aichat-head .aichat-act {
+    background: transparent; border: 0; color: white;
+    width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+    font-size: 16px; line-height: 28px; opacity: 0.85;
+  }
+  .aichat-head .aichat-act:hover { background: rgba(255,255,255,0.18); opacity: 1; }
+  .aichat-body {
+    flex: 1; overflow-y: auto;
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+    background: var(--bg);
+  }
+  .aichat-msg { max-width: 88%; padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
+  .aichat-msg.user { align-self: flex-end; background: var(--accent); color: white; border-bottom-right-radius: 4px; }
+  .aichat-msg.bot  { align-self: flex-start; background: var(--surface-2); color: var(--text); border-bottom-left-radius: 4px; }
+  .aichat-msg.bot.thinking { color: var(--muted); font-style: italic; }
+  .aichat-jump {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-top: 6px; padding: 4px 8px; border-radius: 6px;
+    background: rgba(37, 99, 235, 0.12); color: var(--accent);
+    border: 1px solid rgba(37, 99, 235, 0.25);
+    font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+  .aichat-jump:hover { background: rgba(37, 99, 235, 0.18); }
+  .aichat-empty {
+    color: var(--muted); font-size: 12px;
+    text-align: center; padding: 20px 12px;
+  }
+  .aichat-foot {
+    display: flex; gap: 6px;
+    padding: 8px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .aichat-foot textarea {
+    flex: 1; border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font: inherit; font-size: 13px;
+    background: var(--surface); color: var(--text);
+    resize: none; min-height: 38px; max-height: 120px;
+    outline: none;
+  }
+  .aichat-foot textarea:focus { border-color: var(--accent); }
+  .aichat-foot .aichat-send {
+    background: var(--accent); color: white; border: 0; border-radius: 8px;
+    padding: 0 14px; cursor: pointer; font-weight: 600; font-size: 13px;
+    flex-shrink: 0;
+  }
+  .aichat-foot .aichat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
   /* Settings modal tabs */
   .settings-tabs {
     display: flex; gap: 4px; margin: 4px 0 16px;
@@ -1417,7 +1517,10 @@
     padding: 1px 4px; line-height: 1.15;
     pointer-events: auto; cursor: move;
     transition: box-shadow var(--tr); user-select: none;
-    white-space: pre-wrap; word-break: break-word; max-width: 600px;
+    white-space: pre-wrap; word-break: break-word;
+    /* No fixed max-width: let the user resize / type up to the page width.
+       (Previously hard-capped at 600 px which prevented full-width labels.) */
+    max-width: 100%;
     transform-origin: center center;
   }
   .text-annotation > div { display: block; min-height: 1em; }
@@ -1446,7 +1549,8 @@
     font-family: 'Helvetica', 'Arial', sans-serif;
     border: 2px solid #2563eb; padding: 1px 4px;
     outline: none; line-height: 1.15;
-    min-width: 80px; max-width: 600px;
+    /* Active editing: same — no 600 px cap, user can drag to full page width */
+    min-width: 80px; max-width: 100%;
     box-shadow: 0 4px 16px rgba(37,99,235,0.30);
     border-radius: 2px;
     white-space: pre-wrap; word-break: break-word;
@@ -2151,16 +2255,41 @@
     color: var(--text-soft); margin-bottom: 6px;
     text-transform: uppercase; letter-spacing: 0.4px;
   }
-  .create-stamp-form input[type="text"], .create-stamp-form input[type="number"] {
+  .create-stamp-form input[type="text"], .create-stamp-form input[type="number"],
+  .create-stamp-form textarea.cs-template {
     width: 100%;
     padding: 8px 12px;
     background: var(--surface-2); border: 1px solid var(--border);
     border-radius: 4px; color: var(--text);
     font-family: 'Manrope', sans-serif; font-size: 14px;
   }
-  .create-stamp-form input[type="text"]:focus, .create-stamp-form input[type="number"]:focus {
+  .create-stamp-form input[type="text"]:focus, .create-stamp-form input[type="number"]:focus,
+  .create-stamp-form textarea.cs-template:focus {
     outline: 2px solid var(--accent-ring); border-color: var(--accent);
   }
+  .create-stamp-form textarea.cs-template {
+    resize: vertical; min-height: 64px;
+    line-height: 1.4; font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    white-space: pre;
+  }
+  .cs-hint {
+    color: var(--muted); font-weight: 400; text-transform: none;
+    font-size: 11px; letter-spacing: 0;
+  }
+  .cs-chip-row {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 6px;
+  }
+  .cs-chip {
+    padding: 4px 10px;
+    background: var(--accent-subtle); color: var(--accent);
+    border: 1px solid var(--accent-ring); border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: 'Manrope', sans-serif;
+    transition: background .12s, transform .08s;
+  }
+  .cs-chip:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .cs-chip:active { transform: scale(0.96); }
   .create-stamp-form .row {
     display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
   }
@@ -2441,55 +2570,87 @@
     box-shadow: 0 1px 0 var(--border);
   }
 
-  /* === ONBOARDING MODAL === */
-  .modal-card-onboard { max-width: 580px; }
+  /* === ONBOARDING MODAL — modern, no horizontal scrollbar === */
+  .modal-card-onboard {
+    max-width: 560px;
+    width: calc(100vw - 32px);
+    overflow: hidden;
+  }
   .onboard-slide {
-    background: var(--surface-2);
+    background: linear-gradient(180deg, var(--surface-2) 0%, var(--surface) 100%);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 24px;
-    margin-bottom: 16px;
-    min-height: 260px;
+    border-radius: 14px;
+    padding: 32px 28px;
+    margin-bottom: 18px;
+    min-height: 240px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     text-align: center;
     gap: 12px;
+    animation: onboardFade 0.28s ease both;
+  }
+  @keyframes onboardFade {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
   .onboard-slide .icon-big {
-    font-size: 52px;
+    font-size: 56px;
     line-height: 1;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
+    filter: drop-shadow(0 4px 10px rgba(37, 99, 235, 0.18));
   }
   .onboard-slide h3 {
-    margin: 0; font-size: 19px; font-weight: 700;
+    margin: 0; font-size: 20px; font-weight: 700;
     letter-spacing: -0.3px;
   }
   .onboard-slide .desc {
     font-size: 14px; color: var(--text-soft);
-    max-width: 460px; line-height: 1.55;
+    max-width: 440px; line-height: 1.6;
   }
   .onboard-slide .desc strong { color: var(--text); font-weight: 600; }
   .onboard-slide .new-badge {
     display: inline-block;
-    background: var(--accent); color: white;
+    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    color: white;
     font-size: 10px; font-weight: 700;
-    padding: 3px 7px; border-radius: 10px;
-    letter-spacing: 0.5px; text-transform: uppercase;
-    margin-bottom: 6px;
+    padding: 3px 8px; border-radius: 999px;
+    letter-spacing: 0.6px; text-transform: uppercase;
+    margin-bottom: 4px;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+  }
+  /* Progress bar + step counter replaces the 28 overflowing dots */
+  .onboard-progress {
+    display: flex; flex-direction: column; gap: 6px;
+    flex: 1; min-width: 0;
+  }
+  .onboard-progress-track {
+    height: 4px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .onboard-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-hover) 100%);
+    border-radius: 999px;
+    transition: width 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .onboard-counter {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
   }
   .onboard-footer {
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: nowrap;
   }
-  .onboard-dots {
-    display: flex; gap: 6px;
-  }
-  .onboard-dots .dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--border-strong);
-    transition: all var(--tr); cursor: pointer;
-    border: 0; padding: 0;
-  }
-  .onboard-dots .dot.active {
-    background: var(--accent); width: 22px; border-radius: 4px;
+  .onboard-footer .btn { white-space: nowrap; flex-shrink: 0; }
+  /* Compact buttons on the narrowest phones so we never need a sideways scroll */
+  @media (max-width: 420px) {
+    .onboard-footer { gap: 8px; }
+    .onboard-footer .btn { padding: 8px 12px; font-size: 13px; }
+    .onboard-counter { display: none; }
   }
 
   @media (max-width: 760px) {
@@ -2955,7 +3116,7 @@
 
 <div class="zoom-bar" id="zoomBar" style="display: none">
   <button class="zoom-btn" id="zoomOut" title="Zoom out (Ctrl+−)">−</button>
-  <button class="zoom-percent" id="zoomReset" title="Reset to 100% (Ctrl+0)">100%</button>
+  <button class="zoom-percent" id="zoomReset" title="Click to type a zoom value · Alt+click for 100%">100%</button>
   <button class="zoom-btn" id="zoomIn" title="Zoom in (Ctrl++)">+</button>
 </div>
 
@@ -3109,8 +3270,14 @@
       </div>
       <div class="create-stamp-form">
         <div class="field">
-          <label for="csText">Stamp Text*</label>
-          <input type="text" id="csText" value="DRAFT" maxlength="80" placeholder="Stamp text">
+          <label for="csText">Stamp content* <span class="cs-hint">— one line per line; click a chip to insert a token at the cursor</span></label>
+          <textarea id="csText" rows="3" maxlength="280" placeholder="DRAFT&#10;{USER} · {DATE} {TIME}" class="cs-template"></textarea>
+          <div class="cs-chip-row">
+            <button class="cs-chip" id="csInsertUser" type="button" data-token="{USER}" title="Insert username — uses your profile name by default">+ Username</button>
+            <button class="cs-chip" id="csInsertDate" type="button" data-token="{DATE}" title="Insert today's date — format below">+ Date</button>
+            <button class="cs-chip" id="csInsertTime" type="button" data-token="{TIME}" title="Insert current time — format below">+ Time</button>
+            <button class="cs-chip" id="csInsertNL" type="button" data-token="&#10;" title="Insert a new line (you can also just press Enter)">↵ New line</button>
+          </div>
         </div>
         <div class="field">
           <label>Font Style</label>
@@ -3161,23 +3328,20 @@
           </div>
         </div>
         <div class="field">
-          <label>Append Timestamp</label>
-          <div class="row checks-row">
-            <label class="check"><input type="checkbox" id="csUsername"> Username</label>
-            <label class="check"><input type="checkbox" id="csDate"> Date</label>
-            <label class="check"><input type="checkbox" id="csTime"> Time</label>
-          </div>
+          <label>Token values <span class="cs-hint">— what {USER}, {DATE}, {TIME} resolve to</span></label>
           <div class="row" id="csTimestampRow">
-            <input type="text" id="csUsernameVal" class="select-input" placeholder="Your name" maxlength="40" style="display:none">
-            <select id="csDateFormat" class="select-input" style="display:none">
+            <input type="text" id="csUsernameVal" class="select-input" placeholder="Your name (used by {USER})" maxlength="40" style="flex:1;min-width:140px">
+          </div>
+          <div class="row" style="margin-top:6px">
+            <select id="csDateFormat" class="select-input" style="flex:1" title="Date format used by {DATE}">
+              <option value="MM/DD/YYYY" selected>MM/DD/YYYY (USA)</option>
               <option value="MMM-DD-YYYY">Month DD, YYYY</option>
               <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
               <option value="YYYY-MM-DD">YYYY-MM-DD</option>
             </select>
-            <select id="csTimeFormat" class="select-input" style="display:none">
+            <select id="csTimeFormat" class="select-input" style="flex:1" title="Time format used by {TIME}">
+              <option value="hh:mm A" selected>12-hour (hh:mm AM/PM)</option>
               <option value="HH:mm">24-hour (HH:mm)</option>
-              <option value="hh:mm A">12-hour (hh:mm AM/PM)</option>
             </select>
           </div>
         </div>
@@ -3673,6 +3837,24 @@
   </div>
 </div>
 
+<!-- Floating "Ask AI about this PDF" chat — visible only when AI is connected -->
+<button id="aiChatFab" type="button" title="Ask AI about this PDF" aria-label="Ask AI about this PDF">💬</button>
+<div id="aiChatPanel" role="dialog" aria-labelledby="aiChatTitle">
+  <div class="aichat-head">
+    <span style="font-size:18px">🤖</span>
+    <span class="title" id="aiChatTitle">Ask AI about this PDF</span>
+    <button class="aichat-act" id="aiChatClear" type="button" title="Clear chat">↺</button>
+    <button class="aichat-act" id="aiChatClose" type="button" title="Close" aria-label="Close">✕</button>
+  </div>
+  <div class="aichat-body" id="aiChatBody">
+    <div class="aichat-empty">Ask a question about the open PDF and I'll answer using its contents. The viewer will jump to the page the answer came from.</div>
+  </div>
+  <div class="aichat-foot">
+    <textarea id="aiChatInput" placeholder="Ask something about this PDF…" rows="1"></textarea>
+    <button class="aichat-send" id="aiChatSend" type="button">Send</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="modal-card" style="max-width:680px">
     <div class="modal-head">
@@ -3875,8 +4057,12 @@
     </div>
     <div class="onboard-slide" id="onboardSlide"></div>
     <div class="onboard-footer">
-      <div class="onboard-dots" id="onboardDots"></div>
-      <span class="spacer" style="flex:1"></span>
+      <div class="onboard-progress">
+        <div class="onboard-progress-track">
+          <div class="onboard-progress-fill" id="onboardProgressFill" style="width:0%"></div>
+        </div>
+        <div class="onboard-counter" id="onboardCounter">Step 1 of 1</div>
+      </div>
       <button class="btn" id="onboardPrev" type="button">Back</button>
       <button class="btn primary" id="onboardNext" type="button">Next →</button>
     </div>
@@ -4256,9 +4442,15 @@ const { PDFDocument, rgb, StandardFonts, degrees,
         pushGraphicsState, popGraphicsState, translate, rotateRadians } = PDFLib;
 // Helper: wrap a drawing operation in a graphics-state rotation around (cx, cy).
 // drawFn may be sync or async; we always await it so async work completes inside the matrix.
-async function withRotationMatrix(page, angleDeg, cx, cy, drawFn) {
-  if (!angleDeg) { await drawFn(); return; }
-  const theta = angleDeg * Math.PI / 180;
+//
+// IMPORTANT: callers pass the CSS rotation angle (the same number stored on
+// `ann.rotation`). CSS-positive rotates clockwise on screen; pdf-lib's
+// `rotateRadians(+α)` rotates counter-clockwise on screen (because PDF user
+// space is Y-up math convention, then the viewer applies a Y-flip). So we
+// NEGATE here so the saved/printed PDF rotates the same way the editor does.
+async function withRotationMatrix(page, cssAngleDeg, cx, cy, drawFn) {
+  if (!cssAngleDeg) { await drawFn(); return; }
+  const theta = -cssAngleDeg * Math.PI / 180;
   page.pushOperators(pushGraphicsState(), translate(cx, cy), rotateRadians(theta), translate(-cx, -cy));
   try { await drawFn(); }
   finally { page.pushOperators(popGraphicsState()); }
@@ -4271,7 +4463,18 @@ const PDFJS_LOAD_OPTS = { isEvalSupported: false, useSystemFonts: true, stopAtEr
 async function loadPdfJsDoc(bytes) {
   return await pdfjsLib.getDocument(Object.assign({ data: bytes }, PDFJS_LOAD_OPTS)).promise;
 }
-const RENDER_SCALE = 1.6;
+// RENDER_SCALE maps PDF points to CSS pixels in the editor. 96 / 72 = 4/3
+// is the same ratio every PDF viewer (Chrome, Acrobat, Edge…) uses when it
+// renders a PDF at "100% zoom" on a 96 DPI monitor. Matching it here means:
+//   editor "100%"  ==  PDF viewer "100%"  ==  printed paper (1 logical inch
+// on the screen = 1 physical inch on the page). Combined with the per-text
+// `fs = ann.fontSize / scale` in generatePdfBytes, a 14-px label in the
+// editor lands as 14/96 inch = 10.5 pt in the saved PDF and prints at the
+// exact same physical size the user designed it at — true 1:1.
+// Using a higher RENDER_SCALE (the old 1.6) was nice for editor sharpness
+// but made the editor "100%" 1.2× larger than the PDF viewer's "100%", so
+// text / positions / line spacing all looked wrong on print and save.
+const RENDER_SCALE = 4 / 3;
 const PALETTE = ['#000000', '#dc2626', '#2563eb', '#15803d', '#a16207', '#7c3aed', '#ffffff'];
 const ZOOM_LEVELS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0];
 const LINE_HEIGHT_RATIO = 1.15;
@@ -4555,6 +4758,9 @@ async function renderPages() {
   const container = document.getElementById('pages');
   container.innerHTML = '';
   pdfTotalTextItems = 0;
+  // Allow auto-fit on the freshly-rendered pages. User can still override
+  // by clicking +/- afterwards (which re-sets _userZoomed = true).
+  _userZoomed = false;
   // High-resolution rendering: canvas pixels at 2× display so high-DPI screens stay crisp,
   // but CSS dimensions stay at RENDER_SCALE so layout/coords don't change.
   const dpr = window.devicePixelRatio || 1;
@@ -4607,6 +4813,13 @@ async function renderPages() {
       buildPdfTextLayer(overlay, page, dispViewport, i).catch(e => console.warn('text layer error:', e))
     );
   }
+  // After layout, auto-fit page width to a narrow viewport (phones / split
+  // screens) so the right edge isn't clipped. Desktop / wide screens are
+  // unaffected because the function only fires when the page overflows.
+  // We run the fit on the next animation frame AND with safety-net timeouts
+  // because the wrapper's geometry isn't always settled the instant the for
+  // loop ends (text-layer promises still resolving in parallel can shift it).
+  try { scheduleFitToViewport(); } catch (_) {}
   // Once all text layers finish, warn user if the PDF appears to be a scan
   const pending = window._textLayerPromises || [];
   window._textLayerPromises = [];
@@ -4883,6 +5096,74 @@ function applyZoom() {
   if (selected) positionPropsPanel(selected);
 }
 function setZoom(z) { currentZoom = Math.max(0.25, Math.min(3.0, z)); applyZoom(); }
+
+// On narrow screens (phones), the PDF page in its native size is wider than
+// the viewport — content gets clipped on the right because the page-wrapper
+// uses fixed pixel widths. Fit-to-width once after render and on rotate /
+// resize, but only if the user hasn't manually zoomed since.
+let _userZoomed = false;
+function fitToViewportWidthIfNeeded(force) {
+  const wrapper = document.querySelector('.page-wrapper');
+  if (!wrapper) return;
+  const baseW = parseFloat(wrapper.dataset.baseW);
+  if (!baseW) return;
+  if (_userZoomed && !force) return;
+  // Measure MAIN's content-area width — NOT #pages.width. #pages is a flex
+  // child whose width tracks its content, so measuring it creates a feedback
+  // loop: page shrinks → #pages shrinks → we measure smaller → page shrinks
+  // again, all the way down to the 0.25 min clamp. main's width is driven
+  // by its parent (body), independent of the page size, so it's stable.
+  const mainEl = document.querySelector('main');
+  let available;
+  if (mainEl) {
+    const s = getComputedStyle(mainEl);
+    const padL = parseFloat(s.paddingLeft) || 0;
+    const padR = parseFloat(s.paddingRight) || 0;
+    available = mainEl.clientWidth - padL - padR - 8; // -8 for shadow / margin
+  } else {
+    available = window.innerWidth - 48;
+  }
+  available = Math.max(120, available);
+  // Already fits → leave currentZoom alone. CRITICAL: this is what keeps
+  // a wide desktop monitor at 100%, since baseW (~979 for US Letter) is
+  // smaller than `available` (~1800+).
+  if (baseW * currentZoom <= available && !force) return;
+  // Only NOW do we need to shrink — page would overflow the available space.
+  const fit = available / baseW;
+  currentZoom = Math.max(0.25, Math.min(3.0, fit));
+  applyZoom();
+}
+// Schedule fit-to-width after layout has settled: we run on the next frame
+// AND with a couple short delays as a safety net. Cheap to run, harmless to
+// double-fire (the function early-returns if no refit is needed).
+function scheduleFitToViewport() {
+  if (!document.querySelector('.page-wrapper')) return;
+  requestAnimationFrame(() => fitToViewportWidthIfNeeded(false));
+  setTimeout(() => fitToViewportWidthIfNeeded(false), 60);
+  setTimeout(() => fitToViewportWidthIfNeeded(false), 250);
+}
+window.addEventListener('resize', () => {
+  if (!document.querySelector('.page-wrapper')) return;
+  scheduleFitToViewport();
+});
+// Observe MAIN (not #pages) so a side-panel toggle, dropzone hide, etc.
+// re-runs the fit without creating the page-shrinkage feedback loop above.
+if (window.ResizeObserver) {
+  const _bindFitObserver = () => {
+    const el = document.querySelector('main');
+    if (!el) return;
+    let lastW = el.clientWidth;
+    new ResizeObserver(() => {
+      const w = el.clientWidth;
+      if (w === lastW) return;  // ignore phantom resize ticks
+      lastW = w;
+      if (!document.querySelector('.page-wrapper')) return;
+      fitToViewportWidthIfNeeded(false);
+    }).observe(el);
+  };
+  if (document.readyState === 'complete' || document.readyState === 'interactive') _bindFitObserver();
+  else window.addEventListener('DOMContentLoaded', _bindFitObserver);
+}
 function snapZoom(direction) {
   let idx = ZOOM_LEVELS.findIndex(z => Math.abs(z - currentZoom) < 0.01);
   if (idx < 0) {
@@ -4894,13 +5175,69 @@ function snapZoom(direction) {
     setZoom(ZOOM_LEVELS[Math.max(0, Math.min(ZOOM_LEVELS.length - 1, idx + direction))]);
   }
 }
-document.getElementById('zoomIn').addEventListener('click', () => snapZoom(+1));
-document.getElementById('zoomOut').addEventListener('click', () => snapZoom(-1));
-document.getElementById('zoomReset').addEventListener('click', () => setZoom(1.0));
+document.getElementById('zoomIn').addEventListener('click', () => { _userZoomed = true; snapZoom(+1); });
+document.getElementById('zoomOut').addEventListener('click', () => { _userZoomed = true; snapZoom(-1); });
+// Click on the % readout opens an inline input so the user can type any
+// zoom value (25–300). Plain click without typing still goes to 100% via the
+// Enter / blur fallback if the field is left untouched. We do NOT force a
+// refit here — on desktop 100% should mean 100%, not "fill the viewport".
+function openZoomInput() {
+  const btn = document.getElementById('zoomReset');
+  if (!btn || btn._zoomInputOpen) return;
+  btn._zoomInputOpen = true;
+  const prev = btn.textContent;
+  const cur = Math.round(currentZoom * 100);
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '25'; input.max = '300'; input.step = '5';
+  input.value = String(cur);
+  input.style.cssText =
+    'width:54px;height:26px;border:1px solid var(--accent);border-radius:6px;' +
+    'padding:0 4px;font:inherit;font-family:"JetBrains Mono",monospace;font-size:13px;' +
+    'text-align:center;background:var(--surface);color:var(--text);outline:none;';
+  btn.textContent = '';
+  btn.appendChild(input);
+  setTimeout(() => { input.focus(); input.select(); }, 0);
+  let restored = false;
+  const restore = () => {
+    if (restored) return;
+    restored = true;
+    btn._zoomInputOpen = false;
+    input.remove();
+    btn.textContent = Math.round(currentZoom * 100) + '%';
+  };
+  const apply = () => {
+    let v = parseFloat(input.value);
+    if (!isFinite(v) || v < 25) v = 25;
+    if (v > 300) v = 300;
+    _userZoomed = true;
+    setZoom(v / 100);
+    restore();
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); apply(); }
+    else if (e.key === 'Escape') { e.preventDefault(); restore(); }
+  });
+  input.addEventListener('blur', apply);
+  // Don't let clicks inside the input bubble up to the document-level
+  // click listeners (which would close modals, deselect annotations, etc.).
+  input.addEventListener('click', (e) => e.stopPropagation());
+}
+document.getElementById('zoomReset').addEventListener('click', (e) => {
+  // Modifier-click (Alt or Shift) is a quick "reset to 100%" shortcut. Plain
+  // click opens the typed-value input.
+  if (e.altKey || e.shiftKey) {
+    _userZoomed = true;  // honour the user's explicit choice; don't auto-refit
+    setZoom(1.0);
+    return;
+  }
+  openZoomInput();
+});
 document.addEventListener('wheel', e => {
   if (!e.ctrlKey && !e.metaKey) return;
   if (!pdfJsDoc) return;
   e.preventDefault();
+  _userZoomed = true;
   setZoom(e.deltaY < 0 ? currentZoom * 1.1 : currentZoom / 1.1);
 }, { passive: false });
 
@@ -6761,7 +7098,7 @@ document.addEventListener('keydown', e => {
   } else if (ctrl && e.key === '-') {
     e.preventDefault(); if (pdfJsDoc) snapZoom(-1);
   } else if (ctrl && e.key === '0') {
-    e.preventDefault(); if (pdfJsDoc) setZoom(1.0);
+    e.preventDefault(); if (pdfJsDoc) { _userZoomed = true; setZoom(1.0); }
   } else if (e.key === 'Escape') {
     if (activeEditor) { e.preventDefault(); commitEditor(false); return; }
     // Close topmost modal if open
@@ -7325,39 +7662,142 @@ async function generatePdfBytes(saveOpts) {
       // Link annotations are added at the end (after all drawing) via a separate pass
       // — see the linkAnnotations bundle below.
     } else if (ann.type === 'text') {
-      // From-PDF-edit annotations captured their fontSize in VIEWPORT PIXELS
-      // (= PDF points × RENDER_SCALE). User-typed text annotations store their
-      // fontSize directly in PDF points (no conversion). So divide by scale
-      // only when we know the source was the in-place editor.
-      const fs = ann.fromPdfEdit ? (ann.fontSize / scale) : ann.fontSize;
+      // ann.fontSize is stored in VIEWPORT PIXELS for every text annotation
+      // (matches the editor's `el.style.fontSize = ann.fontSize + 'px'`), so
+      // divide by `scale` uniformly to convert to PDF points.
+      const fs = ann.fontSize / scale;
       const family = ann.fontFamily || 'Helvetica';
       const lineHRatio = ann.lineHeight || LINE_HEIGHT_RATIO;
       const align = ann.align || 'left';
-      // From-PDF-edit annotations use no padding so glyphs land exactly on the
-      // original baseline. Regular text annotations keep the familiar 1px/4px padding.
       const padTopPdf  = ann.fromPdfEdit ? 0 : 1 / scale;
       const padLeftPdf = ann.fromPdfEdit ? 0 : 4 / scale;
-      // For from-PDF-edit, override the baseline offset with the font's actual ascent
-      // ratio (matches the CSS measureCssAscent we used to place the annotation).
       const baselineOffset = ann.fromPdfEdit
         ? (PDF_FONT_ASCENT[family] || 0.78)
         : BASELINE_OFFSET;
       const pyTop = pageH - (ann.y / scale);
       const pw = ann.width / scale, ph = ann.height / scale;
-      // Rotate around the text's visual centre
       const cxRot = (ann.x + ann.width / 2) / scale;
       const cyRot = pageH - (ann.y + ann.height / 2) / scale;
-      // Pre-compute width of each line for alignment (must happen outside the matrix block)
-      const lineWidths = [];
-      for (let li = 0; li < ann.lines.length; li++) {
-        let w = 0;
-        for (const seg of ann.lines[li]) {
-          if (!seg.text) continue;
-          const f = await getFontFor(family, seg.bold, seg.italic);
-          w += f.widthOfTextAtSize(safePdfText(seg.text), fs);
+      // === WORD-WRAP each logical line ===
+      // Use pdf-lib font widths for the wrap decision — user reported the
+      // canvas-measureText approach (v1.14) was worse than this. Reverted.
+      // We also measure with canvas at the same fontSize so we can log
+      // BOTH widths and the developer can compare them to find any remaining
+      // mismatch. Wrap THIS run uses pdf-lib widths exclusively.
+      const cssFamily = family === 'Times-Roman' ? 'Times, "Times New Roman", serif'
+                      : family === 'Courier'     ? '"Courier New", Courier, monospace'
+                                                  : 'Helvetica, Arial, sans-serif';
+      const _measureCanvas = (function () {
+        const c = document.createElement('canvas');
+        const cx = c.getContext('2d');
+        return (text, bold, italic) => {
+          cx.font = (italic ? 'italic ' : '') + (bold ? 'bold ' : '')
+                  + ann.fontSize + 'px ' + cssFamily;
+          return cx.measureText(text).width;
+        };
+      })();
+      const maxLineW = Math.max(0, pw - 2 * padLeftPdf);  // PDF pt
+      // pdf-lib's StandardFonts.Helvetica metrics are marginally wider than
+      // the browser's actual rendered font, so a token that fits "by a hair"
+      // in the editor can overflow `maxLineW` here by a fraction of a point
+      // and trigger an unwanted wrap. Allow ~10% of the font size (or 2 pt
+      // minimum) of slack — that's well under one average character width
+      // for normal-size text, and lets very-large text (e.g. fontSize 147 in
+      // the user's `dfgsdfg` case, 0.1 pt overflow) stay on the same visual
+      // line just like the editor shows it.
+      const wrapTolerance = Math.max(2, fs * 0.10);
+      const visualLines = [];  // each: { segs:[…], width: number (pdf pt) }
+      const stylesMatch = (a, b) => a && b
+        && a.bold === b.bold && a.italic === b.italic
+        && a.underline === b.underline && a.color === b.color;
+      for (const logicalLine of ann.lines) {
+        let cur = { segs: [], width: 0 };
+        if (!logicalLine || !logicalLine.length || logicalLine.every(s => !s || !s.text)) {
+          visualLines.push(cur);
+          continue;
         }
-        lineWidths.push(w);
+        for (const seg of logicalLine) {
+          if (!seg || !seg.text) continue;
+          const font = await getFontFor(family, seg.bold, seg.italic);
+          const tokens = seg.text.split(/(\s+)/);
+          const appendChunk = (chunk, w) => {
+            const last = cur.segs[cur.segs.length - 1];
+            if (stylesMatch(last, seg)) last.text += chunk;
+            else cur.segs.push({
+              text: chunk, bold: !!seg.bold, italic: !!seg.italic,
+              underline: !!seg.underline, color: seg.color || '#000000'
+            });
+            cur.width += w;
+          };
+          for (const tok of tokens) {
+            if (!tok) continue;
+            const tokSafe = safePdfText(tok);
+            const tokW = font.widthOfTextAtSize(tokSafe, fs);
+            const isWS = /^\s+$/.test(tok);
+            if (cur.segs.length > 0 && maxLineW > 0 && cur.width + tokW > maxLineW + wrapTolerance && !isWS) {
+              visualLines.push(cur);
+              cur = { segs: [], width: 0 };
+            }
+            if (isWS && cur.segs.length === 0) continue;
+            // Character-level break ONLY when the word truly can't fit on a
+            // line by itself even with tolerance (matches CSS overflow-wrap:
+            // a barely-overflowing word doesn't break mid-letter).
+            if (maxLineW > 0 && tokW > maxLineW + wrapTolerance && !isWS) {
+              let start = 0;
+              while (start < tokSafe.length) {
+                let end = start + 1;
+                let chunkW = font.widthOfTextAtSize(tokSafe.slice(start, end), fs);
+                while (end < tokSafe.length) {
+                  const tryW = font.widthOfTextAtSize(tokSafe.slice(start, end + 1), fs);
+                  if (cur.width + tryW > maxLineW + wrapTolerance) break;
+                  end++; chunkW = tryW;
+                }
+                appendChunk(tokSafe.slice(start, end), chunkW);
+                start = end;
+                if (start < tokSafe.length) {
+                  visualLines.push(cur);
+                  cur = { segs: [], width: 0 };
+                }
+              }
+              continue;
+            }
+            appendChunk(tokSafe, tokW);
+          }
+        }
+        visualLines.push(cur);
       }
+      // Diagnostic log: for each visual line we record pdf-lib width AND
+      // canvas-measured width (in CSS px and converted to pt) so we can
+      // see which measurement source matches the editor's actual wrap.
+      // To disable: window._PDFM_DEBUG_TEXT_WRAP = false in the console.
+      try {
+        if (window._PDFM_DEBUG_TEXT_WRAP !== false) {
+          const maxLineWcss = ann.width - 8;
+          const linesOut = visualLines.map(v => {
+            const txt = v.segs.map(s => s.text).join('');
+            let cssW = 0;
+            for (const s of v.segs) cssW += _measureCanvas(s.text, s.bold, s.italic);
+            return {
+              text: txt,
+              pdf_w_pt:  +v.width.toFixed(1),
+              css_w_px:  +cssW.toFixed(1),
+              css_w_as_pt: +(cssW / scale).toFixed(1)
+            };
+          });
+          // Also measure the WHOLE logical text in one shot for comparison
+          const whole = ann.lines.map(l => l.map(s => s.text || '').join('')).join('\n');
+          const wholeCanvas = _measureCanvas(whole.replace(/\n/g, ' '), false, false);
+          console.log('[pdf-text-wrap pg', ann.pageNum, ']', {
+            ann_x: ann.x, ann_y: ann.y,
+            ann_width_css_px: ann.width, ann_height_css_px: ann.height,
+            fontSize_css_px: ann.fontSize, family, scale,
+            maxLineW_pdf_pt: +maxLineW.toFixed(1),
+            maxLineW_css_px: maxLineWcss,
+            whole_text_canvas_w_css_px: +wholeCanvas.toFixed(1),
+            visualLines: linesOut
+          });
+        }
+      } catch (_) {}
       await withRotationMatrix(page, ann.rotation || 0, cxRot, cyRot, async () => {
         if (!ann.noBackground) {
           page.drawRectangle({
@@ -7365,22 +7805,21 @@ async function generatePdfBytes(saveOpts) {
             color: rgb(1, 1, 1), borderWidth: 0
           });
         }
-        for (let li = 0; li < ann.lines.length; li++) {
-          const line = ann.lines[li];
+        for (let li = 0; li < visualLines.length; li++) {
+          const vline = visualLines[li];
           const baseY = pyTop - padTopPdf - (li * lineHRatio + baselineOffset) * fs;
           let startX = px + padLeftPdf;
-          if (align === 'center') startX = px + (pw - lineWidths[li]) / 2;
-          else if (align === 'right') startX = px + pw - padLeftPdf - lineWidths[li];
+          if (align === 'center') startX = px + (pw - vline.width) / 2;
+          else if (align === 'right') startX = px + pw - padLeftPdf - vline.width;
           let xCursor = startX;
-          for (const seg of line) {
+          for (const seg of vline.segs) {
             if (!seg.text) continue;
             const font = await getFontFor(family, seg.bold, seg.italic);
             const segCol = hexToRgb(seg.color);
-            const safeSeg = safePdfText(seg.text);
             const textOpts = { x: xCursor, y: baseY, size: fs, font, color: segCol };
             if (ann.opacity != null && ann.opacity < 1) textOpts.opacity = ann.opacity;
-            page.drawText(safeSeg, textOpts);
-            const segW = font.widthOfTextAtSize(safeSeg, fs);
+            page.drawText(seg.text, textOpts);
+            const segW = font.widthOfTextAtSize(seg.text, fs);
             if (seg.underline) {
               page.drawLine({
                 start: { x: xCursor, y: baseY - fs * 0.12 },
@@ -7402,15 +7841,16 @@ async function generatePdfBytes(saveOpts) {
       const cyDesign = ann.y + ann.height / 2;
       const cxPdf = cxDesign / scale;
       const cyPdf = pageH - cyDesign / scale;
-      const angleDeg = ann.rotation || 0;
-      const theta = angleDeg * Math.PI / 180;
+      // Negate CSS angle → PDF angle (see withRotationMatrix comment).
+      const pdfAngleDeg = -(ann.rotation || 0);
+      const theta = pdfAngleDeg * Math.PI / 180;
       const cosT = Math.cos(theta), sinT = Math.sin(theta);
       // x,y so that drawImage rotates around the image's visual center
       const xPdf = cxPdf - (wPdf / 2) * cosT + (hPdf / 2) * sinT;
       const yPdf = cyPdf - (wPdf / 2) * sinT - (hPdf / 2) * cosT;
       page.drawImage(img, {
         x: xPdf, y: yPdf, width: wPdf, height: hPdf,
-        rotate: degrees(angleDeg)
+        rotate: degrees(pdfAngleDeg)
       });
     } else if (ann.type === 'rectangle') {
       const pw = ann.width / scale, ph = ann.height / scale;
@@ -7437,7 +7877,8 @@ async function generatePdfBytes(saveOpts) {
         const wPdf = ann.width / scale, hPdf = ann.height / scale;
         const cxPdf = (ann.x + ann.width / 2) / scale;
         const cyPdf = pageH - (ann.y + ann.height / 2) / scale;
-        const angle = ann.rotation || 0;
+        // Negate CSS → PDF angle so the rectangle rotates the same direction as the editor.
+        const angle = -(ann.rotation || 0);
         const t = angle * Math.PI / 180;
         const c = Math.cos(t), s = Math.sin(t);
         const xPdf = cxPdf - (wPdf / 2) * c + (hPdf / 2) * s;
@@ -7490,7 +7931,8 @@ async function generatePdfBytes(saveOpts) {
         const isStrokeOnly = !!STROKE_PATHS[ann.shape];
         const wPdf = ann.width / scale;
         const hPdf = ann.height / scale;
-        const angle = ann.rotation || 0;
+        // Negate CSS → PDF angle.
+        const angle = -(ann.rotation || 0);
         const t = angle * Math.PI / 180;
         const c = Math.cos(t), s = Math.sin(t);
         const cxPdf = (ann.x + ann.width / 2) / scale;
@@ -7630,7 +8072,8 @@ async function generatePdfBytes(saveOpts) {
           (ann.bold && ann.italic ? 'HelveticaBoldOblique' : ann.bold ? 'HelveticaBold' : ann.italic ? 'HelveticaOblique' : 'Helvetica');
       const stampFont = await doc.embedFont(StandardFonts[fontKey]);
       const w = ann.width / scale, h = ann.height / scale;
-      const angle = ann.rotation || 0;
+      // Negate CSS → PDF angle so the stamp rotates the same way as the editor.
+      const angle = -(ann.rotation || 0);
       const cxDesign = ann.x + ann.width / 2;
       const cyDesign = ann.y + ann.height / 2;
       const cxPdf = cxDesign / scale;
@@ -8137,7 +8580,18 @@ _proxy('findBtnMenu', 'findBtn');
   const b = document.getElementById('passwordBtnMenu');
   if (b) b.addEventListener('click', () => { closeAllDropdowns && closeAllDropdowns(); openPasswordModal(); });
 })();
-_proxy('exportBtnMenu', 'exportBtn');
+// Export as… → call openExportModal directly. The old "_proxy → exportBtn.click()"
+// path was unreliable because exportBtn lives in <div hidden> and some browsers
+// drop programmatic clicks on display:none descendants. Direct call is simpler
+// and matches the sanitizeBtnMenu / regexRedactBtnMenu / shareBtnMenu pattern.
+(function () {
+  const b = document.getElementById('exportBtnMenu');
+  if (b) b.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeAllDropdowns && closeAllDropdowns();
+    if (typeof openExportModal === 'function') openExportModal();
+  });
+})();
 _proxy('printBtnMenu', 'printBtn');
 _proxy('clearBtnMenu', 'clearBtn');
 
@@ -8984,7 +9438,12 @@ function formatDateOnly(d, format) {
 function formatTimeOnly(d, format) {
   switch (format) {
     case 'hh:mm A':
-      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      // toLocaleTimeString may use a regular space OR a narrow-no-break-space
+      // (U+202F) between the digits and the AM/PM token, depending on browser
+      // / locale. Force a non-breaking space so it never wraps "11:56" on one
+      // line and "PM" on the next inside the stamp.
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+              .replace(/[\s  ]+/g, ' ');
     case 'HH:mm':
     default:
       return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -9104,9 +9563,29 @@ function sigSetupAudit() {
   const panel = document.getElementById('sigAuditPanel');
   cb.onchange = () => { panel.hidden = !cb.checked; };
   document.getElementById('sigAuditLocBtn').onclick = sigCaptureLocation;
-  // Restore signer fields from localStorage (if previously remembered)
+  // Pull defaults from the user's Profile so they don't have to retype name /
+  // email / phone in the audit panel. Profile values are only used when the
+  // audit field is otherwise blank — explicit audit-remembered values win.
+  const profile = (typeof getProfile === 'function') ? getProfile() : {};
+  let pfFirst = '', pfLast = '';
+  if (profile.fullName) {
+    const parts = String(profile.fullName).trim().split(/\s+/);
+    pfFirst = parts.shift() || '';
+    pfLast  = parts.join(' ');
+  }
+  const pfRole = profile.company || '';
+
+  // Restore signer fields from localStorage (if previously remembered);
+  // otherwise fall back to Profile data so the panel comes pre-filled.
   try {
     const saved = JSON.parse(localStorage.getItem(SIG_AUDIT_KEY) || 'null');
+    const setIfEmpty = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && !el.value && val) el.value = val;
+    };
+    // Clear first so previous-session leftovers don't bleed in
+    ['sigAuditFirst','sigAuditLast','sigAuditEmail','sigAuditPhone','sigAuditRole']
+      .forEach(id => { document.getElementById(id).value = ''; });
     if (saved) {
       if (saved.first) document.getElementById('sigAuditFirst').value = saved.first;
       if (saved.last)  document.getElementById('sigAuditLast').value  = saved.last;
@@ -9116,9 +9595,13 @@ function sigSetupAudit() {
       document.getElementById('sigAuditRemember').checked = true;
     } else {
       document.getElementById('sigAuditRemember').checked = false;
-      ['sigAuditFirst','sigAuditLast','sigAuditEmail','sigAuditPhone','sigAuditRole']
-        .forEach(id => { document.getElementById(id).value = ''; });
     }
+    // Profile fallbacks — only fill fields the user (or remembered audit) didn't set
+    setIfEmpty('sigAuditFirst', pfFirst);
+    setIfEmpty('sigAuditLast',  pfLast);
+    setIfEmpty('sigAuditEmail', profile.email);
+    setIfEmpty('sigAuditPhone', profile.phone);
+    setIfEmpty('sigAuditRole',  pfRole);
   } catch (_) {}
 }
 function sigGetSignerIdentity() {
@@ -9989,11 +10472,64 @@ function addSavedSignature(dataURL) {
 }
 
 // === PROFILE MODAL ===
+// Live-format a phone-number string into the US style "+1 (XXX) XXX-XXXX".
+// IMPORTANT: this function is idempotent — feeding our own output back in
+// must produce the same string, otherwise live-reformatting on every input
+// event would compound (each keystroke would add another "1" digit because
+// the "+1" prefix would be re-counted as part of the user's number).
+function formatUsPhone(input) {
+  let s = String(input || '');
+  // Strip OUR own "+1 (" / "+1 " display prefix first so its "1" isn't
+  // re-grabbed as a phone digit by the digit regex below. Tolerates the
+  // assorted whitespace variants `toLocaleString` and pasted text use.
+  s = s.replace(/^\+\s*1[\s (]+/, '');
+  let digits = s.replace(/\D+/g, '');
+  // 11 digits starting with 1 → that 1 is the country code; drop it.
+  if (digits.length === 11 && digits.startsWith('1')) digits = digits.slice(1);
+  digits = digits.slice(0, 10);
+  if (!digits) return '';
+  const p1 = digits.slice(0, 3);
+  const p2 = digits.slice(3, 6);
+  const p3 = digits.slice(6, 10);
+  if (digits.length <= 3)  return '+1 (' + p1 + (digits.length === 3 ? ')' : '');
+  if (digits.length <= 6)  return '+1 (' + p1 + ') ' + p2;
+  return '+1 (' + p1 + ') ' + p2 + '-' + p3;
+}
+function attachUsPhoneAutoFormat(input) {
+  if (!input || input._usPhoneBound) return;
+  input._usPhoneBound = true;
+  // Track when the user is *shrinking* the value (Backspace / Delete) so we
+  // can leave their typing alone — otherwise re-formatting after Backspace
+  // immediately re-adds the prefix and the user can't delete the field.
+  let lastLen = input.value.length;
+  const onInput = (e) => {
+    const before = input.value;
+    const shrunk = before.length < lastLen;
+    lastLen = before.length;
+    // Don't re-format while the user is actively deleting — let them empty
+    // the field freely. Final canonical format runs on blur.
+    if (shrunk) return;
+    const after = formatUsPhone(before);
+    if (after !== before) {
+      input.value = after;
+      lastLen = after.length;
+    }
+  };
+  const onBlur = () => {
+    const before = input.value;
+    const after = formatUsPhone(before);
+    if (after !== before) input.value = after;
+    lastLen = input.value.length;
+  };
+  input.addEventListener('input', onInput);
+  input.addEventListener('blur', onBlur);
+}
 function openProfileModal() {
   const p = getProfile();
   document.getElementById('prFullName').value = p.fullName || '';
   document.getElementById('prEmail').value    = p.email || '';
-  document.getElementById('prPhone').value    = p.phone || '';
+  document.getElementById('prPhone').value    = formatUsPhone(p.phone || '');
+  attachUsPhoneAutoFormat(document.getElementById('prPhone'));
   document.getElementById('prStreet').value   = p.street || '';
   document.getElementById('prCity').value     = p.city || '';
   document.getElementById('prState').value    = p.state || '';
@@ -10049,7 +10585,7 @@ document.getElementById('profileSave').addEventListener('click', () => {
   const p = {
     fullName: document.getElementById('prFullName').value.trim(),
     email:    document.getElementById('prEmail').value.trim(),
-    phone:    document.getElementById('prPhone').value.trim(),
+    phone:    formatUsPhone(document.getElementById('prPhone').value.trim()),
     street:   document.getElementById('prStreet').value.trim(),
     city:     document.getElementById('prCity').value.trim(),
     state:    document.getElementById('prState').value.trim(),
@@ -10208,14 +10744,24 @@ function createStampAnnotation(pos, tpl) {
 // Open the Create New Stamp modal pre-filled with this annotation's values; on save, update the annotation.
 function openStampEditor(ann) {
   openCreateStampModal();
-  csState.text = ann.text;
+  // Prefer the original template (with tokens) when the stamp has one — that
+  // way editing a "DRAFT  {USER} {DATE}" stamp shows the template again, not
+  // the snapshotted resolved string. Older stamps fall back to ann.text.
+  const tpl = ann.template || ann.text || '';
+  csState.template = tpl;
+  csState.text = tpl;
   csState.fontFamily = ann.fontFamily;
   csState.fontSize = ann.fontSize;
   csState.bold = ann.bold; csState.italic = ann.italic; csState.underline = ann.underline;
   csState.textColor = ann.textColor; csState.bgColor = ann.bgColor;
   csState.borderColor = ann.borderColor; csState.borderStyle = ann.borderStyle; csState.borderWidth = ann.borderWidth;
+  if (ann.timestamp) {
+    if (ann.timestamp.usernameVal) csState.timestamp.usernameVal = ann.timestamp.usernameVal;
+    if (ann.timestamp.dateFormat)  csState.timestamp.dateFormat  = ann.timestamp.dateFormat;
+    if (ann.timestamp.timeFormat)  csState.timestamp.timeFormat  = ann.timestamp.timeFormat;
+  }
   // sync UI
-  document.getElementById('csText').value = ann.text;
+  document.getElementById('csText').value = tpl;
   document.getElementById('csFont').value = ann.fontFamily;
   document.getElementById('csBold').classList.toggle('active', ann.bold);
   document.getElementById('csItalic').classList.toggle('active', ann.italic);
@@ -10225,13 +10771,22 @@ function openStampEditor(ann) {
   document.getElementById('csBorderColor').value = ann.borderColor;
   document.getElementById('csBorderWidth').value = ann.borderWidth;
   document.getElementById('csFontSize').value = ann.fontSize;
+  document.getElementById('csUsernameVal').value = csState.timestamp.usernameVal || '';
+  document.getElementById('csDateFormat').value  = csState.timestamp.dateFormat;
+  document.getElementById('csTimeFormat').value  = csState.timestamp.timeFormat;
   updateCreateStampPreview();
   document.getElementById('createStampTitle').textContent = 'Edit Stamp';
   document.getElementById('csCreate').textContent = 'Update Stamp';
   // Override create handler to update this annotation instead
   document.getElementById('csCreate').onclick = () => {
     Object.assign(ann, buildStampTemplateFromState());
-    ann.text = csState.text;
+    // The visible text on the annotation is the resolved-once snapshot —
+    // editing it shouldn't silently keep showing the old date / time.
+    ann.text = resolveStampTemplate(csState.template, {
+      usernameVal: csState.timestamp.usernameVal,
+      dateFormat:  csState.timestamp.dateFormat,
+      timeFormat:  csState.timestamp.timeFormat
+    });
     const sz = measureStamp(ann);
     ann.width = sz.w; ann.height = sz.h;
     renderStampAnnotation(ann);
@@ -10338,8 +10893,18 @@ function makeStampCard(tpl, opts) {
   card.className = 'stamp-card';
   const box = document.createElement('div');
   box.className = 'stamp-preview-box';
+  // Resolve any {USER}/{DATE}/{TIME} tokens so the card preview shows what
+  // the stamp will actually look like once inserted.
+  const cardText = (typeof resolveStampTemplate === 'function' && tpl.text)
+    ? resolveStampTemplate(tpl.text, {
+        usernamePlaceholder: true,
+        usernameVal: (tpl.timestamp && tpl.timestamp.usernameVal) || '',
+        dateFormat:  (tpl.timestamp && tpl.timestamp.dateFormat)  || 'MM/DD/YYYY',
+        timeFormat:  (tpl.timestamp && tpl.timestamp.timeFormat)  || 'hh:mm A'
+      })
+    : (tpl.text || '');
   // apply tpl visual props
-  box.textContent = tpl.text;
+  box.textContent = cardText;
   box.style.color = tpl.textColor;
   box.style.background = tpl.bgColor || 'transparent';
   box.style.borderRadius = (tpl.borderRadius || 0) + 'px';
@@ -10391,9 +10956,19 @@ function insertStampFromTemplate(tpl) {
       bumpUsage((isCustom ? 'custom-stamp:' : 'stamp:') + tpl.id);
     }
   }
-  // Build a date/time/username suffix if defined on the template
+  // Resolve the stamp's text. New templates (v1.10+) carry {USER}/{DATE}/{TIME}
+  // tokens inline; old custom stamps used a separate timestamp.{username,date,time}
+  // checkbox bag that we appended on a second line. Support both so users
+  // who saved stamps under the old UI still get a working insertion.
   let text = tpl.text || '';
-  if (tpl.timestamp) {
+  const hasTokens = /\{\s*(user|date|time)\s*\}/i.test(text);
+  if (hasTokens || tpl.template) {
+    text = resolveStampTemplate(tpl.template || text, {
+      usernameVal: (tpl.timestamp && tpl.timestamp.usernameVal) || '',
+      dateFormat:  (tpl.timestamp && tpl.timestamp.dateFormat)  || 'MM/DD/YYYY',
+      timeFormat:  (tpl.timestamp && tpl.timestamp.timeFormat)  || 'hh:mm A'
+    });
+  } else if (tpl.timestamp) {
     const now = new Date();
     const parts = [];
     if (tpl.timestamp.username && tpl.timestamp.usernameVal) parts.push(tpl.timestamp.usernameVal);
@@ -10462,19 +11037,55 @@ function insertInfo(id) {
 
 // === CREATE NEW STAMP MODAL ===
 let csState = null;
+
+// Resolve {USER}, {DATE}, {TIME} tokens in a template string against the
+// current values. Case-insensitive. Used by both the live preview and the
+// final "Create & Insert" action so what the user sees IS what they get.
+function resolveStampTemplate(template, opts) {
+  if (template == null) return '';
+  const o = opts || {};
+  const now = o.now || new Date();
+  const userVal = o.usernamePlaceholder
+    ? (o.usernameVal || '[username]')
+    : (o.usernameVal || '');
+  const dateFmt = o.dateFormat || 'MM/DD/YYYY';
+  const timeFmt = o.timeFormat || 'hh:mm A';
+  return String(template).replace(/\{\s*(user|date|time)\s*\}/gi, (_, key) => {
+    switch (key.toLowerCase()) {
+      case 'user': return userVal;
+      case 'date': return formatDateOnly(now, dateFmt);
+      case 'time': return formatTimeOnly(now, timeFmt);
+    }
+    return '';
+  });
+}
+
 function openCreateStampModal() {
+  // Pre-fill username with the user's first + last name from profile, when present.
+  let defaultUsername = '';
+  try {
+    const _p = (typeof getProfile === 'function') ? getProfile() : {};
+    if (_p && _p.fullName) {
+      // First + Last (ignore middle names) — e.g. "Jane Mary Doe" → "Jane Doe"
+      const parts = String(_p.fullName).trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 1) defaultUsername = parts[0];
+      else if (parts.length >= 2) defaultUsername = parts[0] + ' ' + parts[parts.length - 1];
+    }
+  } catch (_) {}
+  // Default template seeds the textarea with the standard "DRAFT + sig line" layout.
+  const defaultTemplate = 'DRAFT\n{USER} · {DATE} {TIME}';
   csState = {
-    text: 'DRAFT',
+    template: defaultTemplate,
+    text: defaultTemplate,  // back-compat alias used by some downstream helpers
     fontFamily: 'Helvetica',
     fontSize: 24,
     bold: true, italic: false, underline: false,
     textColor: RED, bgColor: null,
     borderColor: RED, borderStyle: 'dashed', borderWidth: 2,
-    timestamp: { username: false, date: false, time: false,
-                 usernameVal: '', dateFormat: 'MMM-DD-YYYY', timeFormat: 'HH:mm' }
+    timestamp: { usernameVal: defaultUsername, dateFormat: 'MM/DD/YYYY', timeFormat: 'hh:mm A' }
   };
   // Populate form
-  document.getElementById('csText').value = csState.text;
+  document.getElementById('csText').value = csState.template;
   document.getElementById('csFont').value = csState.fontFamily;
   document.getElementById('csBold').classList.toggle('active', csState.bold);
   document.getElementById('csItalic').classList.toggle('active', csState.italic);
@@ -10484,12 +11095,9 @@ function openCreateStampModal() {
   document.getElementById('csBorderColor').value = csState.borderColor;
   document.getElementById('csBorderWidth').value = csState.borderWidth;
   document.getElementById('csFontSize').value = csState.fontSize;
-  document.getElementById('csUsername').checked = false;
-  document.getElementById('csDate').checked = false;
-  document.getElementById('csTime').checked = false;
-  document.getElementById('csUsernameVal').style.display = 'none';
-  document.getElementById('csDateFormat').style.display = 'none';
-  document.getElementById('csTimeFormat').style.display = 'none';
+  document.getElementById('csUsernameVal').value = defaultUsername;
+  document.getElementById('csDateFormat').value = csState.timestamp.dateFormat;
+  document.getElementById('csTimeFormat').value = csState.timestamp.timeFormat;
   document.getElementById('csSaveLib').checked = false;
   bindCreateStampEvents();
   updateCreateStampPreview();
@@ -10505,7 +11113,31 @@ function bindCreateStampEvents() {
   document.getElementById('createStampModal').onclick = (e) => {
     if (e.target.id === 'createStampModal') closeCreateStampModal();
   };
-  $('csText').oninput = (e) => { csState.text = e.target.value || ''; updateCreateStampPreview(); };
+  // Template textarea — every change updates the preview live.
+  $('csText').oninput = (e) => {
+    csState.template = e.target.value || '';
+    csState.text = csState.template;  // alias for downstream helpers
+    updateCreateStampPreview();
+  };
+  // Token-insert chips. Each chip has data-token; clicking it splices that
+  // string into the textarea at the current caret position (or appends if
+  // the textarea isn't focused) and keeps the caret immediately after.
+  function insertAtCaret(textarea, token) {
+    const start = textarea.selectionStart || 0;
+    const end   = textarea.selectionEnd || 0;
+    const before = textarea.value.slice(0, start);
+    const after  = textarea.value.slice(end);
+    textarea.value = before + token + after;
+    const caret = start + token.length;
+    textarea.selectionStart = textarea.selectionEnd = caret;
+    textarea.focus();
+    csState.template = textarea.value;
+    csState.text = csState.template;
+    updateCreateStampPreview();
+  }
+  document.querySelectorAll('.cs-chip[data-token]').forEach(chip => {
+    chip.onclick = () => insertAtCaret($('csText'), chip.dataset.token);
+  });
   $('csFont').onchange = (e) => { csState.fontFamily = e.target.value; updateCreateStampPreview(); };
   $('csBold').onclick = () => { csState.bold = !csState.bold; $('csBold').classList.toggle('active', csState.bold); updateCreateStampPreview(); };
   $('csItalic').onclick = () => { csState.italic = !csState.italic; $('csItalic').classList.toggle('active', csState.italic); updateCreateStampPreview(); };
@@ -10532,45 +11164,40 @@ function bindCreateStampEvents() {
     csState.fontSize = isNaN(v) ? 24 : Math.max(8, Math.min(96, v));
     updateCreateStampPreview();
   };
-  function refreshTimestampUI() {
-    $('csUsernameVal').style.display = csState.timestamp.username ? '' : 'none';
-    $('csDateFormat').style.display   = csState.timestamp.date     ? '' : 'none';
-    $('csTimeFormat').style.display   = csState.timestamp.time     ? '' : 'none';
-    updateCreateStampPreview();
-  }
-  $('csUsername').onchange = (e) => { csState.timestamp.username = e.target.checked; refreshTimestampUI(); };
-  $('csDate').onchange = (e) => { csState.timestamp.date = e.target.checked; refreshTimestampUI(); };
-  $('csTime').onchange = (e) => { csState.timestamp.time = e.target.checked; refreshTimestampUI(); };
   $('csUsernameVal').oninput = (e) => { csState.timestamp.usernameVal = e.target.value; updateCreateStampPreview(); };
   $('csDateFormat').onchange = (e) => { csState.timestamp.dateFormat = e.target.value; updateCreateStampPreview(); };
   $('csTimeFormat').onchange = (e) => { csState.timestamp.timeFormat = e.target.value; updateCreateStampPreview(); };
   $('csCreate').onclick = () => {
-    if (!csState.text.trim() && !(csState.timestamp.username || csState.timestamp.date || csState.timestamp.time)) {
-      showToast('Stamp text is required.', 'warn'); return;
-    }
-    const tpl = buildStampTemplateFromState();
-    // Save to library if requested
+    const tpl = (csState.template || '').replace(/^\s+|\s+$/g, '');
+    if (!tpl) { showToast('Stamp content is required.', 'warn'); return; }
+    const stampTpl = buildStampTemplateFromState();
+    // Save to library if requested — keep the template (with tokens) so the
+    // tokens re-resolve to *now* whenever the stamp is later inserted.
     if ($('csSaveLib').checked) {
       const list = loadCustomStamps();
-      list.push(Object.assign({}, tpl, { id: 'custom-' + Date.now() }));
+      list.push(Object.assign({}, stampTpl, { id: 'custom-' + Date.now() }));
       saveCustomStamps(list);
     }
     closeCreateStampModal();
     const pos = pickInsertPos(); if (!pos) return;
-    // resolve dynamic timestamp text
-    let text = csState.text;
-    const tParts = [];
-    if (csState.timestamp.username && csState.timestamp.usernameVal) tParts.push(csState.timestamp.usernameVal);
-    if (csState.timestamp.date) tParts.push(formatDateOnly(new Date(), csState.timestamp.dateFormat));
-    if (csState.timestamp.time) tParts.push(formatTimeOnly(new Date(), csState.timestamp.timeFormat));
-    if (tParts.length) text = (text ? text + '\n' : '') + tParts.join(' · ');
-    createStampAnnotation(pos, Object.assign({}, tpl, { text }));
+    // Resolve tokens against the *current* moment for the inserted stamp.
+    const resolvedText = resolveStampTemplate(csState.template, {
+      usernameVal: csState.timestamp.usernameVal,
+      dateFormat:  csState.timestamp.dateFormat,
+      timeFormat:  csState.timestamp.timeFormat
+    });
+    createStampAnnotation(pos, Object.assign({}, stampTpl, { text: resolvedText }));
     showToast('Stamp inserted.', 'success');
   };
 }
 function buildStampTemplateFromState() {
   return {
-    text: csState.text,
+    // Store BOTH the raw template (with {USER}/{DATE}/{TIME} tokens) and the
+    // currently-resolved text. Insertion uses the template when present so
+    // saved custom stamps stay dynamic — each insertion re-stamps with the
+    // moment's date / time, not the moment the stamp was first authored.
+    text: csState.template,
+    template: csState.template,
     fontFamily: csState.fontFamily,
     fontSize: csState.fontSize,
     bold: csState.bold, italic: csState.italic, underline: csState.underline,
@@ -10586,23 +11213,30 @@ function buildStampTemplateFromState() {
 }
 function updateCreateStampPreview() {
   const box = document.getElementById('createStampPreviewBox');
-  let text = csState.text || '';
-  const tParts = [];
-  if (csState.timestamp.username) tParts.push(csState.timestamp.usernameVal || '[username]');
-  if (csState.timestamp.date) tParts.push(formatDateOnly(new Date(), csState.timestamp.dateFormat));
-  if (csState.timestamp.time) tParts.push(formatTimeOnly(new Date(), csState.timestamp.timeFormat));
-  if (tParts.length) text = (text ? text + '\n' : '') + tParts.join(' · ');
-  box.textContent = text || 'Stamp Text';
+  // Resolve the template with a placeholder fallback so the preview never
+  // shows a literal "{USER}" when the user has cleared the username field.
+  const resolved = resolveStampTemplate(csState.template || '', {
+    usernamePlaceholder: true,
+    usernameVal: csState.timestamp.usernameVal,
+    dateFormat:  csState.timestamp.dateFormat,
+    timeFormat:  csState.timestamp.timeFormat
+  });
+  // Use whitespace="pre-line" via textContent so newlines render as breaks
+  // and the preview EXACTLY matches what the stamp will render.
+  box.textContent = resolved || 'Stamp content';
   box.style.color = csState.textColor;
   box.style.background = csState.bgColor || 'transparent';
   box.style.border = (csState.borderStyle && csState.borderStyle !== 'none' && csState.borderWidth > 0)
     ? `${csState.borderWidth}px ${csState.borderStyle} ${csState.borderColor}` : 'none';
+  box.style.borderRadius = '8px';
+  box.style.padding = '8px 16px';
   box.style.fontWeight = csState.bold ? '700' : '500';
   box.style.fontStyle = csState.italic ? 'italic' : 'normal';
   box.style.textDecoration = csState.underline ? 'underline' : 'none';
   box.style.fontSize = csState.fontSize + 'px';
-  box.style.fontFamily = csState.fontFamily === 'Times-Roman' ? 'Times, serif'
-                      : csState.fontFamily === 'Courier'     ? '"Courier New", monospace'
+  // Same CSS font stack the actual stamp uses (applyStampStyles).
+  box.style.fontFamily = csState.fontFamily === 'Times-Roman' ? 'Times, "Times New Roman", serif'
+                      : csState.fontFamily === 'Courier'     ? '"Courier New", Courier, monospace'
                                                               : 'Helvetica, Arial, sans-serif';
 }
 
@@ -12424,7 +13058,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.18';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
@@ -12585,27 +13219,31 @@ function renderOnboardSlide() {
   const slide = onboardActiveSlides[onboardCurrent];
   const isNewer = compareVersions(slide.version, '1.0') > 0;
   const slideEl = document.getElementById('onboardSlide');
+  // Re-trigger the fade-in animation by replacing the node, so each step
+  // gets the subtle 280ms transition (matches the modern feel of the rebuild).
   slideEl.innerHTML = `
     ${isNewer ? `<span class="new-badge">New in ${slide.version}</span>` : ''}
     <div class="icon-big">${slide.icon}</div>
     <h3>${slide.title}</h3>
     <div class="desc">${slide.desc}</div>
   `;
-  // Dots
-  const dotsEl = document.getElementById('onboardDots');
-  dotsEl.innerHTML = '';
-  onboardActiveSlides.forEach((_, i) => {
-    const d = document.createElement('button');
-    d.type = 'button';
-    d.className = 'dot' + (i === onboardCurrent ? ' active' : '');
-    d.onclick = () => { onboardCurrent = i; renderOnboardSlide(); };
-    dotsEl.appendChild(d);
-  });
+  // Force-restart the CSS animation so each slide transitions in
+  slideEl.style.animation = 'none';
+  void slideEl.offsetWidth;
+  slideEl.style.animation = '';
+  // Progress bar + counter (replaces the row of dots — was overflowing on
+  // releases with many slides, causing a horizontal scrollbar on the modal).
+  const total = onboardActiveSlides.length;
+  const pct = total <= 1 ? 100 : ((onboardCurrent + 1) / total) * 100;
+  const fill = document.getElementById('onboardProgressFill');
+  const counter = document.getElementById('onboardCounter');
+  if (fill) fill.style.width = pct.toFixed(2) + '%';
+  if (counter) counter.textContent = 'Step ' + (onboardCurrent + 1) + ' of ' + total;
   // Buttons
   const prev = document.getElementById('onboardPrev');
   const next = document.getElementById('onboardNext');
   prev.disabled = onboardCurrent === 0;
-  next.textContent = (onboardCurrent === onboardActiveSlides.length - 1) ? 'Get started ✓' : 'Next →';
+  next.textContent = (onboardCurrent === total - 1) ? 'Get started ✓' : 'Next →';
 }
 function onboardingFinish() {
   localStorage.setItem(ONBOARD_KEY, APP_VERSION);
@@ -15590,6 +16228,174 @@ async function aiAction(systemPrompt, userPrompt, title, canInsert) {
       }
     });
   }
+})();
+
+// ============== AI CHAT WITH PDF (floating panel) ====================
+// Lets the user ask natural-language questions about the loaded PDF. Each
+// answer is followed by a "Jump to page N" pill that scrolls the viewer
+// to the page the AI cited as its source.
+(function wireAiChat() {
+  const fab    = document.getElementById('aiChatFab');
+  const panel  = document.getElementById('aiChatPanel');
+  const body   = document.getElementById('aiChatBody');
+  const input  = document.getElementById('aiChatInput');
+  const sendBt = document.getElementById('aiChatSend');
+  const closeB = document.getElementById('aiChatClose');
+  const clearB = document.getElementById('aiChatClear');
+  if (!fab || !panel) return;
+
+  // Conversation history (just for context window; not persisted across reloads).
+  const history = [];
+
+  function appendUser(text) {
+    const m = document.createElement('div');
+    m.className = 'aichat-msg user';
+    m.textContent = text;
+    // Drop the empty-state placeholder first time we add a real message.
+    const empty = body.querySelector('.aichat-empty');
+    if (empty) empty.remove();
+    body.appendChild(m);
+    body.scrollTop = body.scrollHeight;
+  }
+  function appendBot(text, sourcePage) {
+    const m = document.createElement('div');
+    m.className = 'aichat-msg bot';
+    m.textContent = text;
+    if (sourcePage && pdfJsDoc && sourcePage >= 1 && sourcePage <= pdfJsDoc.numPages) {
+      const jump = document.createElement('button');
+      jump.type = 'button'; jump.className = 'aichat-jump';
+      jump.textContent = '↗ Jump to page ' + sourcePage;
+      jump.onclick = () => jumpToPage(sourcePage);
+      const wrap = document.createElement('div');
+      wrap.appendChild(m);
+      wrap.appendChild(jump);
+      wrap.style.alignSelf = 'flex-start';
+      wrap.style.maxWidth = '88%';
+      m.style.maxWidth = '100%';
+      body.appendChild(wrap);
+    } else {
+      body.appendChild(m);
+    }
+    body.scrollTop = body.scrollHeight;
+  }
+  function appendThinking() {
+    const m = document.createElement('div');
+    m.className = 'aichat-msg bot thinking';
+    m.textContent = 'Thinking…';
+    m.dataset.thinking = '1';
+    body.appendChild(m);
+    body.scrollTop = body.scrollHeight;
+    return m;
+  }
+  function jumpToPage(pageNum) {
+    const wrapper = document.querySelector('.page-wrapper[data-page-num="' + pageNum + '"]');
+    if (wrapper) wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  // Build a per-page text snapshot to send as context. We label pages so the
+  // model can cite which page it's drawing from.
+  async function buildPdfContext(maxChars) {
+    maxChars = maxChars || 14000;
+    if (!pdfJsDoc) return '';
+    let out = '';
+    for (let pi = 1; pi <= pdfJsDoc.numPages && out.length < maxChars; pi++) {
+      try {
+        const page = await pdfJsDoc.getPage(pi);
+        const tc = await page.getTextContent();
+        out += '\n=== PAGE ' + pi + ' ===\n';
+        for (const item of tc.items) {
+          if (item.str) out += item.str + (item.hasEOL ? '\n' : ' ');
+          if (out.length >= maxChars) break;
+        }
+        page.cleanup && page.cleanup();
+      } catch (_) {}
+    }
+    return out.slice(0, maxChars);
+  }
+  // Parse out a "SOURCE_PAGE: N" or "Source: page N" hint the model emitted.
+  // Returns { text, page } — text has the hint stripped from the visible reply.
+  function parseSource(reply) {
+    if (!reply) return { text: '', page: null };
+    let page = null;
+    let text = reply;
+    const re = /^[ \t]*(?:source[_\s-]*page|source)\s*[:=]\s*(?:page\s*)?(\d{1,4})\s*$/im;
+    const m = text.match(re);
+    if (m) {
+      page = parseInt(m[1], 10);
+      text = text.replace(re, '').trim();
+    }
+    // Also strip a trailing "(page N)" mention if the model added that style.
+    return { text, page };
+  }
+
+  async function ask() {
+    const q = (input.value || '').trim();
+    if (!q) return;
+    if (!aiAvailable) { showToast('AI not connected — set it up in Settings → AI.', 'warn'); return; }
+    if (!pdfJsDoc) { showToast('Open a PDF first.', 'warn'); return; }
+    input.value = '';
+    input.style.height = 'auto';
+    appendUser(q);
+    sendBt.disabled = true;
+    const thinking = appendThinking();
+    try {
+      const ctx = await buildPdfContext(14000);
+      const sys = 'You answer questions about a PDF the user has open. Use ONLY the PDF content below to answer. ' +
+                  'If the answer is not in the PDF, say "Not found in this PDF." ' +
+                  'After your answer, on the LAST line, write exactly: SOURCE_PAGE: N — where N is the page number you drew the answer from (1-based). ' +
+                  'If multiple pages contributed, pick the most relevant one.\n\n' +
+                  '--- PDF CONTENT START ---\n' + ctx + '\n--- PDF CONTENT END ---';
+      const msgs = [{ role: 'system', content: sys }];
+      // Light prior context — last 4 turns to keep the prompt small.
+      for (const h of history.slice(-4)) msgs.push(h);
+      msgs.push({ role: 'user', content: q });
+      const reply = await aiChat(msgs, { maxTokens: 600, temperature: 0.2 });
+      thinking.remove();
+      const { text, page } = parseSource(reply);
+      const finalText = text || '(no answer)';
+      appendBot(finalText, page);
+      history.push({ role: 'user', content: q });
+      history.push({ role: 'assistant', content: finalText });
+      // Auto-jump the viewer to the cited page.
+      if (page && pdfJsDoc && page >= 1 && page <= pdfJsDoc.numPages) {
+        setTimeout(() => jumpToPage(page), 250);
+      }
+    } catch (e) {
+      thinking.remove();
+      appendBot('Error: ' + (e.message || e), null);
+    } finally {
+      sendBt.disabled = false;
+      input.focus();
+    }
+  }
+
+  fab.addEventListener('click', async () => {
+    // Re-check before showing — same pattern as the AI dropdown.
+    if (!panel.classList.contains('show')) {
+      panel.classList.add('show');
+      input.focus();
+      const stillUp = await refreshAiAvailability();
+      if (!stillUp) {
+        panel.classList.remove('show');
+        showToast('AI server not reachable — re-test in Settings → AI.', 'warn');
+      }
+    } else {
+      panel.classList.remove('show');
+    }
+  });
+  closeB.addEventListener('click', () => panel.classList.remove('show'));
+  clearB.addEventListener('click', () => {
+    history.length = 0;
+    body.innerHTML = '<div class="aichat-empty">Ask a question about the open PDF and I\'ll answer using its contents. The viewer will jump to the page the answer came from.</div>';
+  });
+  sendBt.addEventListener('click', ask);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); }
+  });
+  // Auto-grow the textarea (cheap; capped via max-height in CSS).
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(120, input.scrollHeight) + 'px';
+  });
 })();
 
 // =====================================================================
