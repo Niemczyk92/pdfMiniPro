@@ -9148,11 +9148,14 @@ function downloadBlob(blob, fn) {
 }
 
 let toastT = null;
-function showToast(msg, type = 'success') {
+function showToast(msg, type = 'success', durationMs) {
   const t = document.getElementById('toast');
   t.className = 'toast ' + type; t.textContent = msg;
   requestAnimationFrame(() => t.classList.add('show'));
-  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3500);
+  // Optional 3rd arg lets critical messages (e.g. the VPN warning during
+  // signing) linger longer so users can actually read them.
+  const ms = (Number.isFinite(durationMs) && durationMs > 0) ? durationMs : 3500;
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), ms);
 }
 
 // === DROPDOWNS ===
@@ -10338,6 +10341,21 @@ function sigCaptureLocation() {
   return _sigLocationInFlight;
 }
 
+// Great-circle distance between two lat/lon points, in kilometres.
+// Used to spot VPN usage during signing — if the GPS position is far from
+// the IP-derived position, the signer is almost certainly behind a VPN and
+// the audit stamp would be inconsistent. We block signing in that case.
+function _haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const toRad = (d) => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 // Gather everything we can without a backend. Best-effort: any field may be null.
 async function sigGatherAuditData() {
   const now = new Date();
@@ -10858,6 +10876,36 @@ async function sigOnInsert() {
       btn.textContent = 'Collecting audit data…';
       try {
         const audit = await sigGatherAuditData();
+        // VPN-guard: if GPS and IP-derived locations disagree by more than
+        // ~500 km, the signer is almost certainly behind a VPN. Signing
+        // with an inconsistent audit stamp would be misleading — we block
+        // and ask them to disable the VPN. 500 km is wide enough to allow
+        // mobile-carrier IPs that geolocate to a regional aggregation
+        // point but rejects "I'm in Prague but my IP says San Francisco".
+        if (audit.location && audit.ipLocation
+            && Number.isFinite(audit.location.latitude)
+            && Number.isFinite(audit.location.longitude)
+            && Number.isFinite(audit.ipLocation.latitude)
+            && Number.isFinite(audit.ipLocation.longitude)) {
+          const distKm = _haversineKm(
+            audit.location.latitude, audit.location.longitude,
+            audit.ipLocation.latitude, audit.ipLocation.longitude
+          );
+          if (distKm > 500) {
+            const ipCity = audit.ipLocation.city || audit.ipLocation.country || 'IP address';
+            showToast(
+              '⚠ VPN detected — signing blocked. Your GPS location is ~' +
+              Math.round(distKm) + ' km away from your IP location (' + ipCity + '). ' +
+              'A VPN is almost certainly in use. Disable the VPN and try the signature again ' +
+              'so the audit stamp shows consistent location data.',
+              'error',
+              10000  // longer toast — this is important
+            );
+            // Re-enable the button so the user can retry after disabling VPN.
+            // We DON'T close the modal — they can immediately retry.
+            return;
+          }
+        }
         dataURL = await sigComposeWithAudit(dataURL, audit);
         // Stash the same data so the annotation can carry it through to the
         // PDF Info dict at save time (machine-readable, survives image crop).
@@ -14403,7 +14451,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.35';
+const APP_VERSION = '1.36';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
