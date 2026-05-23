@@ -88,6 +88,16 @@
     });
   };
   document.documentElement.lang = window.getCurrentLang().toLowerCase();
+  // Apply the saved UI mode (Simple / Pro) before paint so Pro tools don't
+  // flash visible in Simple mode on every page load.
+  try {
+    const m = localStorage.getItem('pdfMini.uiMode') || 'pro';
+    document.documentElement.setAttribute('data-ui-mode', m);
+  } catch (_) {}
+  window.applyUiMode = function(mode) {
+    if (mode !== 'simple') mode = 'pro';
+    document.documentElement.setAttribute('data-ui-mode', mode);
+  };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() { window.applyTranslations(); });
   } else {
@@ -134,6 +144,7 @@
       'hdr.settings.aria': 'Settings',
       'hdr.theme.title': 'Toggle light / dark mode',
       'hdr.theme.aria': 'Toggle theme',
+      'hdr.cmdPalette': 'Search any action (Ctrl+K or / )',
       // Toolbar
       'tb.open': 'Open', 'tb.open.title': 'Open a PDF file (Ctrl+O)',
       'tb.new': 'New', 'tb.new.title': 'Create a new blank PDF — pick a page size',
@@ -764,6 +775,57 @@
       'toast.selectFirst': 'Select something first (click or Shift-click).',
       'sp.noPdf': 'No PDF loaded',
       'img.markerTitle': 'Image — double-click to grab and move',
+      // Command palette
+      'cp.ph': 'Search actions… (type to filter)',
+      'cp.empty': 'No matches.',
+      'cp.cat.File': 'File', 'cp.cat.Edit': 'Edit', 'cp.cat.Add': 'Add',
+      'cp.cat.Insert': 'Insert', 'cp.cat.Doc': 'Document', 'cp.cat.Search': 'Search',
+      'cp.cat.Security': 'Security', 'cp.cat.Tools': 'Tools', 'cp.cat.App': 'App',
+      'cmd.open': 'Open PDF', 'cmd.open.kw': 'load file import pdf',
+      'cmd.new': 'New blank PDF', 'cmd.new.kw': 'blank create empty',
+      'cmd.save': 'Save PDF', 'cmd.print': 'Print', 'cmd.export': 'Export as…',
+      'cmd.share': 'Share by email…',
+      'cmd.undo': 'Undo', 'cmd.redo': 'Redo', 'cmd.clear': 'Clear all edits',
+      'cmd.text': 'Add text', 'cmd.text.kw': 'write type insert',
+      'cmd.image': 'Insert image',
+      'cmd.draw': 'Free draw',
+      'cmd.editPdf': 'Edit PDF text', 'cmd.editPdf.kw': 'modify change replace',
+      'cmd.highlight': 'Highlight text',
+      'cmd.underline': 'Underline text',
+      'cmd.strike': 'Strike-through text',
+      'cmd.redact': 'Redact (black out)',
+      'cmd.stamps': 'Stamps gallery',
+      'cmd.sig': 'Add signature',
+      'cmd.qr': 'QR / Barcode generator', 'cmd.qr.kw': 'barcode ean code',
+      'cmd.pages': 'Organize pages',
+      'cmd.pageSetup': 'Page Setup (header / footer / watermark)',
+      'cmd.crop': 'Crop / Resize / Margins',
+      'cmd.bm': 'Bookmarks / Outline',
+      'cmd.tpl': 'Templates',
+      'cmd.find': 'Find & Replace',
+      'cmd.ocr': 'OCR scanned PDF',
+      'cmd.password': 'Password protect',
+      'cmd.sanitize': 'Sanitize document',
+      'cmd.regex': 'RegEx redact',
+      'cmd.diff': 'Compare two PDFs',
+      'cmd.table': 'Extract table → CSV',
+      'cmd.jsonFill': 'Fill form from JSON',
+      'cmd.stats': 'Document statistics',
+      'cmd.profile': 'Your profile',
+      'cmd.settings': 'Settings', 'cmd.settings.kw': 'preferences config',
+      'cmd.lang': 'Change language', 'cmd.lang.kw': 'jazyk język idioma',
+      'cmd.help': 'Help / Manual',
+      'cmd.theme': 'Toggle light / dark mode',
+      // Settings: UI mode (Simple/Pro)
+      'settings.ui.title': 'Interface complexity',
+      'settings.ui.desc': 'Simple hides advanced/Pro tools (RegEx redact, JSON fill, table extract, sanitize, password, AI…). Pro shows everything. Switch any time — your annotations are unaffected.',
+      'settings.ui.modeLabel': 'Mode',
+      'settings.ui.pro': 'Pro — all tools',
+      'settings.ui.simple': 'Simple — only essentials',
+      'settings.ui.hint': 'Tip: even in Simple mode, every tool is still reachable via Ctrl+K (command search).',
+      'settings.kbd.title': 'Keyboard shortcuts',
+      'settings.kbd.desc': '<kbd>Ctrl+K</kbd> or <kbd>/</kbd> — search any action · <kbd>V</kbd> Select · <kbd>T</kbd> Text · <kbd>D</kbd> Draw · <kbd>E</kbd> Edit PDF text · <kbd>H</kbd> Highlight · <kbd>U</kbd> Underline · <kbd>R</kbd> Shape · <kbd>?</kbd> Help · <kbd>Esc</kbd> Cancel',
+      'toast.uiModeChanged': 'Interface updated.',
     };
 
     D.CZ = {
@@ -787,6 +849,7 @@
       'hdr.settings.aria': 'Nastavení',
       'hdr.theme.title': 'Přepnout světlý / tmavý režim',
       'hdr.theme.aria': 'Přepnout vzhled',
+      'hdr.cmdPalette': 'Hledat libovolnou akci (Ctrl+K nebo / )',
       'tb.open': 'Otevřít', 'tb.open.title': 'Otevřít soubor PDF (Ctrl+O)',
       'tb.new': 'Nový', 'tb.new.title': 'Vytvořit nové prázdné PDF — vybrat velikost stránky',
       'tb.select': 'Výběr', 'tb.select.title': 'Nástroj výběr — klikněte pro výběr objektu (Esc)',
@@ -1376,6 +1439,55 @@
       'toast.selectFirst': 'Nejprve něco vyberte (klik nebo Shift+klik).',
       'sp.noPdf': 'PDF není načteno',
       'img.markerTitle': 'Obrázek — dvojklikem uchopit a přesunout',
+      'cp.ph': 'Hledat akce… (pište pro filtrování)',
+      'cp.empty': 'Žádné výsledky.',
+      'cp.cat.File': 'Soubor', 'cp.cat.Edit': 'Úpravy', 'cp.cat.Add': 'Přidat',
+      'cp.cat.Insert': 'Vložit', 'cp.cat.Doc': 'Dokument', 'cp.cat.Search': 'Hledání',
+      'cp.cat.Security': 'Zabezpečení', 'cp.cat.Tools': 'Nástroje', 'cp.cat.App': 'Aplikace',
+      'cmd.open': 'Otevřít PDF', 'cmd.open.kw': 'načíst soubor import otevreni',
+      'cmd.new': 'Nové prázdné PDF', 'cmd.new.kw': 'novy prazdny vytvorit',
+      'cmd.save': 'Uložit PDF', 'cmd.print': 'Tisk', 'cmd.export': 'Exportovat jako…',
+      'cmd.share': 'Sdílet e-mailem…',
+      'cmd.undo': 'Zpět', 'cmd.redo': 'Vpřed', 'cmd.clear': 'Smazat všechny úpravy',
+      'cmd.text': 'Přidat text', 'cmd.text.kw': 'pisat psat vlozit napsat',
+      'cmd.image': 'Vložit obrázek',
+      'cmd.draw': 'Volné kreslení',
+      'cmd.editPdf': 'Upravit text PDF', 'cmd.editPdf.kw': 'upravit zmenit nahradit prepsat',
+      'cmd.highlight': 'Zvýraznit text',
+      'cmd.underline': 'Podtrhnout text',
+      'cmd.strike': 'Přeškrtnout text',
+      'cmd.redact': 'Začernit (redact)',
+      'cmd.stamps': 'Galerie razítek',
+      'cmd.sig': 'Přidat podpis',
+      'cmd.qr': 'QR / Čárový kód', 'cmd.qr.kw': 'barcode ean carovy kod',
+      'cmd.pages': 'Organizace stránek',
+      'cmd.pageSetup': 'Vzhled stránky (záhlaví / zápatí / vodoznak)',
+      'cmd.crop': 'Oříznout / Velikost / Okraje',
+      'cmd.bm': 'Záložky / Osnova',
+      'cmd.tpl': 'Šablony',
+      'cmd.find': 'Najít a nahradit',
+      'cmd.ocr': 'OCR skenovaného PDF',
+      'cmd.password': 'Chránit heslem',
+      'cmd.sanitize': 'Vyčistit dokument',
+      'cmd.regex': 'Regex začernit',
+      'cmd.diff': 'Porovnat dvě PDF',
+      'cmd.table': 'Extrahovat tabulku → CSV',
+      'cmd.jsonFill': 'Vyplnit formulář z JSON',
+      'cmd.stats': 'Statistiky dokumentu',
+      'cmd.profile': 'Váš profil',
+      'cmd.settings': 'Nastavení', 'cmd.settings.kw': 'predvolby konfigurace',
+      'cmd.lang': 'Změnit jazyk', 'cmd.lang.kw': 'jazyk language jezyk idioma',
+      'cmd.help': 'Nápověda / Manuál',
+      'cmd.theme': 'Přepnout světlý / tmavý režim',
+      'settings.ui.title': 'Složitost rozhraní',
+      'settings.ui.desc': 'Jednoduché skryje pokročilé / Pro nástroje (Regex začernit, JSON, tabulka, Vyčistit, Heslo, AI…). Pro zobrazí vše. Můžete přepnout kdykoli — anotace tím nejsou dotčeny.',
+      'settings.ui.modeLabel': 'Režim',
+      'settings.ui.pro': 'Pro — všechny nástroje',
+      'settings.ui.simple': 'Jednoduché — jen základ',
+      'settings.ui.hint': 'Tip: i v Jednoduchém režimu jsou všechny nástroje dostupné přes Ctrl+K (vyhledávač akcí).',
+      'settings.kbd.title': 'Klávesové zkratky',
+      'settings.kbd.desc': '<kbd>Ctrl+K</kbd> nebo <kbd>/</kbd> — hledat libovolnou akci · <kbd>V</kbd> Výběr · <kbd>T</kbd> Text · <kbd>D</kbd> Kreslit · <kbd>E</kbd> Upravit PDF text · <kbd>H</kbd> Zvýraznit · <kbd>U</kbd> Podtrhnout · <kbd>R</kbd> Tvar · <kbd>?</kbd> Nápověda · <kbd>Esc</kbd> Zrušit',
+      'toast.uiModeChanged': 'Rozhraní aktualizováno.',
     };
 
     D.PL = {
@@ -1399,6 +1511,7 @@
       'hdr.settings.aria': 'Ustawienia',
       'hdr.theme.title': 'Przełącz tryb jasny / ciemny',
       'hdr.theme.aria': 'Przełącz motyw',
+      'hdr.cmdPalette': 'Szukaj dowolnej akcji (Ctrl+K lub / )',
       'tb.open': 'Otwórz', 'tb.open.title': 'Otwórz plik PDF (Ctrl+O)',
       'tb.new': 'Nowy', 'tb.new.title': 'Utwórz nowy pusty PDF — wybierz rozmiar strony',
       'tb.select': 'Zaznacz', 'tb.select.title': 'Narzędzie zaznaczania — kliknij aby wybrać obiekt (Esc)',
@@ -1963,6 +2076,55 @@
       'toast.selectFirst': 'Najpierw coś zaznacz (klik lub Shift+klik).',
       'sp.noPdf': 'PDF nie wczytany',
       'img.markerTitle': 'Obraz — kliknij dwukrotnie aby chwycić i przesunąć',
+      'cp.ph': 'Szukaj akcji… (pisz aby filtrować)',
+      'cp.empty': 'Brak dopasowań.',
+      'cp.cat.File': 'Plik', 'cp.cat.Edit': 'Edycja', 'cp.cat.Add': 'Dodaj',
+      'cp.cat.Insert': 'Wstaw', 'cp.cat.Doc': 'Dokument', 'cp.cat.Search': 'Wyszukiwanie',
+      'cp.cat.Security': 'Bezpieczeństwo', 'cp.cat.Tools': 'Narzędzia', 'cp.cat.App': 'Aplikacja',
+      'cmd.open': 'Otwórz PDF', 'cmd.open.kw': 'wczytaj plik import',
+      'cmd.new': 'Nowy pusty PDF', 'cmd.new.kw': 'pusty utworz',
+      'cmd.save': 'Zapisz PDF', 'cmd.print': 'Drukuj', 'cmd.export': 'Eksportuj jako…',
+      'cmd.share': 'Udostępnij e-mailem…',
+      'cmd.undo': 'Cofnij', 'cmd.redo': 'Ponów', 'cmd.clear': 'Usuń wszystkie zmiany',
+      'cmd.text': 'Dodaj tekst', 'cmd.text.kw': 'pisz wstaw',
+      'cmd.image': 'Wstaw obraz',
+      'cmd.draw': 'Rysowanie odręczne',
+      'cmd.editPdf': 'Edytuj tekst PDF', 'cmd.editPdf.kw': 'zmień zamień',
+      'cmd.highlight': 'Podświetl tekst',
+      'cmd.underline': 'Podkreśl tekst',
+      'cmd.strike': 'Przekreśl tekst',
+      'cmd.redact': 'Zaczernij (redact)',
+      'cmd.stamps': 'Galeria pieczątek',
+      'cmd.sig': 'Dodaj podpis',
+      'cmd.qr': 'QR / Kod kreskowy', 'cmd.qr.kw': 'barcode ean kod kreskowy',
+      'cmd.pages': 'Organizacja stron',
+      'cmd.pageSetup': 'Układ strony (nagłówek / stopka / znak wodny)',
+      'cmd.crop': 'Przytnij / Rozmiar / Marginesy',
+      'cmd.bm': 'Zakładki / Spis treści',
+      'cmd.tpl': 'Szablony',
+      'cmd.find': 'Znajdź i zamień',
+      'cmd.ocr': 'OCR zeskanowanego PDF',
+      'cmd.password': 'Chroń hasłem',
+      'cmd.sanitize': 'Wyczyść dokument',
+      'cmd.regex': 'Regex zaczernianie',
+      'cmd.diff': 'Porównaj dwa PDF',
+      'cmd.table': 'Wyodrębnij tabelę → CSV',
+      'cmd.jsonFill': 'Wypełnij formularz z JSON',
+      'cmd.stats': 'Statystyki dokumentu',
+      'cmd.profile': 'Twój profil',
+      'cmd.settings': 'Ustawienia', 'cmd.settings.kw': 'preferencje konfiguracja',
+      'cmd.lang': 'Zmień język', 'cmd.lang.kw': 'jezyk language jazyk',
+      'cmd.help': 'Pomoc / Instrukcja',
+      'cmd.theme': 'Przełącz jasny / ciemny',
+      'settings.ui.title': 'Złożoność interfejsu',
+      'settings.ui.desc': 'Prosty ukrywa zaawansowane / Pro narzędzia (Regex, JSON, tabela, Wyczyść, Hasło, AI…). Pro pokazuje wszystko. Możesz przełączyć w dowolnej chwili — adnotacje pozostaną.',
+      'settings.ui.modeLabel': 'Tryb',
+      'settings.ui.pro': 'Pro — wszystkie narzędzia',
+      'settings.ui.simple': 'Prosty — tylko podstawy',
+      'settings.ui.hint': 'Wskazówka: nawet w trybie Prostym każde narzędzie dostępne przez Ctrl+K (wyszukiwarka akcji).',
+      'settings.kbd.title': 'Skróty klawiszowe',
+      'settings.kbd.desc': '<kbd>Ctrl+K</kbd> lub <kbd>/</kbd> — szukaj akcji · <kbd>V</kbd> Zaznacz · <kbd>T</kbd> Tekst · <kbd>D</kbd> Rysuj · <kbd>E</kbd> Edytuj PDF · <kbd>H</kbd> Podświetl · <kbd>U</kbd> Podkreśl · <kbd>R</kbd> Kształt · <kbd>?</kbd> Pomoc · <kbd>Esc</kbd> Anuluj',
+      'toast.uiModeChanged': 'Interfejs zaktualizowany.',
     };
 
     D.ES = {
@@ -1986,6 +2148,7 @@
       'hdr.settings.aria': 'Ajustes',
       'hdr.theme.title': 'Cambiar modo claro / oscuro',
       'hdr.theme.aria': 'Cambiar tema',
+      'hdr.cmdPalette': 'Buscar cualquier acción (Ctrl+K o / )',
       'tb.open': 'Abrir', 'tb.open.title': 'Abrir un archivo PDF (Ctrl+O)',
       'tb.new': 'Nuevo', 'tb.new.title': 'Crear un nuevo PDF en blanco — elige el tamaño',
       'tb.select': 'Seleccionar', 'tb.select.title': 'Herramienta de selección — clic para elegir objetos (Esc)',
@@ -2549,6 +2712,55 @@
       'toast.selectFirst': 'Selecciona algo primero (clic o Shift+clic).',
       'sp.noPdf': 'PDF no cargado',
       'img.markerTitle': 'Imagen — doble clic para agarrar y mover',
+      'cp.ph': 'Buscar acciones… (escribe para filtrar)',
+      'cp.empty': 'Sin coincidencias.',
+      'cp.cat.File': 'Archivo', 'cp.cat.Edit': 'Editar', 'cp.cat.Add': 'Añadir',
+      'cp.cat.Insert': 'Insertar', 'cp.cat.Doc': 'Documento', 'cp.cat.Search': 'Buscar',
+      'cp.cat.Security': 'Seguridad', 'cp.cat.Tools': 'Herramientas', 'cp.cat.App': 'App',
+      'cmd.open': 'Abrir PDF', 'cmd.open.kw': 'cargar archivo importar',
+      'cmd.new': 'Nuevo PDF en blanco', 'cmd.new.kw': 'crear vacio nuevo',
+      'cmd.save': 'Guardar PDF', 'cmd.print': 'Imprimir', 'cmd.export': 'Exportar como…',
+      'cmd.share': 'Compartir por email…',
+      'cmd.undo': 'Deshacer', 'cmd.redo': 'Rehacer', 'cmd.clear': 'Borrar todas las ediciones',
+      'cmd.text': 'Añadir texto', 'cmd.text.kw': 'escribir insertar',
+      'cmd.image': 'Insertar imagen',
+      'cmd.draw': 'Dibujo libre',
+      'cmd.editPdf': 'Editar texto PDF', 'cmd.editPdf.kw': 'modificar cambiar reemplazar',
+      'cmd.highlight': 'Resaltar texto',
+      'cmd.underline': 'Subrayar texto',
+      'cmd.strike': 'Tachar texto',
+      'cmd.redact': 'Censurar (negro)',
+      'cmd.stamps': 'Galería de sellos',
+      'cmd.sig': 'Añadir firma',
+      'cmd.qr': 'QR / Código de barras', 'cmd.qr.kw': 'barcode ean codigo',
+      'cmd.pages': 'Organizar páginas',
+      'cmd.pageSetup': 'Configurar página (cabecera / pie / marca de agua)',
+      'cmd.crop': 'Recortar / Tamaño / Márgenes',
+      'cmd.bm': 'Marcadores / Índice',
+      'cmd.tpl': 'Plantillas',
+      'cmd.find': 'Buscar y reemplazar',
+      'cmd.ocr': 'OCR de PDF escaneado',
+      'cmd.password': 'Proteger con contraseña',
+      'cmd.sanitize': 'Sanear documento',
+      'cmd.regex': 'Censura por regex',
+      'cmd.diff': 'Comparar dos PDF',
+      'cmd.table': 'Extraer tabla → CSV',
+      'cmd.jsonFill': 'Rellenar formulario desde JSON',
+      'cmd.stats': 'Estadísticas del documento',
+      'cmd.profile': 'Tu perfil',
+      'cmd.settings': 'Ajustes', 'cmd.settings.kw': 'preferencias configuracion',
+      'cmd.lang': 'Cambiar idioma', 'cmd.lang.kw': 'idioma language jezyk jazyk',
+      'cmd.help': 'Ayuda / Manual',
+      'cmd.theme': 'Cambiar modo claro / oscuro',
+      'settings.ui.title': 'Complejidad de la interfaz',
+      'settings.ui.desc': 'Simple oculta las herramientas avanzadas / Pro (RegEx, JSON, tabla, Sanear, Contraseña, IA…). Pro muestra todo. Cambia cuando quieras — tus anotaciones no se afectan.',
+      'settings.ui.modeLabel': 'Modo',
+      'settings.ui.pro': 'Pro — todas las herramientas',
+      'settings.ui.simple': 'Simple — solo lo esencial',
+      'settings.ui.hint': 'Consejo: incluso en modo Simple cada herramienta está disponible vía Ctrl+K (búsqueda de acciones).',
+      'settings.kbd.title': 'Atajos de teclado',
+      'settings.kbd.desc': '<kbd>Ctrl+K</kbd> o <kbd>/</kbd> — buscar acciones · <kbd>V</kbd> Seleccionar · <kbd>T</kbd> Texto · <kbd>D</kbd> Dibujar · <kbd>E</kbd> Editar PDF · <kbd>H</kbd> Resaltar · <kbd>U</kbd> Subrayar · <kbd>R</kbd> Forma · <kbd>?</kbd> Ayuda · <kbd>Esc</kbd> Cancelar',
+      'toast.uiModeChanged': 'Interfaz actualizada.',
       'help.s.0.body': '<ol><li><strong>Abre</strong> un PDF — pulsa el botón naranja Abrir o arrastra un archivo. Acepta también archivos <code>.pdfenc</code> (cifrados).</li><li>Elige una herramienta de la barra. Pasa el cursor sobre cualquier botón — todos tienen tooltip.</li><li>Trabaja con el PDF. <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace en cualquier momento.</li><li>Pulsa <strong>Guardar PDF</strong> al terminar. La ▼ pequeña al lado abre Exportar / Imprimir / Borrar. Para una salida más cerrada prueba <strong>Más ▼ → Proteger con contraseña</strong> o <strong>Más ▼ → Sanear documento</strong>.</li></ol><div class="help-tip"><strong>Privacidad:</strong> Nada sale de tu dispositivo — ni subidas, ni analítica, ni cookies. La app funciona totalmente offline tras la carga. Las funciones IA (si están activas) hablan directamente con tu LLM local, nunca con un tercero.</div><div class="help-tip"><strong>Herramientas Pro en Más ▼:</strong> Sanear · Censura por regex · Extraer tabla → CSV · Comparar dos PDF · Rellenar desde JSON · Proteger con contraseña · Recortar / Redimensionar.</div>',
     };
 
@@ -2785,6 +2997,16 @@
   body.edit-pdf-mode .pdf-text-item:hover {
     background: rgba(245, 158, 11, 0.28);
     outline: 2px solid rgba(245, 158, 11, 0.85);
+  }
+  /* Select-mode: text-items receive clicks but stay visually unobtrusive
+     until hover. One click then triggers Edit-PDF. */
+  body.select-mode .pdf-text-item {
+    pointer-events: auto;
+    cursor: text;
+  }
+  body.select-mode .pdf-text-item:hover {
+    background: rgba(245, 158, 11, 0.18);
+    outline: 1.5px dashed rgba(245, 158, 11, 0.7);
   }
   /* Hover hint set by JS in Select mode (we keep pointer-events: none so clicks pass through) */
   .pdf-text-item.pdf-text-hover {
@@ -4184,8 +4406,22 @@
   .btn .icon { font-size: 16px; line-height: 1; display: inline-block; }
   .btn.outlined { border-color: var(--border); background: var(--surface); }
   .btn.outlined:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-2); }
-  .btn.tool { padding: 8px 12px; }
-  .btn.tool.active { background: var(--accent-subtle); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent-ring); }
+  /* Simple-mode hides .pro-tool elements (RegEx redact, JSON fill, Compare,
+     Sanitize, Password, etc.). Set on <html> via JS so it cascades to every
+     menu item and dropdown in one rule. */
+  html[data-ui-mode="simple"] .pro-tool { display: none !important; }
+  .btn.tool { padding: 8px 12px; position: relative; }
+  .btn.tool.active {
+    background: var(--accent-subtle); color: var(--accent);
+    box-shadow: inset 0 0 0 1.5px var(--accent), 0 2px 6px var(--accent-ring);
+    font-weight: 700;
+  }
+  /* Subtle bottom indicator under the active tool so it's spottable at a glance */
+  .btn.tool.active::after {
+    content: ''; position: absolute; left: 12%; right: 12%; bottom: -3px;
+    height: 3px; border-radius: 2px;
+    background: var(--accent);
+  }
   .btn.primary { background: var(--accent); color: white; font-weight: 600; box-shadow: 0 1px 2px rgba(37,99,235,0.3); }
   .btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
   .btn.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); }
@@ -4687,6 +4923,102 @@
   }
   .shape-preview svg { display: block; overflow: visible; }
 
+  /* === COMMAND PALETTE (Ctrl+K / Cmd+K) === */
+  /* A Spotlight-style overlay that lets the user fuzzy-search every action
+     in the app instead of hunting through dropdowns. The list is built from
+     a single CMD_PALETTE registry so adding a new command is one entry, not
+     a UI change. */
+  .cp-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    z-index: 240;
+    align-items: flex-start; justify-content: center;
+    padding-top: min(15vh, 120px);
+    animation: fadeUp 0.12s ease;
+  }
+  .cp-overlay.show { display: flex; }
+  .cp-card {
+    width: min(640px, calc(100vw - 32px));
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    max-height: 70vh;
+  }
+  .cp-search-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cp-search-icon { font-size: 18px; opacity: 0.6; flex-shrink: 0; }
+  .cp-search-input {
+    flex: 1;
+    background: transparent;
+    border: 0; outline: 0;
+    color: var(--text);
+    font-size: 16px;
+    font-family: inherit;
+  }
+  .cp-search-hint {
+    font-size: 11px;
+    color: var(--muted);
+    padding: 2px 7px;
+    background: var(--surface-2);
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .cp-list {
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+    padding: 6px 6px 8px;
+  }
+  .cp-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text);
+    transition: background 0.08s;
+    user-select: none;
+  }
+  .cp-item:hover, .cp-item.active {
+    background: var(--accent-subtle);
+  }
+  .cp-item.active {
+    box-shadow: inset 0 0 0 1px var(--accent-ring);
+  }
+  .cp-item-icon {
+    font-size: 18px; width: 24px; text-align: center;
+    flex-shrink: 0;
+  }
+  .cp-item-label {
+    flex: 1;
+    font-size: 14px; font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .cp-item-cat {
+    font-size: 11px; color: var(--muted);
+    flex-shrink: 0;
+  }
+  .cp-item-kbd {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+  .cp-empty {
+    padding: 28px 18px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
   /* === SIGNATURE MODAL === */
   .modal-overlay {
     position: fixed; inset: 0;
@@ -5707,6 +6039,9 @@
   </div>
   <div class="titlebar-right">
     <div class="file-info" id="fileInfo" data-i18n="brand.noFile">No file loaded</div>
+    <button class="theme-toggle cp-launcher-btn" id="cmdPaletteBtn" type="button" data-i18n-title="hdr.cmdPalette" title="Search any action (Ctrl+K)" aria-label="Command palette">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
     <button class="theme-toggle" id="sidePanelToggleHeader" data-i18n-title="hdr.sidePanel.title" data-i18n-aria="hdr.sidePanel.aria" title="Show side panel — pages, outline, bookmarks, signatures (Ctrl+\)" aria-label="Side panel">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="13" y="3" width="8" height="18" rx="1"/></svg>
     </button>
@@ -6973,6 +7308,25 @@
         </select>
         <div class="settings-status" id="langStatus" style="margin-top:10px" data-i18n="settings.lang.note">Language switches instantly — no reload needed.</div>
       </div>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.ui.title">Interface complexity</div>
+        <div class="settings-desc" data-i18n="settings.ui.desc">Simple hides advanced/Pro tools (RegEx redact, JSON fill, table extract, sanitize, password, AI…). Pro shows everything. Switch any time — your annotations are unaffected.</div>
+        <label class="ps-label" style="margin-top:10px" data-i18n="settings.ui.modeLabel">Mode</label>
+        <select id="uiModeSelect" class="ps-text" style="max-width:280px">
+          <option value="pro" data-i18n="settings.ui.pro">Pro — all tools</option>
+          <option value="simple" data-i18n="settings.ui.simple">Simple — only essentials</option>
+        </select>
+        <div class="settings-status" style="margin-top:10px" data-i18n="settings.ui.hint">Tip: even in Simple mode, every tool is still reachable via Ctrl+K (command search).</div>
+      </div>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.kbd.title">Keyboard shortcuts</div>
+        <div class="settings-desc" data-i18n-html="settings.kbd.desc">
+          <kbd>Ctrl+K</kbd> or <kbd>/</kbd> — search any action ·
+          <kbd>V</kbd> Select · <kbd>T</kbd> Text · <kbd>D</kbd> Draw ·
+          <kbd>E</kbd> Edit PDF text · <kbd>H</kbd> Highlight · <kbd>U</kbd> Underline · <kbd>R</kbd> Shape ·
+          <kbd>?</kbd> Help · <kbd>Esc</kbd> Cancel
+        </div>
+      </div>
     </div>
 
     <!-- Backup tab -->
@@ -7717,6 +8071,19 @@
   </div>
 </div>
 
+<!-- Command palette — Ctrl+K / Cmd+K opens; fuzzy search every action.
+     The list is rendered dynamically from CMD_PALETTE in JS. -->
+<div class="cp-overlay" id="cmdPalette" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="cp-card">
+    <div class="cp-search-row">
+      <span class="cp-search-icon">🔎</span>
+      <input type="text" id="cpInput" class="cp-search-input" data-i18n-placeholder="cp.ph" placeholder="Search actions… (type to filter)" autocomplete="off" spellcheck="false">
+      <span class="cp-search-hint">Esc</span>
+    </div>
+    <div class="cp-list" id="cpList"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -7965,6 +8332,7 @@ function setTool(tool) {
   document.body.classList.toggle('draw-mode', currentTool === 'draw');
   document.body.classList.toggle('shape-mode', currentTool === 'shape');
   document.body.classList.toggle('edit-pdf-mode', currentTool === 'edit-pdf');
+  document.body.classList.toggle('select-mode', currentTool === 'select');
   document.body.classList.toggle('highlight-mode', currentTool === 'highlight');
   document.body.classList.toggle('underline-mode', currentTool === 'underline');
   document.body.classList.toggle('strike-mode', currentTool === 'strike');
@@ -8236,7 +8604,10 @@ async function buildPdfTextLayer(overlay, pdfPage, viewport, pageNum) {
     span.dataset.h          = String(fontHeight * 1.2);
     span.dataset.pageNum    = String(pageNum);
     span.addEventListener('click', (e) => {
-      if (currentTool !== 'edit-pdf') return;
+      // Single click on a PDF text item converts it to an editable annotation
+      // in either Edit-PDF mode (the original behavior) OR Select mode
+      // (one-click edit, matches the "klik na text → upravit" mental model).
+      if (currentTool !== 'edit-pdf' && currentTool !== 'select') return;
       e.stopPropagation();
       editOriginalPdfText(overlay, span);
     });
@@ -9383,6 +9754,186 @@ if (typeof window._imgLayerWrap === 'undefined') {
 
 // If a recent click in text mode created an empty text annotation and the editor
 // just committed it, the empty annotation is already removed by commitEditor.
+// =====================================================================
+// =====  COMMAND PALETTE  =============================================
+// Spotlight-style action search (Ctrl+K / Cmd+K). One flat registry of
+// commands, each with localized labels + keyword aliases so users can find
+// an action by typing the Czech / Polish / Spanish name. Up/Down arrows
+// move the highlight, Enter runs, Esc closes. Click also runs.
+// =====================================================================
+// Each entry: { id, icon, labelKey, label, kbd?, cat?, keywordsKey?,
+// run: () => {} }. labelKey/keywordsKey go through t(); the inline label is
+// the EN fallback. cat is a tiny tag shown on the right of the row.
+const CMD_PALETTE = [
+  { id: 'open',       icon: '📂', labelKey: 'cmd.open',      label: 'Open PDF',                 kbd: 'Ctrl+O', cat: 'File', keywordsKey: 'cmd.open.kw',      run: () => document.getElementById('fileInput')?.click() },
+  { id: 'new',        icon: '📄', labelKey: 'cmd.new',       label: 'New blank PDF',            cat: 'File', keywordsKey: 'cmd.new.kw',       run: () => document.getElementById('newPdfBtn')?.click() },
+  { id: 'save',       icon: '⬇',  labelKey: 'cmd.save',      label: 'Save PDF',                 kbd: 'Ctrl+S', cat: 'File', run: () => document.getElementById('saveBtn')?.click() },
+  { id: 'print',      icon: '🖨', labelKey: 'cmd.print',     label: 'Print',                    kbd: 'Ctrl+P', cat: 'File', run: () => document.getElementById('printBtnMenu')?.click() },
+  { id: 'export',     icon: '⤓',  labelKey: 'cmd.export',    label: 'Export as…',               cat: 'File', run: () => document.getElementById('exportBtnMenu')?.click() },
+  { id: 'share',      icon: '✉',  labelKey: 'cmd.share',     label: 'Share by email…',          cat: 'File', run: () => document.getElementById('shareBtnMenu')?.click() },
+
+  { id: 'undo',       icon: '↶',  labelKey: 'cmd.undo',      label: 'Undo',                     kbd: 'Ctrl+Z', cat: 'Edit', run: () => doUndo() },
+  { id: 'redo',       icon: '↷',  labelKey: 'cmd.redo',      label: 'Redo',                     kbd: 'Ctrl+Y', cat: 'Edit', run: () => doRedo() },
+  { id: 'clear',      icon: '✕',  labelKey: 'cmd.clear',     label: 'Clear all edits',          cat: 'Edit', run: () => document.getElementById('clearBtnMenu')?.click() },
+
+  { id: 'tool-text',  icon: 'T',  labelKey: 'cmd.text',      label: 'Add text',                 cat: 'Add',  keywordsKey: 'cmd.text.kw',      run: () => setTool('text') },
+  { id: 'tool-image', icon: '🖼', labelKey: 'cmd.image',     label: 'Insert image',             cat: 'Add',  run: () => document.getElementById('imgInput')?.click() },
+  { id: 'tool-draw',  icon: '✏',  labelKey: 'cmd.draw',      label: 'Free draw',                cat: 'Add',  run: () => setTool('draw') },
+  { id: 'tool-edit',  icon: '✎',  labelKey: 'cmd.editPdf',   label: 'Edit PDF text',            cat: 'Add',  keywordsKey: 'cmd.editPdf.kw',   run: () => setTool('edit-pdf') },
+  { id: 'tool-highlight', icon: '▓', labelKey: 'cmd.highlight', label: 'Highlight text',        cat: 'Add',  run: () => setTool('highlight') },
+  { id: 'tool-underline', icon: 'U̲', labelKey: 'cmd.underline', label: 'Underline text',       cat: 'Add',  run: () => setTool('underline') },
+  { id: 'tool-strike',    icon: 'S̶', labelKey: 'cmd.strike',    label: 'Strike-through text', cat: 'Add',  run: () => setTool('strike') },
+  { id: 'tool-redact',    icon: '▮',  labelKey: 'cmd.redact',    label: 'Redact (black out)',  cat: 'Add',  run: () => setTool('redact') },
+
+  { id: 'stamps',     icon: '⊟', labelKey: 'cmd.stamps',     label: 'Stamps gallery',           cat: 'Insert', run: () => document.getElementById('stampsBtnMenu')?.click() },
+  { id: 'signature',  icon: '✍', labelKey: 'cmd.sig',        label: 'Add signature',            cat: 'Insert', run: () => document.getElementById('signatureBtnMenu')?.click() },
+  { id: 'qr',         icon: '▦', labelKey: 'cmd.qr',         label: 'QR / Barcode generator',   cat: 'Insert', keywordsKey: 'cmd.qr.kw', run: () => document.getElementById('qrBarcodeBtnMenu')?.click() },
+
+  { id: 'pages',      icon: '⊞', labelKey: 'cmd.pages',      label: 'Organize pages',           cat: 'Doc', run: () => document.getElementById('organizeBtn')?.click() },
+  { id: 'page-setup', icon: '📰', labelKey: 'cmd.pageSetup',  label: 'Page Setup (header / footer / watermark)', cat: 'Doc', run: () => document.getElementById('pageSetupBtnMenu')?.click() },
+  { id: 'crop',       icon: '✂', labelKey: 'cmd.crop',       label: 'Crop / Resize / Margins',  cat: 'Doc', run: () => document.getElementById('cropBtnMenu')?.click() },
+  { id: 'bookmarks',  icon: '🔖', labelKey: 'cmd.bm',         label: 'Bookmarks / Outline',     cat: 'Doc', run: () => document.getElementById('bookmarksBtnMenu')?.click() },
+  { id: 'templates',  icon: '📋', labelKey: 'cmd.tpl',        label: 'Templates',               cat: 'Doc', run: () => document.getElementById('templatesBtnMenu')?.click() },
+
+  { id: 'find',       icon: '🔎', labelKey: 'cmd.find',       label: 'Find & Replace',          kbd: 'Ctrl+F', cat: 'Search', run: () => document.getElementById('findBtnMenu')?.click() },
+  { id: 'ocr',        icon: '📄', labelKey: 'cmd.ocr',        label: 'OCR scanned PDF',         cat: 'Search', run: () => document.getElementById('ocrBtnMenu')?.click() },
+
+  { id: 'password',   icon: '🔒', labelKey: 'cmd.password',   label: 'Password protect',        cat: 'Security', run: () => document.getElementById('passwordBtnMenu')?.click() },
+  { id: 'sanitize',   icon: '🧼', labelKey: 'cmd.sanitize',   label: 'Sanitize document',       cat: 'Security', run: () => document.getElementById('sanitizeBtnMenu')?.click() },
+  { id: 'regex',      icon: '🛡', labelKey: 'cmd.regex',      label: 'RegEx redact',            cat: 'Security', run: () => document.getElementById('regexRedactBtnMenu')?.click() },
+
+  { id: 'diff',       icon: '⇄', labelKey: 'cmd.diff',        label: 'Compare two PDFs',        cat: 'Tools', run: () => document.getElementById('diffBtnMenu')?.click() },
+  { id: 'table',      icon: '⊞', labelKey: 'cmd.table',       label: 'Extract table → CSV',     cat: 'Tools', run: () => document.getElementById('tableExtractBtnMenu')?.click() },
+  { id: 'jsonfill',   icon: '{ }', labelKey: 'cmd.jsonFill',  label: 'Fill form from JSON',     cat: 'Tools', run: () => document.getElementById('jsonFillBtnMenu')?.click() },
+
+  { id: 'stats',      icon: '📊', labelKey: 'cmd.stats',      label: 'Document statistics',     cat: 'App', run: () => openStatsModal() },
+  { id: 'profile',    icon: '👤', labelKey: 'cmd.profile',    label: 'Your profile',            cat: 'App', run: () => document.getElementById('profileBtn')?.click() },
+  { id: 'settings',   icon: '⚙', labelKey: 'cmd.settings',   label: 'Settings',                cat: 'App', keywordsKey: 'cmd.settings.kw', run: () => openSettingsModal() },
+  { id: 'language',   icon: '🌐', labelKey: 'cmd.lang',       label: 'Change language',         cat: 'App', keywordsKey: 'cmd.lang.kw',     run: () => { openSettingsModal(); setTimeout(() => showSettingsTab('language'), 50); } },
+  { id: 'help',       icon: '❓', labelKey: 'cmd.help',       label: 'Help / Manual',           cat: 'App', run: () => document.getElementById('helpBtn')?.click() },
+  { id: 'theme',      icon: '🌓', labelKey: 'cmd.theme',      label: 'Toggle light / dark mode', cat: 'App', run: () => document.getElementById('themeToggle')?.click() },
+];
+
+let _cpFiltered = [];
+let _cpActiveIdx = 0;
+function openCommandPalette() {
+  const overlay = document.getElementById('cmdPalette');
+  if (!overlay) return;
+  const input = document.getElementById('cpInput');
+  input.value = '';
+  _cpActiveIdx = 0;
+  _renderCmdPalette('');
+  overlay.classList.add('show');
+  setTimeout(() => input.focus(), 30);
+}
+function closeCommandPalette() {
+  document.getElementById('cmdPalette')?.classList.remove('show');
+}
+// Fuzzy: every search char must appear (in order) in the target. Returns
+// a score (higher = better) or -1 for no match.
+function _cpFuzzyScore(q, target) {
+  q = q.toLowerCase();
+  target = (target || '').toLowerCase();
+  if (!q) return 1;
+  if (target.includes(q)) return 1000 - target.indexOf(q); // contiguous wins
+  let qi = 0, score = 0, lastIdx = -1, streak = 0;
+  for (let i = 0; i < target.length && qi < q.length; i++) {
+    if (target[i] === q[qi]) {
+      score += (lastIdx === i - 1) ? 10 + streak : 2;
+      streak = (lastIdx === i - 1) ? streak + 1 : 1;
+      lastIdx = i;
+      qi++;
+    }
+  }
+  return qi === q.length ? score : -1;
+}
+function _renderCmdPalette(query) {
+  const list = document.getElementById('cpList');
+  if (!list) return;
+  const q = (query || '').trim();
+  const scored = CMD_PALETTE.map(c => {
+    const label = window.t(c.labelKey, c.label);
+    const keywords = c.keywordsKey ? window.t(c.keywordsKey, '') : '';
+    const cat = c.cat || '';
+    const haystack = label + ' ' + keywords + ' ' + cat;
+    let score = _cpFuzzyScore(q, haystack);
+    // Boost label-prefix hits
+    if (score > 0 && label.toLowerCase().startsWith(q.toLowerCase())) score += 5000;
+    return { cmd: c, label, score };
+  }).filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 40);
+  _cpFiltered = scored.map(x => x.cmd);
+  if (_cpActiveIdx >= _cpFiltered.length) _cpActiveIdx = 0;
+  if (!_cpFiltered.length) {
+    list.innerHTML = '<div class="cp-empty">' + window.t('cp.empty', 'No matches.') + '</div>';
+    return;
+  }
+  list.innerHTML = scored.map((x, i) => {
+    const c = x.cmd;
+    const kbd = c.kbd ? `<span class="cp-item-kbd">${c.kbd}</span>` : '';
+    const cat = c.cat ? `<span class="cp-item-cat">${window.t('cp.cat.' + c.cat, c.cat)}</span>` : '';
+    return `<div class="cp-item${i === _cpActiveIdx ? ' active' : ''}" data-idx="${i}">
+      <span class="cp-item-icon">${c.icon || ''}</span>
+      <span class="cp-item-label">${x.label}</span>
+      ${cat}
+      ${kbd}
+    </div>`;
+  }).join('');
+  // Wire clicks
+  list.querySelectorAll('.cp-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.idx);
+      _runCmdPaletteAt(idx);
+    });
+    el.addEventListener('mouseenter', () => {
+      _cpActiveIdx = parseInt(el.dataset.idx);
+      list.querySelectorAll('.cp-item').forEach(x => x.classList.remove('active'));
+      el.classList.add('active');
+    });
+  });
+}
+function _runCmdPaletteAt(idx) {
+  const c = _cpFiltered[idx];
+  if (!c) return;
+  closeCommandPalette();
+  try { c.run(); }
+  catch (e) { console.warn('[cmd-palette] run failed for', c.id, e); }
+}
+// Wire input / keyboard / overlay-click once
+(function _wireCmdPalette() {
+  const overlay = document.getElementById('cmdPalette');
+  const input = document.getElementById('cpInput');
+  if (!overlay || !input) return;
+  const launcher = document.getElementById('cmdPaletteBtn');
+  if (launcher) launcher.addEventListener('click', openCommandPalette);
+  input.addEventListener('input', () => _renderCmdPalette(input.value));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); closeCommandPalette(); return; }
+    if (e.key === 'Enter') { e.preventDefault(); _runCmdPaletteAt(_cpActiveIdx); return; }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      _cpActiveIdx = Math.min(_cpFiltered.length - 1, _cpActiveIdx + 1);
+      _renderCmdPalette(input.value);
+      // Scroll into view
+      const el = document.querySelector('.cp-item.active');
+      if (el) el.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      _cpActiveIdx = Math.max(0, _cpActiveIdx - 1);
+      _renderCmdPalette(input.value);
+      const el = document.querySelector('.cp-item.active');
+      if (el) el.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+  });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeCommandPalette();
+  });
+})();
+
 // This is just defensive in case we end up with one orphaned at the click site.
 function cleanupStrayEmptyText() {
   for (let i = annotations.length - 1; i >= 0; i--) {
@@ -10738,6 +11289,19 @@ document.addEventListener('keydown', e => {
   const inp = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
   const ctrl = e.ctrlKey || e.metaKey;
 
+  // === Command palette (Ctrl+K / Cmd+K) === always works, even from inputs.
+  // Also supports Ctrl+P-style "/" trigger when not typing into an input.
+  if (ctrl && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    openCommandPalette();
+    return;
+  }
+  if (e.key === '/' && !ce && !inp) {
+    e.preventDefault();
+    openCommandPalette();
+    return;
+  }
+
   if (ctrl && (e.key === 'z' || e.key === 'Z')) {
     if (ce || inp) return;
     e.preventDefault();
@@ -10772,7 +11336,32 @@ document.addEventListener('keydown', e => {
     e.preventDefault(); if (pdfJsDoc) snapZoom(-1);
   } else if (ctrl && e.key === '0') {
     e.preventDefault(); if (pdfJsDoc) { _userZoomed = true; setZoom(1.0); }
-  } else if (e.key === 'Escape') {
+  } else if (!ctrl && !e.shiftKey && !e.altKey && !ce && !inp && pdfJsDoc) {
+    // Single-letter tool shortcuts (Figma-style). Only fire when nothing's
+    // being typed and the user is in the editor with a doc loaded.
+    const k = e.key.toLowerCase();
+    const map = {
+      'v': 'select', 's': 'select',          // V or S → Select (V is Adobe/Figma)
+      't': 'text',                            // T → Text
+      'd': 'draw',                            // D → Draw
+      'e': 'edit-pdf',                        // E → Edit PDF text
+      'h': 'highlight',                       // H → Highlight
+      'u': 'underline',                       // U → Underline
+      'r': 'shape',                           // R → Rectangle (shape tool)
+    };
+    const tool = map[k];
+    if (tool) {
+      e.preventDefault();
+      setTool(tool);
+      return;
+    }
+    if (k === '?') {
+      e.preventDefault();
+      document.getElementById('helpBtn')?.click();
+      return;
+    }
+  }
+  if (e.key === 'Escape') {
     if (activeEditor) { e.preventDefault(); commitEditor(false); return; }
     // Close topmost modal if open
     const openModals = document.querySelectorAll('.modal-overlay.show');
@@ -17823,7 +18412,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.45';
+const APP_VERSION = '1.47';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
@@ -21080,6 +21669,19 @@ function populateAbout() {
     _langSel.addEventListener('change', () => {
       window.setCurrentLang(_langSel.value);
       try { showToast(window.t('toast.langChanged', 'Language updated.'), 'success'); } catch (_) {}
+    });
+  }
+  // UI mode (Simple / Pro) — toggles .pro-tool visibility globally.
+  const _uiModeSel = document.getElementById('uiModeSelect');
+  if (_uiModeSel) {
+    const saved = localStorage.getItem('pdfMini.uiMode') || 'pro';
+    _uiModeSel.value = saved;
+    applyUiMode(saved);
+    _uiModeSel.addEventListener('change', () => {
+      const mode = _uiModeSel.value;
+      localStorage.setItem('pdfMini.uiMode', mode);
+      applyUiMode(mode);
+      try { showToast(window.t('toast.uiModeChanged', 'Interface updated.'), 'success'); } catch (_) {}
     });
   }
   // Re-render dynamic JS-built strings on language change so they don't keep stale text.
