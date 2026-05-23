@@ -9015,7 +9015,9 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
   };
   const flushCurPath = () => {
     if (!curPathMin) return;
-    const b = screenBbox(curPathMin);
+    // curPathMin uses [minX, minY, maxX, maxY] (the intuitive order). Convert
+    // to pdf.js' [minX, maxX, minY, maxY] before handing to screenBbox.
+    const b = screenBbox([curPathMin[0], curPathMin[2], curPathMin[1], curPathMin[3]]);
     const effW = b.w > 0 ? b.w : 2;
     const effH = b.h > 0 ? b.h : 2;
     if (effW < 250 && effH < 250 && !(effW > 80 && effH > 80)) {
@@ -9039,12 +9041,17 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
     return { x: m[0] * ux + m[2] * uy + m[4], y: m[1] * ux + m[3] * uy + m[5] };
   };
   // Transform a user-space bbox [minX,minY,maxX,maxY] to a screen bbox.
-  const screenBbox = (umin) => {
+  // pdf.js stores constructPath minMax as [minX, maxX, minY, maxY] — NOT the
+  // intuitive [minX, minY, maxX, maxY]. Verified by dumping the operator list
+  // for the Alza barcode in 001.pdf: every bar emits minMax of the form
+  // [x, x, yTop, yBottom], which with the wrong interpretation would collapse
+  // to a 0-pixel sized box and disappear from detection.
+  const screenBbox = (mm) => {
     const corners = [
-      screenPoint(umin[0], umin[1]),
-      screenPoint(umin[2], umin[1]),
-      screenPoint(umin[2], umin[3]),
-      screenPoint(umin[0], umin[3]),
+      screenPoint(mm[0], mm[2]),  // (minX, minY)
+      screenPoint(mm[1], mm[2]),  // (maxX, minY)
+      screenPoint(mm[1], mm[3]),  // (maxX, maxY)
+      screenPoint(mm[0], mm[3]),  // (minX, maxY)
     ];
     const xs = corners.map(c => c.x), ys = corners.map(c => c.y);
     const x = Math.min(...xs), y = Math.min(...ys);
@@ -9112,7 +9119,7 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
       // Rectangle may be standalone (rare) — flush any running path first.
       flushCurPath();
       const ux = args[0], uy = args[1], uw = args[2], uh = args[3];
-      const b = screenBbox([ux, uy, ux + uw, uy + uh]);
+      const b = screenBbox([ux, ux + uw, uy, uy + uh]);  // pdf.js order
       const effW = b.w > 0 ? b.w : 2;
       const effH = b.h > 0 ? b.h : 2;
       if (effW < 250 && effH < 250 && !(effW > 80 && effH > 80)) {
@@ -17816,7 +17823,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.44';
+const APP_VERSION = '1.45';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
