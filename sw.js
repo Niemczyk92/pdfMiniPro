@@ -1,6 +1,6 @@
-// PDF Mini Editor Pro — service worker v57
+// PDF Mini Editor Pro — service worker v69
 // Bump this version string for every release to trigger updates.
-const CACHE = 'pdf-mini-editor-pro-v57';
+const CACHE = 'pdf-mini-editor-pro-v69';
 
 const ASSETS = [
   './',
@@ -19,6 +19,7 @@ const ASSETS = [
   './pdf-file-icon-128.png',
   './pdf-file-icon-256.png',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',
+  'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
 ];
