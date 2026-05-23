@@ -826,6 +826,13 @@
       'settings.kbd.title': 'Keyboard shortcuts',
       'settings.kbd.desc': '<kbd>Ctrl+K</kbd> or <kbd>/</kbd> — search any action · <kbd>V</kbd> Select · <kbd>T</kbd> Text · <kbd>D</kbd> Draw · <kbd>E</kbd> Edit PDF text · <kbd>H</kbd> Highlight · <kbd>U</kbd> Underline · <kbd>R</kbd> Shape · <kbd>?</kbd> Help · <kbd>Esc</kbd> Cancel',
       'toast.uiModeChanged': 'Interface updated.',
+      // Regex cheat sheet + live preview
+      'rx.invalid': 'Invalid regex:',
+      'rx.valid': 'Pattern is valid. Click a preset to see a live match preview, or hit Preview matches.',
+      'rx.matchInExample': 'match(es) in example:',
+      'rx.noMatchInExample': 'No match in example:',
+      'rx.helpTitle': '📖 Regex cheat sheet — click to expand',
+      'rx.helpBody': '<strong>Basics:</strong><br><code>.</code> any char · <code>\\d</code> digit · <code>\\w</code> word char · <code>\\s</code> whitespace<br><code>+</code> one or more · <code>*</code> zero or more · <code>?</code> optional<br><code>{n}</code> exactly n · <code>{n,m}</code> n-to-m<br><code>\\b</code> word boundary · <code>^</code> start · <code>$</code> end<br><code>[abc]</code> any of · <code>[^abc]</code> none of · <code>[A-Z]</code> uppercase letter<br><code>(a|b)</code> a or b · <code>\\.</code> literal dot (escape special chars with \\)<br><br><strong>Examples:</strong><br><code>\\b\\d{4}\\s\\d{4}\\s\\d{4}\\s\\d{4}\\b</code> — credit card with spaces<br><code>(?:Mr|Mrs|Dr)\\.\\s\\w+</code> — title + name<br><code>\\b[A-Z][a-z]+\\s[A-Z][a-z]+\\b</code> — two capitalised words (a name)',
     };
 
     D.CZ = {
@@ -1488,6 +1495,12 @@
       'settings.kbd.title': 'Klávesové zkratky',
       'settings.kbd.desc': '<kbd>Ctrl+K</kbd> nebo <kbd>/</kbd> — hledat libovolnou akci · <kbd>V</kbd> Výběr · <kbd>T</kbd> Text · <kbd>D</kbd> Kreslit · <kbd>E</kbd> Upravit PDF text · <kbd>H</kbd> Zvýraznit · <kbd>U</kbd> Podtrhnout · <kbd>R</kbd> Tvar · <kbd>?</kbd> Nápověda · <kbd>Esc</kbd> Zrušit',
       'toast.uiModeChanged': 'Rozhraní aktualizováno.',
+      'rx.invalid': 'Neplatný regex:',
+      'rx.valid': 'Vzor je platný. Klikněte na předvolbu pro živý náhled shod, nebo „Náhled v dokumentu".',
+      'rx.matchInExample': 'shod(y) v ukázce:',
+      'rx.noMatchInExample': 'Žádná shoda v ukázce:',
+      'rx.helpTitle': '📖 Regex tahák — klikněte pro rozbalení',
+      'rx.helpBody': '<strong>Základy:</strong><br><code>.</code> jakýkoli znak · <code>\\d</code> číslice · <code>\\w</code> písmeno/číslice · <code>\\s</code> mezera<br><code>+</code> jedno či více · <code>*</code> nula či více · <code>?</code> volitelně<br><code>{n}</code> přesně n · <code>{n,m}</code> n až m<br><code>\\b</code> hranice slova · <code>^</code> začátek · <code>$</code> konec<br><code>[abc]</code> a/b/c · <code>[^abc]</code> ani a/b/c · <code>[A-Z]</code> velké písmeno<br><code>(a|b)</code> a nebo b · <code>\\.</code> tečka jako znak (speciální znaky escapujte \\)<br><br><strong>Příklady:</strong><br><code>\\b\\d{4}\\s\\d{4}\\s\\d{4}\\s\\d{4}\\b</code> — číslo karty s mezerami<br><code>(?:Ing|Mgr|Dr)\\.\\s\\w+</code> — titul + jméno<br><code>\\b[A-Z][a-z]+\\s[A-Z][a-z]+\\b</code> — Křestní + Příjmení',
     };
 
     D.PL = {
@@ -2125,6 +2138,12 @@
       'settings.kbd.title': 'Skróty klawiszowe',
       'settings.kbd.desc': '<kbd>Ctrl+K</kbd> lub <kbd>/</kbd> — szukaj akcji · <kbd>V</kbd> Zaznacz · <kbd>T</kbd> Tekst · <kbd>D</kbd> Rysuj · <kbd>E</kbd> Edytuj PDF · <kbd>H</kbd> Podświetl · <kbd>U</kbd> Podkreśl · <kbd>R</kbd> Kształt · <kbd>?</kbd> Pomoc · <kbd>Esc</kbd> Anuluj',
       'toast.uiModeChanged': 'Interfejs zaktualizowany.',
+      'rx.invalid': 'Nieprawidłowy regex:',
+      'rx.valid': 'Wzór poprawny. Kliknij predefinicję dla podglądu na żywo, lub „Podgląd w dokumencie".',
+      'rx.matchInExample': 'dopasowanie/dopasowań w przykładzie:',
+      'rx.noMatchInExample': 'Brak dopasowania w przykładzie:',
+      'rx.helpTitle': '📖 Ściąga regex — kliknij aby rozwinąć',
+      'rx.helpBody': '<strong>Podstawy:</strong><br><code>.</code> dowolny znak · <code>\\d</code> cyfra · <code>\\w</code> znak słowa · <code>\\s</code> biały znak<br><code>+</code> jeden lub więcej · <code>*</code> zero lub więcej · <code>?</code> opcjonalnie<br><code>{n}</code> dokładnie n · <code>{n,m}</code> od n do m<br><code>\\b</code> granica słowa · <code>^</code> początek · <code>$</code> koniec<br><code>[abc]</code> a/b/c · <code>[^abc]</code> nie a/b/c · <code>[A-Z]</code> wielka litera<br><code>(a|b)</code> a lub b · <code>\\.</code> dosłowna kropka<br><br><strong>Przykłady:</strong><br><code>\\b\\d{4}\\s\\d{4}\\s\\d{4}\\s\\d{4}\\b</code> — karta ze spacjami<br><code>(?:Pan|Pani|Dr)\\.\\s\\w+</code> — tytuł + imię',
     };
 
     D.ES = {
@@ -2761,6 +2780,12 @@
       'settings.kbd.title': 'Atajos de teclado',
       'settings.kbd.desc': '<kbd>Ctrl+K</kbd> o <kbd>/</kbd> — buscar acciones · <kbd>V</kbd> Seleccionar · <kbd>T</kbd> Texto · <kbd>D</kbd> Dibujar · <kbd>E</kbd> Editar PDF · <kbd>H</kbd> Resaltar · <kbd>U</kbd> Subrayar · <kbd>R</kbd> Forma · <kbd>?</kbd> Ayuda · <kbd>Esc</kbd> Cancelar',
       'toast.uiModeChanged': 'Interfaz actualizada.',
+      'rx.invalid': 'Regex inválido:',
+      'rx.valid': 'Patrón válido. Pulsa una predefinición para ver coincidencias en vivo o «Previsualizar en el documento».',
+      'rx.matchInExample': 'coincidencia(s) en el ejemplo:',
+      'rx.noMatchInExample': 'Sin coincidencias en el ejemplo:',
+      'rx.helpTitle': '📖 Chuleta regex — pulsa para expandir',
+      'rx.helpBody': '<strong>Básico:</strong><br><code>.</code> cualquier · <code>\\d</code> dígito · <code>\\w</code> palabra · <code>\\s</code> espacio<br><code>+</code> uno o más · <code>*</code> cero o más · <code>?</code> opcional<br><code>{n}</code> exactamente n · <code>{n,m}</code> de n a m<br><code>\\b</code> límite de palabra · <code>^</code> inicio · <code>$</code> fin<br><code>[abc]</code> a/b/c · <code>[^abc]</code> ninguno de · <code>[A-Z]</code> mayúscula<br><code>(a|b)</code> a o b · <code>\\.</code> punto literal<br><br><strong>Ejemplos:</strong><br><code>\\b\\d{4}\\s\\d{4}\\s\\d{4}\\s\\d{4}\\b</code> — tarjeta con espacios<br><code>(?:Sr|Sra|Dr)\\.\\s\\w+</code> — título + nombre',
       'help.s.0.body': '<ol><li><strong>Abre</strong> un PDF — pulsa el botón naranja Abrir o arrastra un archivo. Acepta también archivos <code>.pdfenc</code> (cifrados).</li><li>Elige una herramienta de la barra. Pasa el cursor sobre cualquier botón — todos tienen tooltip.</li><li>Trabaja con el PDF. <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace en cualquier momento.</li><li>Pulsa <strong>Guardar PDF</strong> al terminar. La ▼ pequeña al lado abre Exportar / Imprimir / Borrar. Para una salida más cerrada prueba <strong>Más ▼ → Proteger con contraseña</strong> o <strong>Más ▼ → Sanear documento</strong>.</li></ol><div class="help-tip"><strong>Privacidad:</strong> Nada sale de tu dispositivo — ni subidas, ni analítica, ni cookies. La app funciona totalmente offline tras la carga. Las funciones IA (si están activas) hablan directamente con tu LLM local, nunca con un tercero.</div><div class="help-tip"><strong>Herramientas Pro en Más ▼:</strong> Sanear · Censura por regex · Extraer tabla → CSV · Comparar dos PDF · Rellenar desde JSON · Proteger con contraseña · Recortar / Redimensionar.</div>',
     };
 
@@ -3555,19 +3580,24 @@
   /* PDF image markers — only visible/active when Edit PDF tool is on, or on Alt+hover */
   .pdf-image-marker {
     position: absolute;
-    /* Click-through so a user editing text in a table-cell (which may sit
-       under a vector-cluster marker) still hits the text span beneath. The
-       overlay-level dblclick handler hit-tests markers by geometry. */
+    /* In Select / Edit-PDF modes the marker captures clicks so a click on
+       the image doesn't fall through to a text span beneath (which would
+       trigger Edit-PDF-text on the WRONG element). Single click stops the
+       event; double-click runs grabImageMarker via the overlay handler. */
     pointer-events: none;
+    cursor: pointer;
     border: 0 solid transparent;
     z-index: 4;
     transition: border-color .15s, background .15s;
     box-sizing: border-box;
   }
+  body.select-mode .pdf-image-marker,
   body.edit-pdf-mode .pdf-image-marker {
+    pointer-events: auto;
     border: 1px dashed rgba(124, 58, 237, 0.55);
     background: rgba(124, 58, 237, 0.06);
   }
+  body.select-mode .pdf-image-marker:hover,
   body.edit-pdf-mode .pdf-image-marker:hover {
     border-color: #7c3aed;
     background: rgba(124, 58, 237, 0.18);
@@ -6858,29 +6888,48 @@
 </div>
 
 <div class="modal-overlay" id="regexRedactModal" role="dialog" aria-modal="true">
-  <div class="modal-card" style="max-width:560px">
+  <div class="modal-card" style="max-width:640px">
     <div class="modal-head">
       <h2 class="modal-title" data-i18n="rx.title">🛡 RegEx redact</h2>
       <button class="modal-close" id="regexRedactClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
     </div>
     <div class="modal-sub" data-i18n-html="rx.sub">Permanently remove sensitive data. Each match in the PDF text layer is covered by an opaque rectangle <em>and</em> the text is dropped from the underlying content. Save the document to bake these in.</div>
     <div class="ps-section">
-      <label class="ps-label" data-i18n-html="rx.presets">Presets <span style="color:var(--muted);font-weight:400">— click to insert</span></label>
+      <label class="ps-label" data-i18n-html="rx.presets">Presets <span style="color:var(--muted);font-weight:400">— click to insert &amp; preview</span></label>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-        <button class="btn outlined" data-rx-preset="\b\d{3}-?\d{2}-?\d{4}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.ssn">SSN</button>
-        <button class="btn outlined" data-rx-preset="\b(?:\d[ -]*?){13,19}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.cc">Credit card</button>
-        <button class="btn outlined" data-rx-preset="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.email">Email</button>
-        <button class="btn outlined" data-rx-preset="\+?[\d][\d\s()-]{7,}\d" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.phone">Phone</button>
-        <button class="btn outlined" data-rx-preset="\b[A-Z]{2}\d{2}[A-Z0-9]{4,30}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.iban">IBAN</button>
-        <button class="btn outlined" data-rx-preset="\b\d{6}\/?\d{3,4}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.cz">CZ rodné č.</button>
+        <button class="btn outlined" data-rx-preset="\b\d{3}-?\d{2}-?\d{4}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.ssn" data-rx-example="123-45-6789">SSN</button>
+        <button class="btn outlined" data-rx-preset="\b(?:\d[ -]*?){13,19}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.cc" data-rx-example="4111 1111 1111 1111">Credit card</button>
+        <button class="btn outlined" data-rx-preset="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.email" data-rx-example="john@example.com">Email</button>
+        <button class="btn outlined" data-rx-preset="\+?[\d][\d\s()-]{7,}\d" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.phone" data-rx-example="+420 777 123 456">Phone</button>
+        <button class="btn outlined" data-rx-preset="\b[A-Z]{2}\d{2}[A-Z0-9]{4,30}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.iban" data-rx-example="CZ6508000000192000145399">IBAN</button>
+        <button class="btn outlined" data-rx-preset="\b\d{6}\/?\d{3,4}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.cz" data-rx-example="940215/3127">CZ rodné č.</button>
+        <button class="btn outlined" data-rx-preset="\b\d{1,3}(\.\d{1,3}){3}\b" type="button" style="padding:4px 8px;font-size:12px" data-rx-example="192.168.1.42">IP</button>
+        <button class="btn outlined" data-rx-preset="https?://[^\s]+" type="button" style="padding:4px 8px;font-size:12px" data-rx-example="https://example.com/path">URL</button>
       </div>
       <label class="ps-label" data-i18n="rx.pattern">Regular expression (JavaScript flavor)</label>
-      <input type="text" id="rxPattern" class="ps-text" placeholder="\b\d{3}-\d{2}-\d{4}\b">
+      <input type="text" id="rxPattern" class="ps-text" placeholder="\b\d{3}-\d{2}-\d{4}\b" style="font-family:'JetBrains Mono', monospace">
+      <div id="rxLivePreview" style="font-size:12px;color:var(--muted);margin-top:6px;min-height:18px"></div>
       <label class="check" style="margin-top:6px"><input type="checkbox" id="rxFlagI" checked> <span data-i18n="rx.caseI">Case-insensitive</span></label>
       <div id="rxStatus" style="font-size:12px;color:var(--muted);margin-top:10px"></div>
+      <details style="margin-top:14px;padding:8px 10px;background:var(--surface-2);border-radius:6px;border:1px solid var(--border)">
+        <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--text-soft)" data-i18n="rx.helpTitle">📖 Regex cheat sheet — click to expand</summary>
+        <div style="margin-top:8px;font-size:12px;line-height:1.6;color:var(--text-soft)" data-i18n-html="rx.helpBody">
+          <strong>Basics:</strong><br>
+          <code>.</code> any char · <code>\d</code> digit (0-9) · <code>\w</code> word char · <code>\s</code> whitespace<br>
+          <code>+</code> one or more · <code>*</code> zero or more · <code>?</code> optional<br>
+          <code>{n}</code> exactly n times · <code>{n,m}</code> n-to-m times<br>
+          <code>\b</code> word boundary · <code>^</code> start · <code>$</code> end<br>
+          <code>[abc]</code> any of a/b/c · <code>[^abc]</code> none of a/b/c · <code>[A-Z]</code> any uppercase letter<br>
+          <code>(a|b)</code> either a or b · <code>\.</code> literal dot (escape special chars with \)<br><br>
+          <strong>Examples:</strong><br>
+          <code>\b\d{4}\s\d{4}\s\d{4}\s\d{4}\b</code> — credit card with spaces<br>
+          <code>(?:Mr|Mrs|Dr)\.\s\w+</code> — titles followed by a name<br>
+          <code>\b[A-Z][a-z]+\s[A-Z][a-z]+\b</code> — Two capitalised words (a name)
+        </div>
+      </details>
     </div>
     <div class="modal-actions">
-      <button class="btn outlined" id="rxPreview" type="button" data-i18n="rx.preview">Preview matches</button>
+      <button class="btn outlined" id="rxPreview" type="button" data-i18n="rx.preview">Preview matches in document</button>
       <span class="spacer" style="flex:1"></span>
       <button class="btn" id="regexRedactCancel" type="button" data-i18n="common.cancel">Cancel</button>
       <button class="btn primary" id="regexRedactGo" type="button" data-i18n="rx.go">Redact all matches</button>
@@ -8652,6 +8701,72 @@ function measureCssAscent(fontSize, family, bold, italic) {
   return fontSize * (PDF_FONT_ASCENT[family] || 0.78);
 }
 
+// Sample the ink color AND background color inside a text bbox. Returns
+// { ink: '#rrggbb', bg: '#rrggbb' } or null. Histograms colors in 32-step
+// bins so anti-aliased edge pixels collapse together; takes the most-
+// frequent bin as the background and the most-frequent OTHER-far-from-bg
+// bin as the ink. Works for:
+//   - dark text on light bg (most common)
+//   - light text on colored bg (e.g. white on red ribbon)
+//   - colored text on white bg
+//   - colored text on colored bg
+function _sampleTextColor(overlay, cssX, cssY, cssW, cssH) {
+  try {
+    const wrapper = overlay.closest('.page-wrapper');
+    if (!wrapper) return null;
+    const canvas = wrapper.querySelector('canvas');
+    if (!canvas) return null;
+    const cssCanvasW = parseFloat(canvas.style.width) || canvas.width;
+    const pixMul = canvas.width / cssCanvasW;
+    const sx = Math.max(0, Math.floor(cssX * pixMul));
+    const sy = Math.max(0, Math.floor(cssY * pixMul));
+    const sw = Math.min(canvas.width - sx, Math.ceil(cssW * pixMul));
+    const sh = Math.min(canvas.height - sy, Math.ceil(cssH * pixMul));
+    if (sw < 2 || sh < 2) return null;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const data = ctx.getImageData(sx, sy, sw, sh).data;
+    const QUANT = 32;
+    const hist = new Map();
+    for (let i = 0; i < data.length; i += 4) {
+      const a = data[i+3];
+      if (a < 128) continue;
+      const r = Math.floor(data[i]   / QUANT) * QUANT;
+      const g = Math.floor(data[i+1] / QUANT) * QUANT;
+      const b = Math.floor(data[i+2] / QUANT) * QUANT;
+      const key = (r << 16) | (g << 8) | b;
+      hist.set(key, (hist.get(key) || 0) + 1);
+    }
+    if (hist.size < 2) return null;
+    const sorted = [...hist.entries()].sort((a, b) => b[1] - a[1]);
+    const unpack = (k) => ({ r: (k >> 16) & 0xff, g: (k >> 8) & 0xff, b: k & 0xff });
+    const bg = unpack(sorted[0][0]);
+    // Find the most-frequent color that's perceptually FAR from bg — that's
+    // the ink. Threshold 80 in RGB space ≈ "noticeably different".
+    for (let i = 1; i < sorted.length; i++) {
+      const c = unpack(sorted[i][0]);
+      const dr = c.r - bg.r, dg = c.g - bg.g, db = c.b - bg.b;
+      const dist = Math.sqrt(dr*dr + dg*dg + db*db);
+      if (dist > 80) {
+        const hex = (n) => n.toString(16).padStart(2, '0');
+        return {
+          ink: '#' + hex(c.r) + hex(c.g) + hex(c.b),
+          bg:  '#' + hex(bg.r) + hex(bg.g) + hex(bg.b)
+        };
+      }
+    }
+    return null;
+  } catch (e) { return null; }
+}
+// Returns true when a sampled "bg" colour is essentially white (so we
+// shouldn't try to preserve it on the whiteout — pure white is the default).
+function _isNearWhite(hex) {
+  if (!hex || hex[0] !== '#') return false;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (r + g + b) > 720;  // same threshold used in sampling
+}
+
 // Click handler — replace original text region with a whiteout + a precisely-placed editable text annotation
 function editOriginalPdfText(overlay, span) {
   // Guard: a single span must only spawn one whiteout + text pair. A native
@@ -8683,6 +8798,15 @@ function editOriginalPdfText(overlay, span) {
   const fontName = span.dataset.fontName || '';
   const cls = classifyPdfFontName(fontName);
 
+  // Sample the actual rendered text colour from the canvas so coloured text
+  // (red invoice headers, blue links, etc.) keeps its colour after edit.
+  // Fall back to black when the ink reads near-white — the whiteout below
+  // is white, so white-ink would be invisible. The "white text on coloured
+  // ribbon" case is rare and was making the common case look worse, so we
+  // optimise for the common case.
+  const sampled = _sampleTextColor(overlay, x, yTop, w, h);
+  const textColor = (sampled && !_isNearWhite(sampled.ink)) ? sampled.ink : '#000000';
+
   // Prefer the precise baseline if the layer builder stored one (OCR does this).
   // For pdf.js-built spans we fall back to yTop + fontHeight which approximates baseline = bottom of bbox.
   const baselineDesignY = span.dataset.baselineY
@@ -8705,6 +8829,10 @@ function editOriginalPdfText(overlay, span) {
     x: x - bleedX, y: yTop - bleedY,
     width: w + bleedX * 2, height: h + bleedY * 2
   };
+  // Whiteout stays pure white — sampling the canvas bg gave subtly off-white
+  // results (anti-aliasing around glyph edges, slight render compression)
+  // that looked worse than a clean white block. The text-color sampling
+  // above still captures the original ink colour correctly.
   whiteoutAnn.el = createWhiteoutEl(whiteoutAnn, overlay);
   annotations.push(whiteoutAnn);
 
@@ -8718,7 +8846,7 @@ function editOriginalPdfText(overlay, span) {
   const ann = {
     type: 'text', pageNum,
     x, y: annY,
-    lines: [[{ text, color: '#000000', bold: cls.bold, italic: cls.italic, underline: false }]],
+    lines: [[{ text, color: textColor, bold: cls.bold, italic: cls.italic, underline: false }]],
     fontSize: fontHeight,
     fontFamily: cls.family,
     lineHeight: 1.0,    // tight — baseline math relies on this
@@ -8757,8 +8885,11 @@ function createWhiteoutEl(ann, overlay) {
   el.style.top = ann.y + 'px';
   el.style.width = ann.width + 'px';
   el.style.height = ann.height + 'px';
+  // If a custom background color was sampled (light text on colored bg case),
+  // use it instead of white so the underlying colored ribbon / shaded cell
+  // is preserved when the new text is rendered.
+  if (ann.bgColor) el.style.background = ann.bgColor;
   overlay.appendChild(el);
-  // Make whiteout selectable so user can delete or resize it via props panel
   enableWhiteoutInteractions(el, ann);
   return el;
 }
@@ -9443,7 +9574,9 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
       const x = Math.min(...xs), y = Math.min(...ys);
       const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
       if (w < 12 || h < 12) continue;
-      images.push({ x, y, w, h });
+      // Mark as a raster XObject — pdf.js gives us the exact paint bbox so
+      // we MUST NOT pixel-walk this further (would grab surrounding text).
+      images.push({ x, y, w, h, _raster: true });
     } else if (fn === CONSTRUCT_PATH) {
       // pdf.js 3.x: argsArray entry is [opArray, argsArray, minMax].
       // minMax is the user-space bbox [minX, minY, maxX, maxY].
@@ -9553,6 +9686,23 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
     marker.dataset.y = String(img.y);
     marker.dataset.w = String(img.w);
     marker.dataset.h = String(img.h);
+    if (img._raster) marker.dataset.raster = '1';
+    // Swallow single clicks so a click on the image marker doesn't fall
+    // through to a text span underneath (which would trigger Edit-PDF on
+    // the wrong element). Dblclick on the marker still bubbles to the
+    // overlay handler which calls grabImageMarker via geometry hit-test.
+    marker.addEventListener('click', (e) => {
+      if (currentTool === 'select' || currentTool === 'edit-pdf') {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    });
+    // Direct dblclick → grab. Faster than the overlay hit-test fallback.
+    marker.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      grabImageMarker(marker);
+    });
     overlay.appendChild(marker);
   }
 }
@@ -9562,24 +9712,26 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
 // icon strokes). Returns array of merged rects suitable for image markers.
 function _clusterPaths(paths) {
   if (!paths.length) return [];
-  // Spatial union-find: bucket paths into 16-px grid cells, then merge any
-  // two paths whose bboxes are within `proximity` of each other.
-  const proximity = 6; // px — barcode bars are ~2-3 px apart at 1.6x zoom
+  // Spatial union-find: bucket paths into a grid and merge pairs whose
+  // bboxes are within `proxX` (horizontal) / `proxY` (vertical) of each
+  // other. Vertical proximity is larger so a two-line vector logo (e.g.
+  // "Dillon" + "Corporation" baseline below) clusters into ONE graphic.
+  // Horizontal stays tight so distinct columns / unrelated icons don't merge.
+  const proxX = 8;
+  const proxY = 24;
   const sorted = paths.slice().sort((a, b) => (a.y - b.y) || (a.x - b.x));
   const parent = sorted.map((_, i) => i);
   const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
   const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; };
-  // Build a coarse grid index keyed by cell. Each path goes into all cells
-  // it overlaps (plus a 1-cell halo so neighbours within `proximity` collide).
-  const cell = 32;
+  const cell = 40;
   const grid = new Map();
   const cellKey = (cx, cy) => cx + ',' + cy;
   for (let i = 0; i < sorted.length; i++) {
     const p = sorted[i];
-    const c0 = Math.floor((p.x - proximity) / cell);
-    const c1 = Math.floor((p.x + p.w + proximity) / cell);
-    const r0 = Math.floor((p.y - proximity) / cell);
-    const r1 = Math.floor((p.y + p.h + proximity) / cell);
+    const c0 = Math.floor((p.x - proxX) / cell);
+    const c1 = Math.floor((p.x + p.w + proxX) / cell);
+    const r0 = Math.floor((p.y - proxY) / cell);
+    const r1 = Math.floor((p.y + p.h + proxY) / cell);
     for (let cy = r0; cy <= r1; cy++) {
       for (let cx = c0; cx <= c1; cx++) {
         const k = cellKey(cx, cy);
@@ -9588,14 +9740,13 @@ function _clusterPaths(paths) {
       }
     }
   }
-  // Walk every grid cell and union pairs whose bboxes are within proximity.
   for (const indices of grid.values()) {
     for (let a = 0; a < indices.length; a++) {
       for (let b = a + 1; b < indices.length; b++) {
         const pa = sorted[indices[a]], pb = sorted[indices[b]];
         const gx = Math.max(0, Math.max(pa.x, pb.x) - Math.min(pa.x + pa.w, pb.x + pb.w));
         const gy = Math.max(0, Math.max(pa.y, pb.y) - Math.min(pa.y + pa.h, pb.y + pb.h));
-        if (gx <= proximity && gy <= proximity) union(indices[a], indices[b]);
+        if (gx <= proxX && gy <= proxY) union(indices[a], indices[b]);
       }
     }
   }
@@ -9645,19 +9796,69 @@ function _clusterPaths(paths) {
 // (or click when current tool is 'edit-pdf').
 async function grabImageMarker(marker) {
   const pageNum = parseInt(marker.dataset.pageNum);
-  const x = parseFloat(marker.dataset.x);
-  const y = parseFloat(marker.dataset.y);
-  const w = parseFloat(marker.dataset.w);
-  const h = parseFloat(marker.dataset.h);
+  let x = parseFloat(marker.dataset.x);
+  let y = parseFloat(marker.dataset.y);
+  let w = parseFloat(marker.dataset.w);
+  let h = parseFloat(marker.dataset.h);
   const wrapper = marker.closest('.page-wrapper');
   if (!wrapper) return;
   const canvas = wrapper.querySelector('canvas');
   if (!canvas) return;
   const overlay = marker.parentElement;
-  // The page canvas may be at higher resolution than its CSS box (HiDPI). Compute
-  // the multiplier to map from CSS (overlay) coords to canvas pixel coords.
+  // HiDPI canvas: CSS px → canvas px
   const cssW = parseFloat(canvas.style.width) || canvas.width;
   const pixMul = canvas.width / cssW;
+  // Pixel-walk to find the TRUE bbox — only for VECTOR clusters where the
+  // detected bbox can underestimate the real ink region (anti-aliased
+  // edges extend beyond each path's bbox). Raster XObjects already give an
+  // exact paint rectangle via pdf.js, so expanding them would only suck in
+  // adjacent text / table cells and ruin the snapshot.
+  const isRaster = marker.dataset.raster === '1';
+  if (!isRaster) try {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const isInk = (r, g, b, a) => a >= 128 && (r + g + b) < 720;
+    const edgeHasInk = (sx, sy, sw, sh) => {
+      if (sw < 1 || sh < 1) return false;
+      const d = ctx.getImageData(sx, sy, sw, sh).data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (isInk(d[i], d[i+1], d[i+2], d[i+3])) return true;
+      }
+      return false;
+    };
+    const step = 2;                     // CSS px step per expansion
+    const maxExpand = 6;                // tight cap — barcode edges only,
+                                        // no creeping into adjacent text
+    for (let pass = 0; pass < maxExpand; pass++) {
+      let grew = false;
+      // top
+      let sx = Math.max(0, Math.floor(x * pixMul));
+      let sy = Math.max(0, Math.floor((y - step) * pixMul));
+      let sw = Math.min(canvas.width - sx, Math.ceil(w * pixMul));
+      if (y - step >= 0 && edgeHasInk(sx, sy, sw, Math.ceil(step * pixMul))) {
+        y -= step; h += step; grew = true;
+      }
+      // bottom
+      sy = Math.max(0, Math.floor((y + h) * pixMul));
+      if (sy + Math.ceil(step * pixMul) <= canvas.height
+          && edgeHasInk(sx, sy, sw, Math.ceil(step * pixMul))) {
+        h += step; grew = true;
+      }
+      // left
+      sx = Math.max(0, Math.floor((x - step) * pixMul));
+      sy = Math.max(0, Math.floor(y * pixMul));
+      let sh2 = Math.min(canvas.height - sy, Math.ceil(h * pixMul));
+      if (x - step >= 0 && edgeHasInk(sx, sy, Math.ceil(step * pixMul), sh2)) {
+        x -= step; w += step; grew = true;
+      }
+      // right
+      sx = Math.max(0, Math.floor((x + w) * pixMul));
+      if (sx + Math.ceil(step * pixMul) <= canvas.width
+          && edgeHasInk(sx, sy, Math.ceil(step * pixMul), sh2)) {
+        w += step; grew = true;
+      }
+      if (!grew) break;
+    }
+  } catch (e) { /* sampling can fail on tainted canvases — fall through */ }
   const sx = Math.max(0, x * pixMul);
   const sy = Math.max(0, y * pixMul);
   const sw = Math.min(canvas.width - sx,  w * pixMul);
@@ -17412,9 +17613,72 @@ async function doSanitize() {
 function openRegexRedactModal() {
   if (!pdfJsDoc) { showToast(window.t('toast.openFirst', 'Open a PDF first.'), 'warn'); return; }
   document.getElementById('rxStatus').textContent = '';
+  document.getElementById('rxLivePreview').innerHTML = '';
   document.getElementById('regexRedactModal').classList.add('show');
 }
 function closeRegexRedactModal() { document.getElementById('regexRedactModal').classList.remove('show'); }
+// Last preset example the user clicked — drives the live preview row so they
+// can see WHAT the pattern matches before applying it to the document.
+let _rxLastExample = '';
+function _rxUpdateLivePreview() {
+  const out = document.getElementById('rxLivePreview');
+  if (!out) return;
+  const pat = document.getElementById('rxPattern').value.trim();
+  if (!pat) { out.innerHTML = ''; return; }
+  const flags = 'g' + (document.getElementById('rxFlagI').checked ? 'i' : '');
+  let re;
+  try { re = new RegExp(pat, flags); }
+  catch (e) {
+    out.innerHTML = '<span style="color:var(--danger)">⚠ ' +
+      window.t('rx.invalid', 'Invalid regex:') + ' ' + e.message + '</span>';
+    return;
+  }
+  const sample = _rxLastExample || '';
+  if (!sample) {
+    out.innerHTML = '<span style="color:var(--success)">✓ ' +
+      window.t('rx.valid', 'Pattern is valid. Click a preset to see a live match preview, or hit Preview matches.') + '</span>';
+    return;
+  }
+  // Highlight matches inside the example
+  let highlighted = '';
+  let lastIdx = 0;
+  let matchCount = 0;
+  const escapeHtml = (s) => s.replace(/[&<>]/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[c]));
+  let m;
+  while ((m = re.exec(sample)) !== null) {
+    matchCount++;
+    highlighted += escapeHtml(sample.slice(lastIdx, m.index));
+    highlighted += '<mark style="background:#fde68a;color:#7c2d12;padding:1px 3px;border-radius:3px">' + escapeHtml(m[0]) + '</mark>';
+    lastIdx = m.index + m[0].length;
+    if (m.index === re.lastIndex) re.lastIndex++;  // safety vs zero-width
+  }
+  highlighted += escapeHtml(sample.slice(lastIdx));
+  const status = matchCount
+    ? `<span style="color:var(--success)">✓ ${matchCount} ` + window.t('rx.matchInExample', 'match(es) in example:') + '</span>'
+    : `<span style="color:var(--warn)">⚠ ` + window.t('rx.noMatchInExample', 'No match in example:') + '</span>';
+  out.innerHTML = status + ' <span style="font-family:\'JetBrains Mono\',monospace">' + highlighted + '</span>';
+}
+// Wire input listeners once on DOMContentLoaded so the live preview reacts.
+(function _wireRxLive() {
+  const init = () => {
+    const pat = document.getElementById('rxPattern');
+    const flag = document.getElementById('rxFlagI');
+    if (!pat || !flag) return;
+    pat.addEventListener('input', _rxUpdateLivePreview);
+    flag.addEventListener('change', _rxUpdateLivePreview);
+    // Hook preset buttons to also stash their example for the live preview.
+    document.querySelectorAll('#regexRedactModal [data-rx-preset]').forEach(b => {
+      b.addEventListener('click', () => {
+        const ex = b.dataset.rxExample || '';
+        if (ex) _rxLastExample = ex;
+        // The original handler sets pat.value — trigger our preview after.
+        setTimeout(_rxUpdateLivePreview, 0);
+      });
+    });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
 function _rxBuildRegex() {
   const status = document.getElementById('rxStatus');
   const pat = document.getElementById('rxPattern').value.trim();
@@ -18412,7 +18676,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.47';
+const APP_VERSION = '1.52';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
