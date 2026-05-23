@@ -763,6 +763,7 @@
       'toast.noMatches': 'No matches found.',
       'toast.selectFirst': 'Select something first (click or Shift-click).',
       'sp.noPdf': 'No PDF loaded',
+      'img.markerTitle': 'Image — double-click to grab and move',
     };
 
     D.CZ = {
@@ -1374,6 +1375,7 @@
       'toast.noMatches': 'Žádné nálezy.',
       'toast.selectFirst': 'Nejprve něco vyberte (klik nebo Shift+klik).',
       'sp.noPdf': 'PDF není načteno',
+      'img.markerTitle': 'Obrázek — dvojklikem uchopit a přesunout',
     };
 
     D.PL = {
@@ -1960,6 +1962,7 @@
       'toast.noMatches': 'Brak dopasowań.',
       'toast.selectFirst': 'Najpierw coś zaznacz (klik lub Shift+klik).',
       'sp.noPdf': 'PDF nie wczytany',
+      'img.markerTitle': 'Obraz — kliknij dwukrotnie aby chwycić i przesunąć',
     };
 
     D.ES = {
@@ -2545,6 +2548,7 @@
       'toast.noMatches': 'Sin coincidencias.',
       'toast.selectFirst': 'Selecciona algo primero (clic o Shift+clic).',
       'sp.noPdf': 'PDF no cargado',
+      'img.markerTitle': 'Imagen — doble clic para agarrar y mover',
       'help.s.0.body': '<ol><li><strong>Abre</strong> un PDF — pulsa el botón naranja Abrir o arrastra un archivo. Acepta también archivos <code>.pdfenc</code> (cifrados).</li><li>Elige una herramienta de la barra. Pasa el cursor sobre cualquier botón — todos tienen tooltip.</li><li>Trabaja con el PDF. <kbd>Ctrl</kbd>+<kbd>Z</kbd> deshace en cualquier momento.</li><li>Pulsa <strong>Guardar PDF</strong> al terminar. La ▼ pequeña al lado abre Exportar / Imprimir / Borrar. Para una salida más cerrada prueba <strong>Más ▼ → Proteger con contraseña</strong> o <strong>Más ▼ → Sanear documento</strong>.</li></ol><div class="help-tip"><strong>Privacidad:</strong> Nada sale de tu dispositivo — ni subidas, ni analítica, ni cookies. La app funciona totalmente offline tras la carga. Las funciones IA (si están activas) hablan directamente con tu LLM local, nunca con un tercero.</div><div class="help-tip"><strong>Herramientas Pro en Más ▼:</strong> Sanear · Censura por regex · Extraer tabla → CSV · Comparar dos PDF · Rellenar desde JSON · Proteger con contraseña · Recortar / Redimensionar.</div>',
     };
 
@@ -3329,14 +3333,18 @@
   /* PDF image markers — only visible/active when Edit PDF tool is on, or on Alt+hover */
   .pdf-image-marker {
     position: absolute;
-    pointer-events: none;
+    pointer-events: auto;
     border: 0 solid transparent;
     z-index: 4;
     transition: border-color .15s, background .15s;
     box-sizing: border-box;
+    cursor: pointer;
+  }
+  .pdf-image-marker:hover {
+    border: 1px dashed rgba(124, 58, 237, 0.7);
+    background: rgba(124, 58, 237, 0.10);
   }
   body.edit-pdf-mode .pdf-image-marker {
-    pointer-events: auto;
     cursor: pointer;
     border: 1px dashed rgba(124, 58, 237, 0.55);
     background: rgba(124, 58, 237, 0.06);
@@ -3346,8 +3354,8 @@
     background: rgba(124, 58, 237, 0.18);
     box-shadow: inset 0 0 0 2px rgba(124, 58, 237, 0.35);
   }
-  body.edit-pdf-mode .pdf-image-marker::before {
-    content: '📦 grab image';
+  .pdf-image-marker::before {
+    content: '📦';
     position: absolute;
     top: 4px; left: 4px;
     background: #7c3aed; color: white;
@@ -3357,8 +3365,10 @@
     transition: opacity .12s;
     font-family: 'Manrope', sans-serif;
     pointer-events: none;
+    white-space: nowrap;
   }
-  body.edit-pdf-mode .pdf-image-marker:hover::before { opacity: 1; }
+  body.edit-pdf-mode .pdf-image-marker::before { content: '📦 grab image'; }
+  .pdf-image-marker:hover::before { opacity: 1; }
 
   /* Redaction — black rectangles, opaque */
   .redact-annotation {
@@ -5225,25 +5235,27 @@
     border: 1px solid var(--border);
     border-radius: 10px;
   }
-  /* === Photo cropper / editor modal === */
+  /* === Photo cropper / editor modal — modern compact layout, no scrollbars === */
   .photo-crop-body {
     display: grid;
-    grid-template-columns: 340px 1fr;
-    gap: 18px;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
     align-items: start;
+    min-width: 0;
   }
-  @media (max-width: 640px) {
-    .photo-crop-body { grid-template-columns: 1fr; }
+  @media (max-width: 720px) {
+    .photo-crop-body { grid-template-columns: 1fr; justify-items: center; }
   }
   .photo-crop-stage {
     position: relative;
     width: 320px; height: 320px;
+    max-width: 100%;
     background: #1e293b;
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.4);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.18);
     user-select: none;
-    touch-action: none;  /* lets us handle pan ourselves without page scroll fighting */
+    touch-action: none;
   }
   .photo-crop-stage canvas {
     position: absolute; inset: 0;
@@ -5283,22 +5295,29 @@
     letter-spacing: 0.3px;
   }
   .photo-crop-tools {
-    display: flex; flex-direction: column; gap: 10px;
+    display: flex; flex-direction: column; gap: 12px;
+    min-width: 0;
   }
   .pc-row {
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 10px;
+    min-width: 0;
   }
-  .pc-row.pc-btnrow { flex-wrap: wrap; }
+  .pc-row.pc-btnrow { flex-wrap: wrap; gap: 6px; }
   .pc-label {
-    font-size: 12px; font-weight: 600;
+    font-size: 11px; font-weight: 600;
     color: var(--text-soft);
-    width: 80px; flex-shrink: 0;
+    width: 70px; flex-shrink: 0;
     text-transform: uppercase; letter-spacing: 0.4px;
   }
-  .pc-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+  .pc-row input[type="range"] {
+    flex: 1; min-width: 0;
+    accent-color: var(--accent);
+  }
+  .pc-row select.ps-text { min-width: 0; flex: 1; }
   .pc-val {
     font-size: 11px; font-family: 'JetBrains Mono', monospace;
-    color: var(--muted); min-width: 44px; text-align: right;
+    color: var(--muted); min-width: 40px; text-align: right;
+    flex-shrink: 0;
   }
   .pc-btn {
     background: var(--surface-2);
@@ -7064,7 +7083,7 @@
      can pan, zoom, rotate (free + 90°), mirror, and tweak filters /
      brightness / contrast / saturation before saving the square crop. -->
 <div class="modal-overlay" id="photoCropModal" role="dialog" aria-modal="true" aria-labelledby="photoCropTitle">
-  <div class="modal-card" style="max-width:640px">
+  <div class="modal-card" style="max-width:720px;width:min(720px,calc(100vw - 32px));overflow:hidden">
     <div class="modal-head">
       <h2 class="modal-title" id="photoCropTitle" data-i18n="pc.title">Adjust your photo</h2>
       <button class="modal-close" id="photoCropClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
@@ -8263,6 +8282,12 @@ function measureCssAscent(fontSize, family, bold, italic) {
 
 // Click handler — replace original text region with a whiteout + a precisely-placed editable text annotation
 function editOriginalPdfText(overlay, span) {
+  // Guard: a single span must only spawn one whiteout + text pair. A native
+  // double-click fires `click` twice plus `dblclick` — without this guard the
+  // first `click` consumes the span and the synthetic dblclick would still
+  // resolve the same point via findPdfTextItemAtPoint to a stale rect.
+  if (span.classList.contains('pdf-text-item-consumed')) return;
+  if (span.style.display === 'none') return;
   const pageNum = parseInt(span.dataset.pageNum);
   const x = parseFloat(span.dataset.x);
   const yTop = parseFloat(span.dataset.y);
@@ -8296,12 +8321,17 @@ function editOriginalPdfText(overlay, span) {
   const cssAscent = measureCssAscent(fontHeight, cls.family, cls.bold, cls.italic);
   const annY = baselineDesignY - cssAscent;
 
-  // 1) Whiteout the original region with a small font-proportional bleed
-  const bleed = Math.max(1, fontHeight * 0.08);
+  // 1) Whiteout the original region. We over-bleed slightly because the
+  // pdf.js text layer rectangles tend to be tight against the glyph bounds
+  // (especially top/bottom), so a 1-px anti-aliased edge of the original
+  // letters can peek through if the bleed is too small. ~25 % of font height
+  // top+bottom and ~5 % left/right covers every common embedded font.
+  const bleedY = Math.max(2, fontHeight * 0.28);
+  const bleedX = Math.max(2, fontHeight * 0.10);
   const whiteoutAnn = {
     type: 'whiteout', pageNum,
-    x: x - bleed, y: yTop - bleed,
-    width: w + bleed * 2, height: h + bleed * 2
+    x: x - bleedX, y: yTop - bleedY,
+    width: w + bleedX * 2, height: h + bleedY * 2
   };
   whiteoutAnn.el = createWhiteoutEl(whiteoutAnn, overlay);
   annotations.push(whiteoutAnn);
@@ -8985,7 +9015,7 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
     marker.style.top = img.y + 'px';
     marker.style.width = img.w + 'px';
     marker.style.height = img.h + 'px';
-    marker.title = 'Image — Alt+click to grab and move';
+    marker.title = window.t('img.markerTitle', 'Image — double-click to grab and move');
     marker.dataset.pageNum = String(pageNum);
     marker.dataset.x = String(img.x);
     marker.dataset.y = String(img.y);
@@ -9071,6 +9101,34 @@ document.addEventListener('click', (e) => {
   e.preventDefault(); e.stopPropagation();
   grabImageMarker(marker);
 }, true);
+// Double-click on an image marker anywhere (any tool mode) → grab. Matches the
+// "double-click any object to convert it" mental model the user expects for
+// logos, QR codes, barcodes baked into the source PDF.
+document.addEventListener('dblclick', (e) => {
+  const marker = e.target.closest && e.target.closest('.pdf-image-marker');
+  if (!marker) return;
+  e.preventDefault(); e.stopPropagation();
+  grabImageMarker(marker);
+}, true);
+// Hit-test against image markers when the user double-clicks empty overlay
+// (e.g. a marker that sits underneath transparent regions). The text-layer
+// dblclick handler hands off here for image hits so the user doesn't need to
+// land precisely on the marker outline.
+window._tryGrabPdfImageAt = function(overlay, x, y) {
+  const markers = overlay.querySelectorAll('.pdf-image-marker');
+  for (let i = markers.length - 1; i >= 0; i--) {
+    const m = markers[i];
+    const mx = parseFloat(m.dataset.x);
+    const my = parseFloat(m.dataset.y);
+    const mw = parseFloat(m.dataset.w);
+    const mh = parseFloat(m.dataset.h);
+    if (x >= mx && x <= mx + mw && y >= my && y <= my + mh) {
+      grabImageMarker(m);
+      return true;
+    }
+  }
+  return false;
+};
 
 // Hook buildPdfTextLayer so image layer is also built per page
 if (typeof window._imgLayerWrap === 'undefined') {
@@ -17524,7 +17582,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.38';
+const APP_VERSION = '1.39';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
