@@ -8968,22 +8968,43 @@ document.addEventListener('click', (e) => {
   editParagraphFromSpans(overlay, spans);
 }, true);
 
-// ====== PDF image detection — overlay markers per detected raster image ======
+// ====== PDF image detection — overlay markers per detected raster image
+// AND per detected vector cluster (barcodes, QR codes, vector logos that are
+// drawn with many small paths instead of as a single image XObject). ======
 async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
   let opList;
   try { opList = await pdfPage.getOperatorList(); }
   catch (e) { return; }
   const OPS = pdfjsLib.OPS || {};
-  // Identify the relevant ops by feature-detecting their numeric codes
   const PAINT_IMAGE   = OPS.paintImageXObject;
   const PAINT_INLINE  = OPS.paintInlineImageXObject;
   const PAINT_MASK    = OPS.paintImageMaskXObject;
   const PAINT_JPEG    = OPS.paintJpegXObject;
   const SAVE = OPS.save, RESTORE = OPS.restore, TRANSFORM = OPS.transform;
+  const CONSTRUCT_PATH = OPS.constructPath;
+  const RECTANGLE = OPS.rectangle;
   if (TRANSFORM == null) return;
   let ctm = [1, 0, 0, 1, 0, 0];
   const stack = [];
   const images = [];
+  const vectorPaths = []; // each: { x, y, w, h } in screen px
+  // Transform a user-space point through ctm + viewport
+  const screenPoint = (ux, uy) => {
+    const m = pdfjsLib.Util.transform(viewport.transform, ctm);
+    return { x: m[0] * ux + m[2] * uy + m[4], y: m[1] * ux + m[3] * uy + m[5] };
+  };
+  // Transform a user-space bbox [minX,minY,maxX,maxY] to a screen bbox.
+  const screenBbox = (umin) => {
+    const corners = [
+      screenPoint(umin[0], umin[1]),
+      screenPoint(umin[2], umin[1]),
+      screenPoint(umin[2], umin[3]),
+      screenPoint(umin[0], umin[3]),
+    ];
+    const xs = corners.map(c => c.x), ys = corners.map(c => c.y);
+    const x = Math.min(...xs), y = Math.min(...ys);
+    return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+  };
   for (let i = 0; i < opList.fnArray.length; i++) {
     const fn = opList.fnArray[i];
     const args = opList.argsArray[i];
@@ -8992,27 +9013,38 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
     else if (fn === TRANSFORM) {
       ctm = pdfjsLib.Util.transform(ctm, args);
     } else if (fn === PAINT_IMAGE || fn === PAINT_INLINE || fn === PAINT_MASK || fn === PAINT_JPEG) {
-      // Image fills unit box [0,0]-[1,1] under the current CTM. Transform corners
-      // through viewport.transform · ctm.
-      const m = pdfjsLib.Util.transform(viewport.transform, ctm);
       const corners = [
         { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }
-      ].map(c => ({
-        x: m[0] * c.x + m[2] * c.y + m[4],
-        y: m[1] * c.x + m[3] * c.y + m[5]
-      }));
+      ].map(c => screenPoint(c.x, c.y));
       const xs = corners.map(c => c.x), ys = corners.map(c => c.y);
       const x = Math.min(...xs), y = Math.min(...ys);
       const w = Math.max(...xs) - x, h = Math.max(...ys) - y;
-      // Skip tiny markers / 1-px images
       if (w < 12 || h < 12) continue;
       images.push({ x, y, w, h });
+    } else if (fn === CONSTRUCT_PATH) {
+      // pdf.js 3.x: argsArray entry is [opArray, argsArray, minMax].
+      // minMax is the user-space bbox [minX, minY, maxX, maxY].
+      const minMax = args && args[2];
+      if (minMax && minMax.length >= 4 && isFinite(minMax[0])) {
+        const b = screenBbox(minMax);
+        if (b.w > 0 && b.h > 0 && b.w < 120 && b.h < 120) vectorPaths.push(b);
+      }
+    } else if (fn === RECTANGLE && Array.isArray(args) && args.length >= 4) {
+      const ux = args[0], uy = args[1], uw = args[2], uh = args[3];
+      const b = screenBbox([ux, uy, ux + uw, uy + uh]);
+      if (b.w > 0 && b.h > 0 && b.w < 120 && b.h < 120) vectorPaths.push(b);
     }
   }
+  // === Cluster vector paths into rectangles ===
+  // Barcodes are many narrow tall rects in a horizontal row.
+  // QR codes are many small squares in a grid.
+  // A path-dense rectangular cluster ≥ N members likely represents one.
+  const vectorClusters = _clusterPaths(vectorPaths);
   // Remove any prior markers (re-render scenario)
   overlay.querySelectorAll('.pdf-image-marker').forEach(m => m.remove());
-  for (let i = 0; i < images.length; i++) {
-    const img = images[i];
+  const allMarkers = images.concat(vectorClusters);
+  for (let i = 0; i < allMarkers.length; i++) {
+    const img = allMarkers[i];
     const marker = document.createElement('div');
     marker.className = 'pdf-image-marker';
     marker.style.left = img.x + 'px';
@@ -9027,6 +9059,76 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
     marker.dataset.h = String(img.h);
     overlay.appendChild(marker);
   }
+}
+
+// Group nearby vector path bboxes into clusters. A cluster represents a
+// region drawn from many small paths (barcode bars, QR code modules, vector
+// icon strokes). Returns array of merged rects suitable for image markers.
+function _clusterPaths(paths) {
+  if (!paths.length) return [];
+  // Spatial union-find: bucket paths into 16-px grid cells, then merge any
+  // two paths whose bboxes are within `proximity` of each other.
+  const proximity = 6; // px — barcode bars are ~2-3 px apart at 1.6x zoom
+  const sorted = paths.slice().sort((a, b) => (a.y - b.y) || (a.x - b.x));
+  const parent = sorted.map((_, i) => i);
+  const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+  const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; };
+  // Build a coarse grid index keyed by cell. Each path goes into all cells
+  // it overlaps (plus a 1-cell halo so neighbours within `proximity` collide).
+  const cell = 32;
+  const grid = new Map();
+  const cellKey = (cx, cy) => cx + ',' + cy;
+  for (let i = 0; i < sorted.length; i++) {
+    const p = sorted[i];
+    const c0 = Math.floor((p.x - proximity) / cell);
+    const c1 = Math.floor((p.x + p.w + proximity) / cell);
+    const r0 = Math.floor((p.y - proximity) / cell);
+    const r1 = Math.floor((p.y + p.h + proximity) / cell);
+    for (let cy = r0; cy <= r1; cy++) {
+      for (let cx = c0; cx <= c1; cx++) {
+        const k = cellKey(cx, cy);
+        if (!grid.has(k)) grid.set(k, []);
+        grid.get(k).push(i);
+      }
+    }
+  }
+  // Walk every grid cell and union pairs whose bboxes are within proximity.
+  for (const indices of grid.values()) {
+    for (let a = 0; a < indices.length; a++) {
+      for (let b = a + 1; b < indices.length; b++) {
+        const pa = sorted[indices[a]], pb = sorted[indices[b]];
+        const gx = Math.max(0, Math.max(pa.x, pb.x) - Math.min(pa.x + pa.w, pb.x + pb.w));
+        const gy = Math.max(0, Math.max(pa.y, pb.y) - Math.min(pa.y + pa.h, pb.y + pb.h));
+        if (gx <= proximity && gy <= proximity) union(indices[a], indices[b]);
+      }
+    }
+  }
+  // Collect groups
+  const groups = new Map();
+  for (let i = 0; i < sorted.length; i++) {
+    const r = find(i);
+    if (!groups.has(r)) groups.set(r, []);
+    groups.get(r).push(sorted[i]);
+  }
+  // Emit cluster bboxes that look like graphics (enough paths, big enough).
+  const clusters = [];
+  for (const g of groups.values()) {
+    if (g.length < 8) continue;            // need at least 8 paths
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of g) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x + p.w > maxX) maxX = p.x + p.w;
+      if (p.y + p.h > maxY) maxY = p.y + p.h;
+    }
+    const w = maxX - minX, h = maxY - minY;
+    if (w < 30 || h < 20) continue;        // ignore stray tiny clusters
+    if (w > 1200 || h > 1600) continue;    // probably a whole page outline
+    // Pad slightly so the marker comfortably covers anti-aliased edges
+    const pad = 2;
+    clusters.push({ x: minX - pad, y: minY - pad, w: w + pad * 2, h: h + pad * 2 });
+  }
+  return clusters;
 }
 
 // Grab a PDF image into a draggable image annotation: snapshot the canvas region
@@ -17586,7 +17688,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.40';
+const APP_VERSION = '1.41';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
