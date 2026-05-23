@@ -3333,19 +3333,16 @@
   /* PDF image markers — only visible/active when Edit PDF tool is on, or on Alt+hover */
   .pdf-image-marker {
     position: absolute;
-    pointer-events: auto;
+    /* Click-through so a user editing text in a table-cell (which may sit
+       under a vector-cluster marker) still hits the text span beneath. The
+       overlay-level dblclick handler hit-tests markers by geometry. */
+    pointer-events: none;
     border: 0 solid transparent;
     z-index: 4;
     transition: border-color .15s, background .15s;
     box-sizing: border-box;
-    cursor: pointer;
-  }
-  .pdf-image-marker:hover {
-    border: 1px dashed rgba(124, 58, 237, 0.7);
-    background: rgba(124, 58, 237, 0.10);
   }
   body.edit-pdf-mode .pdf-image-marker {
-    cursor: pointer;
     border: 1px dashed rgba(124, 58, 237, 0.55);
     background: rgba(124, 58, 237, 0.06);
   }
@@ -8757,12 +8754,19 @@ function setupOverlay(overlay, pageNum) {
     const rect = overlay.getBoundingClientRect();
     const x = (e.clientX - rect.left) / currentZoom;
     const y = (e.clientY - rect.top) / currentZoom;
+    // Try image marker first — text spans usually live ABOVE images, but
+    // when a PDF includes a barcode/QR with text labels next to it the
+    // text-item hit-test would consume the dblclick. Resolving the image
+    // first matches the user's mental model ("I double-clicked the barcode").
+    if (window._tryGrabPdfImageAt && window._tryGrabPdfImageAt(overlay, x, y)) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     const item = findPdfTextItemAtPoint(overlay, x, y);
     if (item) {
       e.preventDefault();
       e.stopPropagation();
-      // If a stray empty text annotation was just created by a click that preceded
-      // this dblclick (text mode), clean it up so we don't leave an empty box.
       cleanupStrayEmptyText();
       editOriginalPdfText(overlay, item);
     }
@@ -9024,15 +9028,45 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
     } else if (fn === CONSTRUCT_PATH) {
       // pdf.js 3.x: argsArray entry is [opArray, argsArray, minMax].
       // minMax is the user-space bbox [minX, minY, maxX, maxY].
+      // opArray is a list of path op-codes (moveTo, lineTo, rectangle,
+      // curveTo, closePath, …) — we use it to tell a "table grid" path
+      // (mostly lineTo) from a "graphic" path (many rectangles or many
+      // closed sub-paths).
       const minMax = args && args[2];
+      const ops = args && args[0];
       if (minMax && minMax.length >= 4 && isFinite(minMax[0])) {
         const b = screenBbox(minMax);
-        if (b.w > 0 && b.h > 0 && b.w < 120 && b.h < 120) vectorPaths.push(b);
+        if (b.w > 0 && b.h > 0) {
+          // Bucket A — small/narrow paths that get UNION-CLUSTERED later.
+          if (b.w < 250 && b.h < 250 && !(b.w > 80 && b.h > 80)) {
+            vectorPaths.push(b);
+          }
+          // Bucket B — a single path that already encloses many filled
+          // shapes (e.g. an entire barcode flattened into one path with
+          // 30 rectangles, or a vector logo with many sub-paths). Emit
+          // directly as a marker. We require closed-shape evidence so
+          // grid-of-lines table backgrounds don't qualify.
+          let closedSubpaths = 0;
+          if (Array.isArray(ops)) {
+            for (let k = 0; k < ops.length; k++) {
+              const op = ops[k];
+              if (op === OPS.rectangle || op === OPS.closePath) closedSubpaths++;
+            }
+          }
+          const aspect = b.w / b.h;
+          if (closedSubpaths >= 6
+              && b.w >= 40 && b.h >= 20 && b.w <= 400 && b.h <= 250
+              && aspect >= 0.2 && aspect <= 6) {
+            images.push({ x: b.x, y: b.y, w: b.w, h: b.h });
+          }
+        }
       }
     } else if (fn === RECTANGLE && Array.isArray(args) && args.length >= 4) {
       const ux = args[0], uy = args[1], uw = args[2], uh = args[3];
       const b = screenBbox([ux, uy, ux + uw, uy + uh]);
-      if (b.w > 0 && b.h > 0 && b.w < 120 && b.h < 120) vectorPaths.push(b);
+      if (b.w > 0 && b.h > 0 && b.w < 250 && b.h < 250 && !(b.w > 80 && b.h > 80)) {
+        vectorPaths.push(b);
+      }
     }
   }
   // === Cluster vector paths into rectangles ===
@@ -9110,21 +9144,34 @@ function _clusterPaths(paths) {
     if (!groups.has(r)) groups.set(r, []);
     groups.get(r).push(sorted[i]);
   }
-  // Emit cluster bboxes that look like graphics (enough paths, big enough).
+  // Emit cluster bboxes that look like graphics (enough paths, big enough,
+  // and shaped like a barcode/QR/icon rather than a table grid).
   const clusters = [];
   for (const g of groups.values()) {
-    if (g.length < 8) continue;            // need at least 8 paths
+    if (g.length < 12) continue;           // need a meaningful cloud of paths
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let flatCount = 0;                      // paths wider than tall by 2x+
+    let pathAreaSum = 0;
     for (const p of g) {
       if (p.x < minX) minX = p.x;
       if (p.y < minY) minY = p.y;
       if (p.x + p.w > maxX) maxX = p.x + p.w;
       if (p.y + p.h > maxY) maxY = p.y + p.h;
+      pathAreaSum += p.w * p.h;
+      if (p.w > p.h * 2) flatCount++;
     }
     const w = maxX - minX, h = maxY - minY;
-    if (w < 30 || h < 20) continue;        // ignore stray tiny clusters
-    if (w > 1200 || h > 1600) continue;    // probably a whole page outline
-    // Pad slightly so the marker comfortably covers anti-aliased edges
+    if (w < 30 || h < 20) continue;        // stray tiny clusters
+    if (w > 1200 || h > 1600) continue;    // probably page background
+    // Table-like clusters have many flat (wide-and-short) rects — cell rows
+    // and horizontal borders. Reject if 30%+ of the paths are flat: real
+    // barcodes (tall narrow bars) and QR codes (square modules) have ≈0%.
+    if (flatCount / g.length > 0.30) continue;
+    // Density gate — tables also tend to be sparse (a 200×150 table can
+    // have only 20-40 paths total, density ~1/800). Real barcodes pack
+    // 30+ tall bars into ~150×130 = ~1/650 px²; QR modules ~1/30 px².
+    const density = g.length / (w * h);
+    if (density < 1 / 700) continue;
     const pad = 2;
     clusters.push({ x: minX - pad, y: minY - pad, w: w + pad * 2, h: h + pad * 2 });
   }
@@ -9198,23 +9245,20 @@ async function grabImageMarker(marker) {
   showToast(window.t('toast.imgGrabbed', 'Image grabbed — drag to move, corner handles to resize.'), 'success');
 }
 
-// Click on image marker (when in edit-pdf tool, or Alt+click anywhere) → grab.
+// Alt+click anywhere (or click in Edit PDF mode) over an image marker → grab.
+// Markers are pointer-events:none so we hit-test by geometry against the
+// overlay the click landed on.
 document.addEventListener('click', (e) => {
-  const marker = e.target.closest && e.target.closest('.pdf-image-marker');
-  if (!marker) return;
-  // Require either Edit PDF mode OR explicit Alt+click anywhere
   if (currentTool !== 'edit-pdf' && !e.altKey) return;
-  e.preventDefault(); e.stopPropagation();
-  grabImageMarker(marker);
-}, true);
-// Double-click on an image marker anywhere (any tool mode) → grab. Matches the
-// "double-click any object to convert it" mental model the user expects for
-// logos, QR codes, barcodes baked into the source PDF.
-document.addEventListener('dblclick', (e) => {
-  const marker = e.target.closest && e.target.closest('.pdf-image-marker');
-  if (!marker) return;
-  e.preventDefault(); e.stopPropagation();
-  grabImageMarker(marker);
+  const overlay = e.target && e.target.closest && e.target.closest('.overlay');
+  if (!overlay) return;
+  const rect = overlay.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / currentZoom;
+  const y = (e.clientY - rect.top) / currentZoom;
+  if (window._tryGrabPdfImageAt && window._tryGrabPdfImageAt(overlay, x, y)) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
 }, true);
 // Hit-test against image markers when the user double-clicks empty overlay
 // (e.g. a marker that sits underneath transparent regions). The text-layer
@@ -17688,7 +17732,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.41';
+const APP_VERSION = '1.42';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
