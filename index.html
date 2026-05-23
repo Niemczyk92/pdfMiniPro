@@ -4699,6 +4699,10 @@
     animation: fadeUp 0.18s ease;
   }
   .modal-overlay.show { display: flex; }
+  /* Stacking: child modals (opened from another modal) must sit on top.
+     Photo cropper opens from Profile, so it gets the higher z-index. */
+  #photoCropModal { z-index: 220; }
+  #photoCropModal.show { display: flex; }
   .modal-card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
@@ -17582,7 +17586,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.39';
+const APP_VERSION = '1.40';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
