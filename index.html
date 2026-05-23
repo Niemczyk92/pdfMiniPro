@@ -9028,44 +9028,52 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
     } else if (fn === CONSTRUCT_PATH) {
       // pdf.js 3.x: argsArray entry is [opArray, argsArray, minMax].
       // minMax is the user-space bbox [minX, minY, maxX, maxY].
-      // opArray is a list of path op-codes (moveTo, lineTo, rectangle,
-      // curveTo, closePath, …) — we use it to tell a "table grid" path
-      // (mostly lineTo) from a "graphic" path (many rectangles or many
-      // closed sub-paths).
       const minMax = args && args[2];
       const ops = args && args[0];
       if (minMax && minMax.length >= 4 && isFinite(minMax[0])) {
         const b = screenBbox(minMax);
-        if (b.w > 0 && b.h > 0) {
-          // Bucket A — small/narrow paths that get UNION-CLUSTERED later.
-          if (b.w < 250 && b.h < 250 && !(b.w > 80 && b.h > 80)) {
-            vectorPaths.push(b);
+        // A stroked vertical line (barcode bar) has b.w === 0; a stroked
+        // horizontal line has b.h === 0. Give them a nominal 2 px so they
+        // survive clustering / aspect math.
+        const effW = b.w > 0 ? b.w : 2;
+        const effH = b.h > 0 ? b.h : 2;
+        if (effW < 250 && effH < 250 && !(effW > 80 && effH > 80)) {
+          vectorPaths.push({ x: b.x, y: b.y, w: effW, h: effH });
+        }
+        // Bucket B — a single path with many sub-shapes (one full barcode
+        // flattened into one filled-rects path, OR a barcode drawn as many
+        // moveTo+lineTo stroke segments). Count "shape starts": rectangle
+        // ops, closePath ops, and moveTo ops are all signals that the path
+        // contains multiple disjoint elements rather than one continuous
+        // outline.
+        let rectOrClose = 0;
+        let moveCount = 0;
+        if (Array.isArray(ops)) {
+          for (let k = 0; k < ops.length; k++) {
+            const op = ops[k];
+            if (op === OPS.rectangle || op === OPS.closePath) rectOrClose++;
+            else if (op === OPS.moveTo) moveCount++;
           }
-          // Bucket B — a single path that already encloses many filled
-          // shapes (e.g. an entire barcode flattened into one path with
-          // 30 rectangles, or a vector logo with many sub-paths). Emit
-          // directly as a marker. We require closed-shape evidence so
-          // grid-of-lines table backgrounds don't qualify.
-          let closedSubpaths = 0;
-          if (Array.isArray(ops)) {
-            for (let k = 0; k < ops.length; k++) {
-              const op = ops[k];
-              if (op === OPS.rectangle || op === OPS.closePath) closedSubpaths++;
-            }
-          }
-          const aspect = b.w / b.h;
-          if (closedSubpaths >= 6
-              && b.w >= 40 && b.h >= 20 && b.w <= 400 && b.h <= 250
-              && aspect >= 0.2 && aspect <= 6) {
-            images.push({ x: b.x, y: b.y, w: b.w, h: b.h });
-          }
+        }
+        // Each disjoint stroke needs a moveTo; treat every other moveTo as
+        // a sub-shape "start" so two-point bars (moveTo + lineTo) count.
+        const subpathSignal = Math.max(rectOrClose, Math.floor(moveCount));
+        const finalW = Math.max(b.w, effW);
+        const finalH = Math.max(b.h, effH);
+        const aspect = finalW / finalH;
+        if (subpathSignal >= 6
+            && finalW >= 30 && finalH >= 20 && finalW <= 400 && finalH <= 250
+            && aspect >= 0.15 && aspect <= 8) {
+          images.push({ x: b.x, y: b.y, w: finalW, h: finalH });
         }
       }
     } else if (fn === RECTANGLE && Array.isArray(args) && args.length >= 4) {
       const ux = args[0], uy = args[1], uw = args[2], uh = args[3];
       const b = screenBbox([ux, uy, ux + uw, uy + uh]);
-      if (b.w > 0 && b.h > 0 && b.w < 250 && b.h < 250 && !(b.w > 80 && b.h > 80)) {
-        vectorPaths.push(b);
+      const effW = b.w > 0 ? b.w : 2;
+      const effH = b.h > 0 ? b.h : 2;
+      if (effW < 250 && effH < 250 && !(effW > 80 && effH > 80)) {
+        vectorPaths.push({ x: b.x, y: b.y, w: effW, h: effH });
       }
     }
   }
@@ -9076,9 +9084,24 @@ async function buildPdfImageLayer(overlay, pdfPage, viewport, pageNum) {
   const vectorClusters = _clusterPaths(vectorPaths);
   // Remove any prior markers (re-render scenario)
   overlay.querySelectorAll('.pdf-image-marker').forEach(m => m.remove());
-  const allMarkers = images.concat(vectorClusters);
-  for (let i = 0; i < allMarkers.length; i++) {
-    const img = allMarkers[i];
+  // Dedupe: a barcode may be detected both as a clustered group AND as a
+  // single fat path. Keep the larger of two overlapping markers.
+  const candidates = images.concat(vectorClusters);
+  const placed = [];
+  const overlapFrac = (a, b) => {
+    const ix = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+    const iy = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+    const inter = ix * iy;
+    return inter / Math.min(a.w * a.h, b.w * b.h);
+  };
+  candidates.sort((p, q) => (q.w * q.h) - (p.w * p.h));
+  for (const c of candidates) {
+    let dup = false;
+    for (const p of placed) { if (overlapFrac(c, p) > 0.6) { dup = true; break; } }
+    if (!dup) placed.push(c);
+  }
+  for (let i = 0; i < placed.length; i++) {
+    const img = placed[i];
     const marker = document.createElement('div');
     marker.className = 'pdf-image-marker';
     marker.style.left = img.x + 'px';
@@ -17732,7 +17755,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.42';
+const APP_VERSION = '1.43';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
