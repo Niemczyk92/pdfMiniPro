@@ -1,0 +1,13 @@
+{
+  "name": "pdf-mini-editor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-based PDF editor. The app itself is static (index.html + sw.js); this package.json only carries the dev test tooling.",
+  "scripts": {
+    "test": "node tests/smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

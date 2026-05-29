@@ -1,84 +1,97 @@
-# PDF Mini Editor
+# PDF Mini Editor Pro
 
-A local PDF editor that runs entirely in the browser. No backend, no uploads, no accounts.
+A full PDF editor that runs **entirely in your browser**. No backend, no uploads, no accounts — the PDF you open never leaves your device. Rendering uses pdf.js, editing uses pdf-lib, and everything is processed locally.
+
+Live: **https://pdf.kamagio.com**
 
 ## Features
 
-- **White Box** — cover existing text in the PDF
-- **Add Text** — write new text with auto white background, color, size, **B** / *I* / underline
-- **Insert Image** — paste from clipboard (Ctrl+V) or upload from disk
-- **Edit any change** — click to select, drag to move, double-click text to edit, Delete to remove
-- **Multi-page** — works with any number of pages
-- **PWA** — installable as a standalone app
-- **Offline** — once installed, works without internet
+### Edit & annotate
+- **Edit existing PDF text** — double-click any text in the PDF to edit it in place (font, size and colour are matched; the original is covered and the new text rendered on top)
+- **Add Text** — new text boxes with bold / italic / underline, colour, size, alignment and font family
+- **Insert image** — paste from clipboard (Ctrl+V) or upload; move, resize and rotate
+- **Free draw** with brush presets (**pen · pencil · highlighter · marker**) — picked from a prominent floating bar (not a buried dropdown); the tool stays active for multiple strokes; the cursor reflects the current brush colour and width; the quick panel remembers your last brush/colour/width. Also **shapes**, **highlight / underline / strike-through**
+- **Form-field designer** — press **F** (or pick **+ Add → Form field**), drag a rectangle, choose the subtype from the floating bar (**text · multi-line · number · date · checkbox · dropdown · multi-select list**); name + default value (and options for dropdown/multi-select) editable in the side panel; the fields are written into the saved PDF as real **AcroForm** fields fillable in any PDF viewer
+- **White-out** (cover content) and **Redact** (black-out, strips metadata on save)
+- **Signatures** — draw, type or upload; **certified / PAdES signatures** (in progress)
+- **QR codes & barcodes**, **stamps gallery**
+- **Ruler, grid & measurement** — toolbar toggles for a per-page ruler and grid with a live unit selector (**mm · cm · in · px · pt**). Press **M** (or 📏) and drag to measure in the chosen unit; double-click a measurement to calibrate to a known length
+- **Diacritics fully supported** — Noto Sans / Serif / Mono are embedded at save time, so čřšžě, é, ñ, ü, etc. render correctly
 
-## Running locally (simple)
+### Pages & documents
+- **Organize pages** — reorder, rotate, delete, duplicate
+- **Merge** PDFs, **Split** out selected pages
+- **Compress** (rasterise to shrink size), **Crop / Resize / Margins** (A4, Letter, photo sizes)
+- **Page Setup** — watermark, header, footer, page numbers
+- **Bookmarks / outline** editor (incl. **auto-detect headings** → one-click outline), **Templates**
 
-Just open `index.html` in Chrome / Edge by double-clicking it. Everything works **except** the PWA install and "default PDF reader" features (those require HTTPS hosting — see below).
+### Smart tools
+- **Find & Replace** across the document
+- **OCR** scanned PDFs (makes image-only pages editable)
+- **Compare two PDFs** — side-by-side visual diff
+- **Extract table → CSV**
+- **Forms** — fill AcroForm / XFA fields; **Fill from JSON** (single object, or an array to batch-generate many filled copies)
+- **RegEx redact** — find & black-out SSNs, card numbers, emails, IBANs
+- **AI tools** (optional local server) — summarize, translate, explain a paragraph, suggest form values, and a "chat about this PDF" panel
 
-## Hosting it as a real PWA
+### Security & export
+- **Password protect** (AES-256 envelope)
+- **Sanitize** — flatten + strip metadata
+- **Save**, **Export as** (HQ / Web / Archive), **Export → Text (.txt)**, **Export → Word (.docx, text only)**
+- **Share by email** (compresses + attaches), **Print**
 
-To get the "install" prompt and the ability to set it as Windows' default PDF reader, you need to serve these files over HTTPS. Three easy free options:
+### App
+- **Multi-language** UI (English, Čeština, Polski, Español)
+- **Command palette** + single-letter shortcuts (incl. **M** for measure), **Simple / Pro** mode toggle
+- **Recent files** on the start screen + **auto-save draft recovery** (all local, in IndexedDB)
+- **Drag & drop** a PDF anywhere to open it; **arrow keys** nudge selected objects (Shift = 10px); **eyedropper** to pick colours
+- **Copy / cut / paste** any object with **Ctrl+C / Ctrl+X / Ctrl+V** — works across pages and drops the object at your last click position
+- **Document info & PDF metadata** (title, author, subject, keywords, creator, producer, dates) in the stats panel
+- **PWA** — installable, works **offline**, and can be set as the default Windows PDF reader
 
-### Option A — GitHub Pages (5 minutes)
+## Running locally
 
-1. Create a new GitHub repo, push all files in this folder to it
-2. Repo Settings → Pages → Source: deploy from branch `main`, folder `/ (root)`
-3. After ~1 minute, open the URL GitHub gives you (`https://<you>.github.io/<repo>/`)
-4. In Chrome, click the **install** icon in the address bar
+Just open `index.html` in Chrome / Edge. Everything works except the PWA install and "default PDF reader" features, which require HTTPS hosting.
 
-### Option B — Cloudflare Pages (drag and drop)
+For local development the project is served by XAMPP at `http://localhost/pdfMiniPro/`.
 
-1. Go to https://pages.cloudflare.com/
-2. Create a new project → "Direct Upload"
-3. Drag this whole folder into the upload area
-4. Open the URL Cloudflare gives you
-5. Install via Chrome's address-bar install icon
+> **Service worker note:** the app caches itself for offline use. After changing the code, bump `APP_VERSION` in `index.html` **and** the `CACHE` string in `sw.js` so browsers pick up the new version. The worker self-activates (`skipWaiting`) and uses a network-first strategy for the HTML, so a normal reload gets the latest code; if a tab is stuck on an old build, hard-refresh (Ctrl+Shift+R) once.
 
-### Option C — Netlify Drop
+## Hosting as a PWA
 
-1. Go to https://app.netlify.com/drop
-2. Drag this folder onto the page
-3. Done — open the URL it gives you
+Serve the files over HTTPS (GitHub Pages, Cloudflare Pages, Netlify Drop, or local Caddy). Then use Chrome's address-bar **install** icon. To set as Windows' default PDF reader: right-click a `.pdf` → **Open with** → **Choose another app** → **PDF Mini Editor** → "Always". Launches are handled via the PWA `file_handlers` manifest entry + the `launchQueue` API.
 
-### Option D — Local HTTPS via Caddy
+> Only Chromium browsers (Chrome, Edge, Brave, Arc) support PWA file handlers. Firefox does not.
 
-If you want to keep it private on your network, install Caddy and run:
+## Notes & limitations
+
+- **Edit-PDF covers, it doesn't rewrite the stream.** Editing existing text places a cover + new text on top; the original glyphs still exist underneath in the saved file (so text extraction could still find them). Visually and on print the result is clean. For guaranteed removal, use **Redact**.
+- **Mobile** is currently desktop-first; a touch-optimised layout is on the roadmap.
+
+## Testing
+
+A self-contained Playwright smoke suite lives in `tests/`. It generates its own
+test PDF (no external files) and checks the behaviours that have regressed before
+— edit-PDF sizing/position/coverage, the bound cover (move/delete together), save,
+auto-save, recent files, auto-outline and measure.
 
 ```
-caddy file-server --domain pdf.local
+npm i -D playwright && npx playwright install chromium
+# serve the app locally (XAMPP, or `npx serve .`), then:
+npm test                 # → node tests/smoke.mjs   (default http://localhost/pdfMiniPro/index.html)
+APP_URL=http://localhost:3000/index.html npm test
 ```
 
-Then trust the Caddy root cert and access via `https://pdf.local`.
+`node_modules` and the dev `package.json` tooling are not part of the shipped app
+(which stays a static `index.html` + `sw.js`).
 
-## Setting as default PDF reader in Windows
-
-After installing the PWA (Chrome address bar → install icon):
-
-1. Right-click any `.pdf` file in File Explorer
-2. **Open with** → **Choose another app**
-3. Pick **PDF Mini Editor** from the list
-4. Check **"Always use this app to open .pdf files"**
-5. Click OK
-
-Now any `.pdf` you double-click opens in the PWA. The launch is handled by the PWA's `file_handlers` manifest entry, which uses the browser's `launchQueue` API to receive the file.
-
-> Note: Only Chromium browsers (Chrome, Edge, Brave, Arc) support PWA file handlers as of 2026. Firefox does not.
-
-## Limitations
-
-- **Diacritics / accented characters** (čřšž, é, ñ, ü, etc.) are **not supported** when saving text. The built-in PDF fonts (Helvetica family) don't include them. If you need them, the next step is embedding a Unicode font like Noto Sans into the PDF — let me know.
-- **No re-edit of original PDF text** — this tool adds annotations on top of the PDF; it does not extract or modify existing text inside the document structure.
-- **Image resize** is not yet implemented — you can move but not resize inserted images.
-
-## Files in this folder
+## Files
 
 - `index.html` — the entire app
-- `manifest.webmanifest` — PWA manifest (declares file_handlers for `.pdf`)
 - `sw.js` — service worker (offline cache + installability)
-- `icon.svg` — app icon
-- `icon-maskable.svg` — adaptive icon (Android, Chrome OS)
+- `manifest.webmanifest` — PWA manifest (declares `file_handlers` for `.pdf`)
+- `icon*.svg` / `*.png` — app + file icons
 
 ## Privacy
 
-The PDF you open **never leaves your browser**. All processing happens locally via pdf.js (rendering) and pdf-lib (editing). The CDN is used only to load the JavaScript libraries themselves on first visit — once the service worker caches them, you don't even need internet.
+The PDF you open **never leaves your browser**. All processing is local (pdf.js for rendering, pdf-lib for editing). The CDN only serves the JavaScript libraries on first visit; once the service worker caches them, no internet is needed.

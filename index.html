@@ -185,6 +185,7 @@
       'props.fieldName': 'Field name', 'props.fieldDefault': 'Default value', 'props.fieldType': 'Type', 'props.fieldOptions': 'Options (one per line)', 'props.fieldFontSize': 'Font size (pt)',
       'cmd.field': 'Form field (text / checkbox)', 'tool.field': 'Field',
       'tb.view': 'View', 'tb.ruler': 'Ruler', 'tb.grid': 'Grid', 'tb.measure': 'Measure (M)', 'tb.unit': 'Measurement unit', 'tb.spacingGuides': 'Spacing guides — show distance to nearest objects on drag',
+      'tb.readingRuler': 'Reading ruler — movable, rotatable guide for following lines (does not print)',
       'brush.pen': 'Pen', 'brush.pencil': 'Pencil', 'brush.highlighter': 'Highlighter', 'brush.marker': 'Marker',
       'brush.bar.color': 'Colour', 'brush.bar.width': 'Width',
       'quick.lastDraw': 'Resume drawing',
@@ -1016,6 +1017,7 @@
       'props.fieldName': 'Název pole', 'props.fieldDefault': 'Výchozí hodnota', 'props.fieldType': 'Typ', 'props.fieldOptions': 'Možnosti (jedna na řádek)', 'props.fieldFontSize': 'Velikost písma (pt)',
       'cmd.field': 'Pole formuláře (text / checkbox)', 'tool.field': 'Pole',
       'tb.view': 'Zobrazení', 'tb.ruler': 'Pravítko', 'tb.grid': 'Mřížka', 'tb.measure': 'Měření (M)', 'tb.unit': 'Jednotka', 'tb.spacingGuides': 'Vodicí čáry vzdáleností — při tažení ukáže odstup k nejbližším objektům',
+      'tb.readingRuler': 'Vodicí pravítko — posuvné a otočné pravítko pro sledování řádků (netiskne se)',
       'brush.pen': 'Pero', 'brush.pencil': 'Tužka', 'brush.highlighter': 'Zvýrazňovač', 'brush.marker': 'Fix',
       'brush.bar.color': 'Barva', 'brush.bar.width': 'Šířka',
       'quick.lastDraw': 'Pokračovat v kreslení',
@@ -3436,6 +3438,14 @@
   body.edit-pdf-mode .pdf-text-item:hover {
     background: rgba(245, 158, 11, 0.28);
     outline: 2px solid rgba(245, 158, 11, 0.85);
+  }
+  /* Stream-level delete mark — set by markPdfTextForDeletion on Shift+click. */
+  .pdf-text-item.pdf-text-delete-marked {
+    background: rgba(220, 38, 38, 0.25) !important;
+    outline: 2px solid rgba(220, 38, 38, 0.95) !important;
+    text-decoration: line-through;
+    text-decoration-color: rgba(220, 38, 38, 0.95);
+    text-decoration-thickness: 2px;
   }
   /* Select-mode: text-items are pointer-events:none (default) so a click
      passes through to the overlay and either deselects or hits an
@@ -6835,10 +6845,11 @@
   <!-- 7c. View: ruler · grid · measure · unit -->
   <div class="text-defaults view-tools">
     <span class="label" data-i18n="tb.view">View</span>
-    <button class="btn btn-icon" id="rulerToggle" type="button" data-i18n-title="tb.ruler" title="Ruler"><span class="icon">📐</span></button>
+    <button class="btn btn-icon" id="rulerToggle" type="button" data-i18n-title="tb.ruler" title="Ruler"><span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 4h16M4 4v16"/><path d="M9 4v3M14 4v4M19 4v3M4 9h3M4 14h4M4 19h3"/></svg></span></button>
     <button class="btn btn-icon" id="gridToggle" type="button" data-i18n-title="tb.grid" title="Grid"><span class="icon">▦</span></button>
-    <button class="btn btn-icon" id="measureToggle" type="button" data-i18n-title="tb.measure" title="Measure (M)"><span class="icon">📏</span></button>
+    <button class="btn btn-icon" id="measureToggle" type="button" data-i18n-title="tb.measure" title="Measure (M)"><span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M5 19L19 5"/><path d="M3.5 17.5l3 3M17.5 3.5l3 3"/></svg></span></button>
     <button class="btn btn-icon" id="spacingGuidesToggle" type="button" data-i18n-title="tb.spacingGuides" title="Spacing guides — show distance to nearest objects on drag"><span class="icon">⇿</span></button>
+    <button class="btn btn-icon" id="readingRulerToggle" type="button" data-i18n-title="tb.readingRuler" title="Reading ruler — movable, rotatable guide (does not print)"><span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" style="vertical-align:middle"><path d="M4 6h12M4 18h12" stroke-width="1.4" opacity="0.4"/><rect x="2.5" y="10" width="19" height="4" rx="2" fill="currentColor" stroke="none"/></svg></span></button>
     <select id="unitSelect" class="select-input" data-i18n-title="tb.unit" title="Measurement unit">
       <option value="mm">mm</option>
       <option value="cm">cm</option>
@@ -8802,6 +8813,258 @@ async function withRotationMatrix(page, cssAngleDeg, cx, cy, drawFn) {
 // Permissive load options so we can open as many PDFs as possible
 // (many real-world PDFs are permission-encrypted or contain quirky objects).
 const PDF_LOAD_OPTS = { ignoreEncryption: true, throwOnInvalidObject: false, updateMetadata: false };
+
+// =====================================================================
+//   Real PDF text deletion (modifies the page's content stream, with
+//   single-line left-shift reflow). Best-effort: when matching fails we
+//   fall back to the legacy whiteout cover so the user still sees the
+//   text gone visually.
+// =====================================================================
+
+// Walk a decoded content-stream byte array and emit a flat array of
+// "instructions": { operands:[...raw-token-records], opcode, start, end }.
+// Operands keep their RAW byte range so binary-clean CID strings round-trip
+// without us touching them.
+function _tokenizeContentStream(bytes) {
+  const insts = [];
+  let i = 0;
+  let operands = [];
+  const len = bytes.length;
+  const isWS = b => b === 0x20 || b === 0x09 || b === 0x0a || b === 0x0d || b === 0x0c || b === 0x00;
+  const isDigit = b => (b >= 0x30 && b <= 0x39) || b === 0x2b || b === 0x2d || b === 0x2e;
+  const sliceStr = (s, e) => { let r = ''; for (let k = s; k < e; k++) r += String.fromCharCode(bytes[k]); return r; };
+  while (i < len) {
+    const b = bytes[i];
+    if (isWS(b)) { i++; continue; }
+    // Comment to end of line
+    if (b === 0x25) { while (i < len && bytes[i] !== 0x0a && bytes[i] !== 0x0d) i++; continue; }
+    // Literal string (balanced parens, with escapes)
+    if (b === 0x28) {
+      const s = i; let depth = 1; i++;
+      while (i < len && depth > 0) {
+        const c = bytes[i];
+        if (c === 0x5c) { i += 2; continue; }     // skip escape
+        if (c === 0x28) { depth++; i++; continue; }
+        if (c === 0x29) { depth--; i++; continue; }
+        i++;
+      }
+      operands.push({ type: 'str', start: s, end: i, raw: sliceStr(s, i) });
+      continue;
+    }
+    // Hex string
+    if (b === 0x3c && bytes[i + 1] !== 0x3c) {
+      const s = i; i++;
+      while (i < len && bytes[i] !== 0x3e) i++;
+      if (i < len) i++;
+      operands.push({ type: 'hex', start: s, end: i, raw: sliceStr(s, i) });
+      continue;
+    }
+    // Dict <<...>> — kept verbatim (depth-counted)
+    if (b === 0x3c && bytes[i + 1] === 0x3c) {
+      const s = i; let depth = 1; i += 2;
+      while (i < len && depth > 0) {
+        if (bytes[i] === 0x3c && bytes[i + 1] === 0x3c) { depth++; i += 2; continue; }
+        if (bytes[i] === 0x3e && bytes[i + 1] === 0x3e) { depth--; i += 2; continue; }
+        i++;
+      }
+      operands.push({ type: 'dict', start: s, end: i, raw: sliceStr(s, i) });
+      continue;
+    }
+    // Array (depth-counted, supports nested literal/hex strings)
+    if (b === 0x5b) {
+      const s = i; let depth = 1; i++;
+      while (i < len && depth > 0) {
+        const c = bytes[i];
+        if (c === 0x28) { let dp = 1; i++; while (i < len && dp > 0) { if (bytes[i] === 0x5c) { i += 2; continue; } if (bytes[i] === 0x28) dp++; else if (bytes[i] === 0x29) dp--; i++; } continue; }
+        if (c === 0x3c) { i++; while (i < len && bytes[i] !== 0x3e) i++; if (i < len) i++; continue; }
+        if (c === 0x5b) { depth++; i++; continue; }
+        if (c === 0x5d) { depth--; i++; continue; }
+        i++;
+      }
+      operands.push({ type: 'arr', start: s, end: i, raw: sliceStr(s, i) });
+      continue;
+    }
+    // Name
+    if (b === 0x2f) {
+      const s = i; i++;
+      while (i < len && !isWS(bytes[i]) && bytes[i] !== 0x28 && bytes[i] !== 0x3c && bytes[i] !== 0x5b && bytes[i] !== 0x2f && bytes[i] !== 0x5d && bytes[i] !== 0x3e) i++;
+      operands.push({ type: 'name', start: s, end: i, raw: sliceStr(s, i) });
+      continue;
+    }
+    // Number
+    if (isDigit(b)) {
+      const s = i; i++;
+      while (i < len && (isDigit(bytes[i]) || bytes[i] === 0x2e)) i++;
+      const raw = sliceStr(s, i);
+      operands.push({ type: 'num', start: s, end: i, raw, value: parseFloat(raw) });
+      continue;
+    }
+    // Operator (alpha)
+    if ((b >= 0x41 && b <= 0x5a) || (b >= 0x61 && b <= 0x7a) || b === 0x27 || b === 0x22 || b === 0x2a) {
+      const s = i; i++;
+      while (i < len && !isWS(bytes[i]) && bytes[i] !== 0x28 && bytes[i] !== 0x3c && bytes[i] !== 0x5b && bytes[i] !== 0x2f) i++;
+      const opcode = sliceStr(s, i);
+      insts.push({ operands, opcode, start: operands.length ? operands[0].start : s, end: i });
+      operands = [];
+      continue;
+    }
+    // Unknown — skip 1 byte
+    i++;
+  }
+  return insts;
+}
+
+// Find the best-matching text-showing instruction (`Tj`, `TJ`, `'`, `"`) for
+// a deletion target. Returns the instruction index or -1. Walks each BT/ET
+// block, tracking Tm. Conservative: only inspects ops at the BT-block's
+// implicit identity CTM (works for body text in most PDFs).
+function _findTjForDeletion(insts, target) {
+  let best = -1, bestErr = Infinity;
+  let tm5 = 0, tm4 = 0, tmInited = false, fontSize = 12, leading = 0;
+  let inBT = false;
+  for (let i = 0; i < insts.length; i++) {
+    const it = insts[i];
+    const op = it.opcode;
+    if (op === 'BT') { tm5 = tm4 = 0; tmInited = true; inBT = true; continue; }
+    if (op === 'ET') { inBT = false; continue; }
+    if (!inBT) continue;
+    if (op === 'Tf') {
+      const n = it.operands[1]; if (n && n.type === 'num') fontSize = n.value || fontSize;
+      continue;
+    }
+    if (op === 'TL') {
+      const n = it.operands[0]; if (n && n.type === 'num') leading = n.value;
+      continue;
+    }
+    if (op === 'Tm') {
+      const e = it.operands[4], f = it.operands[5];
+      if (e && f && e.type === 'num' && f.type === 'num') { tm4 = e.value; tm5 = f.value; }
+      continue;
+    }
+    if (op === 'Td' || op === 'TD') {
+      const x = it.operands[0], y = it.operands[1];
+      if (x && y && x.type === 'num' && y.type === 'num') { tm4 += x.value; tm5 += y.value; }
+      if (op === 'TD' && y && y.type === 'num') leading = -y.value;
+      continue;
+    }
+    if (op === 'T*') { tm5 -= leading; continue; }
+    if (op === "'" || op === '"') { tm5 -= leading; }
+    if (op === 'Tj' || op === 'TJ' || op === "'" || op === '"') {
+      // baseline-y tolerance ~0.5*fontSize, x-start tolerance ~0.5*fontSize
+      const tolY = Math.max(2, fontSize * 0.5);
+      const tolX = Math.max(2, fontSize * 0.8);
+      const dy = Math.abs(tm5 - target.yPt);
+      const dx = Math.abs(tm4 - target.xPt);
+      const sizeErr = Math.abs(fontSize - target.hPt) / Math.max(1, target.hPt);
+      if (dy < tolY && dx < tolX && sizeErr < 0.35) {
+        const err = dy * 2 + dx + sizeErr * fontSize * 4;
+        if (err < bestErr) { bestErr = err; best = i; }
+      }
+    }
+  }
+  return best;
+}
+
+// Re-emit the operator list to bytes — preserves every untouched op via its
+// original byte slice. Replaced ops get re-encoded from a string.
+function _emitContentStream(insts, srcBytes) {
+  const enc = new TextEncoder();
+  const chunks = [];
+  for (const it of insts) {
+    if (it._removed) continue;
+    if (it._replaceRaw != null) {
+      chunks.push(enc.encode(it._replaceRaw + '\n'));
+      continue;
+    }
+    // Default: copy original byte slice (operands + opcode)
+    chunks.push(srcBytes.subarray(it.start, it.end));
+    chunks.push(enc.encode('\n'));
+  }
+  // Concat
+  let total = 0;
+  for (const c of chunks) total += c.length;
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { out.set(c, off); off += c.length; }
+  return out;
+}
+
+// Apply queued text-delete annotations for a single page.
+// Returns the set of `text-delete` annotations successfully consumed
+// (so the save loop can skip the legacy whiteout for those).
+async function _applyTextDeletions(doc, pageNum, deletions, scale, pageH) {
+  const consumed = new Set();
+  if (!deletions.length) return consumed;
+  try {
+    const { PDFRawStream, PDFArray, PDFName, decodePDFRawStream, PDFNumber } = PDFLib;
+    const page = doc.getPage(pageNum - 1);
+    const pNode = page.node;
+    const contentsRef = pNode.get(PDFName.of('Contents'));
+    let streams = [];
+    if (!contentsRef) return consumed;
+    if (contentsRef instanceof PDFArray) {
+      for (let i = 0; i < contentsRef.size(); i++) {
+        const ref = contentsRef.get(i);
+        const s = doc.context.lookup(ref, PDFRawStream);
+        if (s) streams.push({ ref, stream: s });
+      }
+    } else {
+      const ref = pNode.get(PDFName.of('Contents'));
+      const s = doc.context.lookup(ref, PDFRawStream);
+      if (s) streams.push({ ref, stream: s });
+    }
+    if (!streams.length) return consumed;
+    // For Phase 1 we work on each stream independently. PDFs with text split
+    // across stream boundaries inside a single BT will produce mismatches —
+    // those will fall back to whiteout via the caller.
+    for (const { ref, stream } of streams) {
+      const bytes = decodePDFRawStream(stream).decode();
+      const insts = _tokenizeContentStream(bytes);
+      let changed = false;
+      for (const ann of deletions) {
+        if (consumed.has(ann)) continue;
+        // Editor coordinates → PDF points. ann.x/y/w/h are in editor CSS pixels
+        // at `scale`. PDF Y-up: y_base = pageH - (ann.y + ann.h) / scale + ann.h / scale = pageH - ann.y / scale  (top maps; baseline ≈ pageH - (y + h)/scale).
+        const xPt = ann.x / scale;
+        const yPt = pageH - (ann.y + ann.height) / scale;
+        const hPt = ann.height / scale;
+        const wPt = ann.width / scale;
+        const target = { xPt, yPt, hPt, wPt };
+        const idx = _findTjForDeletion(insts, target);
+        if (idx < 0) continue;
+        const op = insts[idx];
+        // Mark this op for removal — preserves any TJ/Tj/'/" with whatever
+        // string it carries; we don't try to delete a SUBSTRING of the run.
+        op._removed = true;
+        // Reflow: if the next inst is `tx ty Td` with |ty|<eps, shift tx.
+        // Walk past spacing/Tf/etc. that don't move position.
+        const nxt = insts[idx + 1];
+        if (nxt && (nxt.opcode === 'Td' || nxt.opcode === 'TD')) {
+          const xn = nxt.operands[0], yn = nxt.operands[1];
+          if (xn && yn && xn.type === 'num' && yn.type === 'num' && Math.abs(yn.value) < 0.5) {
+            const newX = xn.value - wPt;
+            nxt._replaceRaw = `${newX.toFixed(3)} ${yn.value} ${nxt.opcode}`;
+          }
+        }
+        changed = true;
+        consumed.add(ann);
+      }
+      if (changed) {
+        const newBytes = _emitContentStream(insts, bytes);
+        // Write back to the same indirect object, uncompressed.
+        const newDict = stream.dict.clone(doc.context);
+        try { newDict.delete(PDFName.of('Filter')); } catch (_) {}
+        try { newDict.delete(PDFName.of('DecodeParms')); } catch (_) {}
+        newDict.set(PDFName.of('Length'), PDFNumber.of(newBytes.length));
+        const fresh = PDFRawStream.of(newDict, newBytes);
+        doc.context.assign(doc.context.getObjectRef(stream), fresh);
+      }
+    }
+  } catch (e) {
+    console.warn('[text-delete] stream rewrite failed:', e && e.message);
+  }
+  return consumed;
+}
 const PDFJS_LOAD_OPTS = { isEvalSupported: false, useSystemFonts: true, stopAtErrors: false };
 // Permissive pdf.js loader — accepts bytes, applies the same compatibility options every time.
 async function loadPdfJsDoc(bytes) {
@@ -9899,6 +10162,15 @@ async function buildPdfTextLayer(overlay, pdfPage, viewport, pageNum) {
       // too aggressive in normal browsing of the PDF.
       if (currentTool !== 'edit-pdf') return;
       e.stopPropagation();
+      // Shift+click in Edit-PDF mode = REAL stream-level delete (no whiteout).
+      // pdf-lib walks the page's content stream on save, finds the matching
+      // Tj/TJ glyph run and removes the operator; following same-line text
+      // reflows left by the deleted width. Falls back to whiteout if the run
+      // can't be matched (CID fonts, complex layouts).
+      if (e.shiftKey) {
+        markPdfTextForDeletion(overlay, span);
+        return;
+      }
       editOriginalPdfText(overlay, span);
     });
     layer.appendChild(span);
@@ -10006,6 +10278,41 @@ function _isNearWhite(hex) {
   const g = parseInt(hex.slice(3, 5), 16);
   const b = parseInt(hex.slice(5, 7), 16);
   return (r + g + b) > 720;  // same threshold used in sampling
+}
+
+// Mark a single pdf-text-item span for stream-level deletion (no whiteout
+// is created — save-time stream rewrite removes the glyphs and shifts the
+// rest of the line left). The span is visually struck through in red so the
+// user sees what'll be removed before they hit Save.
+function markPdfTextForDeletion(overlay, span) {
+  if (span.classList.contains('pdf-text-item-consumed')) return;
+  if (span.classList.contains('pdf-text-delete-marked')) {
+    // toggle off
+    span.classList.remove('pdf-text-delete-marked');
+    const id = span.dataset._delId;
+    if (id) {
+      const idx = annotations.findIndex(a => a.type === 'text-delete' && a._spanId === id);
+      if (idx >= 0) { annotations.splice(idx, 1); }
+    }
+    updateAnnotCount(); pushHistory('delete-text-unmark');
+    return;
+  }
+  const pageNum = parseInt(span.dataset.pageNum);
+  const x = parseFloat(span.dataset.x);
+  const yTop = parseFloat(span.dataset.y);
+  const w = parseFloat(span.dataset.w);
+  const h = parseFloat(span.dataset.h);
+  const text = span.dataset.text || '';
+  const fontHeight = parseFloat(span.dataset.fontHeight) || h || 14;
+  const id = 'del_' + Math.random().toString(36).slice(2, 9);
+  span.classList.add('pdf-text-delete-marked');
+  span.dataset._delId = id;
+  annotations.push({
+    type: 'text-delete', pageNum,
+    x, y: yTop, width: w, height: h, fontHeight,
+    sourceText: text, _spanId: id,
+  });
+  updateAnnotCount(); pushHistory('delete-text-mark');
 }
 
 // Click handler — replace original text region with a whiteout + a precisely-placed editable text annotation
@@ -13877,6 +14184,31 @@ async function generatePdfBytes(saveOpts) {
   // legacy "fonts" object for code that still references it (stamps embed their own fonts)
   const fonts = { _legacy: true };
   // Draw whiteouts FIRST (so they cover original PDF content without obscuring user annotations)
+  // Stream-level text deletions run FIRST, before any annotation drawing.
+  // Each text-delete ann targets a Tj/TJ run in the original content stream;
+  // we tokenize the stream, drop the operator, and reflow same-line text.
+  // Any ann that couldn't be matched (returns NOT in `consumed`) is converted
+  // on-the-fly to a whiteout so the visual still works.
+  try {
+    const delAnns = annotations.filter(a => a.type === 'text-delete');
+    if (delAnns.length) {
+      const byPage = {};
+      for (const a of delAnns) (byPage[a.pageNum] = byPage[a.pageNum] || []).push(a);
+      for (const pageNumStr of Object.keys(byPage)) {
+        const pageNum = parseInt(pageNumStr);
+        const wrapper = document.querySelector(`.page-wrapper[data-page-num="${pageNum}"]`);
+        if (!wrapper) continue;
+        const scale = parseFloat(wrapper.dataset.scale);
+        const p = doc.getPage(pageNum - 1);
+        const ph = p.getHeight();
+        const consumed = await _applyTextDeletions(doc, pageNum, byPage[pageNumStr], scale, ph);
+        for (const a of byPage[pageNumStr]) {
+          a._consumedByStreamDelete = consumed.has(a);
+        }
+      }
+    }
+  } catch (e) { console.warn('[text-delete] pre-pass failed:', e && e.message); }
+
   // Whiteouts AND redactions go first so they cover original PDF content.
   // Form fields go LAST so we can sort them by their user-chosen tabIndex —
   // PDF viewers tab through fields in the order they appear in the page
@@ -13895,6 +14227,25 @@ async function generatePdfBytes(saveOpts) {
   });
   const _hasRedaction = annotations.some(a => a.type === 'redact');
   for (const ann of orderedAnns) {
+    // text-delete: handled in the stream-rewrite pre-pass above. If stream
+    // matching succeeded, skip — otherwise drop a whiteout as a visual safety
+    // net so the user still sees the text gone.
+    if (ann.type === 'text-delete') {
+      if (ann._consumedByStreamDelete) continue;
+      const page = doc.getPage(ann.pageNum - 1);
+      const wrapper = document.querySelector(`.page-wrapper[data-page-num="${ann.pageNum}"]`);
+      const scale = parseFloat(wrapper.dataset.scale);
+      const pageH = page.getHeight();
+      const bleed = Math.max(2, (ann.fontHeight || ann.height || 14) * 0.25);
+      page.drawRectangle({
+        x: ann.x / scale - bleed / scale,
+        y: pageH - (ann.y + ann.height) / scale - bleed / scale,
+        width: ann.width / scale + (bleed * 2) / scale,
+        height: ann.height / scale + (bleed * 2) / scale,
+        color: rgb(1, 1, 1), borderWidth: 0,
+      });
+      continue;
+    }
     const page = doc.getPage(ann.pageNum - 1);
     const wrapper = document.querySelector(`.page-wrapper[data-page-num="${ann.pageNum}"]`);
     const scale = parseFloat(wrapper.dataset.scale);
@@ -14154,17 +14505,32 @@ async function generatePdfBytes(saveOpts) {
       // (overlap = same yellow), then composites the whole image at the brush
       // opacity → uniform translucent yellow regardless of pass count.
       if (ann.points && ann.points.length >= 2 && _brushStyle(ann).blend !== 'multiply') {
-        const color = hexToRgb(ann.color);
         const bs = _brushStyle(ann);
-        const thickness = bs.width / scale;
+        // Draw the whole stroke as ONE stroked path (a single paint operation) so
+        // its opacity is composited exactly ONCE — identical to the on-screen SVG
+        // <polyline stroke-opacity>. Drawing N separate line segments instead
+        // re-paints the translucent colour at every joint AND every self-crossing,
+        // stacking alpha so translucent brushes (pencil, marker, custom opacity)
+        // print darker and "blobbier" than the editor shows (see 017 vs 018).
+        // Path coords are overlay px / scale; the anchor (0, pageH) + pdf-lib's
+        // built-in y-flip map them to PDF space just like the per-segment code did.
+        let d = `M ${(ann.points[0].x / scale).toFixed(2)} ${(ann.points[0].y / scale).toFixed(2)}`;
         for (let i = 1; i < ann.points.length; i++) {
-          const p1 = ann.points[i - 1], p2 = ann.points[i];
-          page.drawLine({
-            start: { x: p1.x / scale, y: pageH - p1.y / scale },
-            end:   { x: p2.x / scale, y: pageH - p2.y / scale },
-            thickness, color, lineCap: bs.cap === 'butt' ? 0 : 1, opacity: bs.opacity
-          });
+          d += ` L ${(ann.points[i].x / scale).toFixed(2)} ${(ann.points[i].y / scale).toFixed(2)}`;
         }
+        const opts = {
+          x: 0, y: pageH, scale: 1,
+          borderColor: hexToRgb(ann.color),
+          borderWidth: bs.width / scale,
+          borderLineCap: bs.cap === 'butt' ? 0 : 1,
+          borderOpacity: bs.opacity
+        };
+        // Round line joins to match SVG stroke-linejoin:round (pdf-lib's drawSvgPath
+        // doesn't expose join, so set it in the graphics state it inherits).
+        const roundJoin = PDFLib.setLineJoin && PDFLib.LineJoinStyle;
+        if (roundJoin) page.pushOperators(pushGraphicsState(), PDFLib.setLineJoin(PDFLib.LineJoinStyle.Round));
+        page.drawSvgPath(d, opts);
+        if (roundJoin) page.pushOperators(popGraphicsState());
       }
     } else if (ann.type === 'field') {
       // Create a real AcroForm field via pdf-lib. Existing fields in the PDF are
@@ -14524,28 +14890,29 @@ async function generatePdfBytes(saveOpts) {
       const cyPdf = pageH - cyDesign / scale;
       const theta = angle * Math.PI / 180;
       const cosT = Math.cos(theta), sinT = Math.sin(theta);
-      // bottom-left of rect so that rotation around (x,y) keeps visual center fixed
-      const xPdf = cxPdf - (w / 2) * cosT + (h / 2) * sinT;
-      const yPdf = cyPdf - (w / 2) * sinT - (h / 2) * cosT;
       if (ann.bgColor || (ann.borderStyle && ann.borderStyle !== 'none' && ann.borderWidth > 0)) {
-        const rectOpts = {
-          x: xPdf, y: yPdf, width: w, height: h,
-          rotate: degrees(angle)
-        };
-        if (ann.bgColor) rectOpts.color = hexToRgb(ann.bgColor);
+        // Draw the box as a rounded-rect SVG path so exported corners match the
+        // CSS border-radius of the on-screen stamp. Anchor (top-left of the path,
+        // y-down) + rotate math mirrors the path-based shapes so rotation keeps
+        // the visual centre fixed.
+        const boxX = cxPdf - (w / 2) * cosT - (h / 2) * sinT;
+        const boxY = cyPdf - (w / 2) * sinT + (h / 2) * cosT;
+        const rPdf = (ann.borderRadius || 0) / scale;
+        const opts = { x: boxX, y: boxY, scale: 1, rotate: degrees(angle) };
+        if (ann.bgColor) opts.color = hexToRgb(ann.bgColor);
         if (ann.borderStyle && ann.borderStyle !== 'none' && ann.borderWidth > 0) {
-          rectOpts.borderColor = hexToRgb(ann.borderColor);
-          rectOpts.borderWidth = ann.borderWidth / scale;
-          if (ann.borderStyle === 'dashed') {
-            rectOpts.borderDashArray = [6 / scale, 4 / scale];
-          }
+          opts.borderColor = hexToRgb(ann.borderColor);
+          opts.borderWidth = ann.borderWidth / scale;
+          if (ann.borderStyle === 'dashed') opts.borderDashArray = [6 / scale, 4 / scale];
         }
-        page.drawRectangle(rectOpts);
+        page.drawSvgPath(roundRectSvgPath(w, h, rPdf), opts);
       }
-      // Draw text — split into lines, center each
-      const lines = (ann.text || '').split('\n');
+      // Draw text — split into lines, center each. Collapse internal whitespace
+      // runs to a single space to match the on-screen box (white-space: pre-line),
+      // otherwise "DRAFT  {USER}"-style double spaces print wider than designed.
+      const lines = (ann.text || '').split('\n').map(l => l.replace(/[ \t]+/g, ' '));
       const fs = ann.fontSize / scale;
-      const lineH = fs * 1.2;
+      const lineH = fs * 1.15; // match CSS .stamp-inner line-height
       const totalTextH = lineH * lines.length;
       // start baseline of first line relative to center
       const startOffsetY = totalTextH / 2 - fs * 0.85;
@@ -14579,65 +14946,51 @@ async function generatePdfBytes(saveOpts) {
     }
   }
 
-  // === Highlighter — rasterise per page to guarantee uniform print = screen ===
-  // CRITICAL: design and print MUST be 1:1 identical. Drawing each highlighter
-  // stroke as a path with opacity (or Multiply blend) inevitably stacks alpha
-  // on overlapping passes — every joint and every re-pass darkens. Rasterising
-  // all highlighter strokes opaquely onto one canvas (overlap = same yellow
-  // pixel = same colour) and embedding it at the brush opacity gives the same
-  // uniform translucent yellow no matter how many times the user passed over it.
+  // === Highlighter — real Multiply blend, one stroke = one paint op ==========
+  // The on-screen highlighter is an SVG <polyline> with stroke-opacity α inside a
+  // layer with mix-blend-mode:multiply. Over a base colour B that composites to
+  //     B' = B·(1 − α·(1 − colour))           (per channel)
+  // i.e. each stroke MULTIPLIES the page by k = 1 − α·(1 − colour). We reproduce
+  // that EXACTLY by drawing each stroke once, with a genuine PDF Multiply blend,
+  // in that pre-multiplied colour k. Consequences that match the editor 1:1:
+  //   • over white  → pale translucent colour (B=1 ⇒ B'=k)
+  //   • over text / dark fills → text shows through darkened, not filmed over
+  //   • two SEPARATE overlapping strokes → page·k·k, i.e. they darken at the cross
+  //   • self-overlap WITHIN one stroke → one paint op ⇒ multiplied once (no seams)
+  // The previous "flatten to one opaque raster at α" lost the multiply (wrong over
+  // dark content) and collapsed overlapping strokes to a single uniform pass.
   try {
-    const highlightersByPage = {};
+    const RJ = PDFLib.setLineJoin && PDFLib.LineJoinStyle;
+    const MUL = PDFLib.BlendMode && PDFLib.BlendMode.Multiply;
     for (const ann of annotations) {
-      if (ann.type !== 'draw') continue;
-      if (!ann.points || ann.points.length < 2) continue;
+      if (ann.type !== 'draw' || !ann.points || ann.points.length < 2) continue;
       const bs = _brushStyle(ann);
-      if (bs.blend !== 'multiply') continue;   // only highlighter brushes
-      (highlightersByPage[ann.pageNum] = highlightersByPage[ann.pageNum] || []).push(ann);
-    }
-    for (const pageNumStr of Object.keys(highlightersByPage)) {
-      const pageNum = parseInt(pageNumStr);
-      const page = doc.getPage(pageNum - 1);
-      const wrapper = document.querySelector(`.page-wrapper[data-page-num="${pageNum}"]`);
+      if (bs.blend !== 'multiply') continue;   // highlighter brushes only
+      const wrapper = document.querySelector(`.page-wrapper[data-page-num="${ann.pageNum}"]`);
       if (!wrapper) continue;
+      const page = doc.getPage(ann.pageNum - 1);
       const scale = parseFloat(wrapper.dataset.scale);
-      const baseW = parseFloat(wrapper.dataset.baseW);
-      const baseH = parseFloat(wrapper.dataset.baseH);
-      const mul = 2;   // supersample for crisp edges at print
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(baseW * mul);
-      canvas.height = Math.round(baseH * mul);
-      const ctx = canvas.getContext('2d');
-      ctx.scale(mul, mul);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      // Paint strokes FULLY OPAQUE so internal overlaps collapse to one colour.
-      // Group by colour so a yellow + red highlighter on the same page don't
-      // muddy each other on stroke order.
-      const byColor = {};
-      for (const ann of highlightersByPage[pageNumStr]) (byColor[ann.color] = byColor[ann.color] || []).push(ann);
-      for (const col of Object.keys(byColor)) {
-        ctx.strokeStyle = col;
-        for (const ann of byColor[col]) {
-          ctx.lineWidth = _brushStyle(ann).width;
-          ctx.beginPath();
-          ctx.moveTo(ann.points[0].x, ann.points[0].y);
-          for (let i = 1; i < ann.points.length; i++) ctx.lineTo(ann.points[i].x, ann.points[i].y);
-          ctx.stroke();
-        }
-      }
-      // All highlighters on this page share the same opacity (set in _brushStyle).
-      const opacity = _brushStyle(highlightersByPage[pageNumStr][0]).opacity;
-      const png = await doc.embedPng(canvas.toDataURL('image/png'));
-      page.drawImage(png, {
-        x: 0, y: 0,
-        width: baseW / scale,
-        height: baseH / scale,
-        opacity
-      });
+      const ph = page.getHeight();
+      const op = bs.opacity;
+      const hx = (ann.color || '#ffff00').replace('#', '');
+      const cr = parseInt(hx.substr(0, 2), 16) / 255, cg = parseInt(hx.substr(2, 2), 16) / 255, cb = parseInt(hx.substr(4, 2), 16) / 255;
+      const k = ch => Math.max(0, Math.min(1, 1 - op * (1 - ch)));
+      let d = `M ${(ann.points[0].x / scale).toFixed(2)} ${(ann.points[0].y / scale).toFixed(2)}`;
+      for (let i = 1; i < ann.points.length; i++) d += ` L ${(ann.points[i].x / scale).toFixed(2)} ${(ann.points[i].y / scale).toFixed(2)}`;
+      const opts = {
+        x: 0, y: ph, scale: 1,
+        borderColor: rgb(k(cr), k(cg), k(cb)),
+        borderWidth: bs.width / scale,
+        borderLineCap: 1,
+        borderOpacity: 1
+      };
+      if (MUL) opts.blendMode = MUL;
+      if (RJ) page.pushOperators(pushGraphicsState(), PDFLib.setLineJoin(PDFLib.LineJoinStyle.Round));
+      page.drawSvgPath(d, opts);
+      if (RJ) page.pushOperators(popGraphicsState());
     }
   } catch (e) {
-    console.warn('[highlighter raster] failed:', e && e.message);
+    console.warn('[highlighter] failed:', e && e.message);
   }
 
   // === Link annotations: add as a post-pass via low-level pdf-lib API ===
@@ -15398,6 +15751,30 @@ function shapeAABB(ann) {
 }
 
 // Scale a simple SVG path (M/L/C and Z commands) by independent x and y factors
+// Build a rounded-rectangle SVG path in a TOP-LEFT-origin, y-DOWN box of W×H
+// PDF units with corner radius r. Used so exported stamps keep the same rounded
+// corners as their on-screen CSS box (border-radius) — page.drawRectangle only
+// ever draws square corners, which is why print used to lose the rounding.
+// Corners are cubic béziers (kappa) so the path stays M/L/C, which pdf-lib's
+// drawSvgPath renders reliably (its arc support is shakier).
+function roundRectSvgPath(W, H, r) {
+  r = Math.max(0, Math.min(r, Math.min(W, H) / 2));
+  const f = n => n.toFixed(3);
+  if (r <= 0.01) return `M 0 0 L ${f(W)} 0 L ${f(W)} ${f(H)} L 0 ${f(H)} Z`;
+  const k = r * 0.5522847498307936; // bézier circle constant
+  return [
+    `M ${f(r)} 0`,
+    `L ${f(W - r)} 0`,
+    `C ${f(W - r + k)} 0 ${f(W)} ${f(r - k)} ${f(W)} ${f(r)}`,
+    `L ${f(W)} ${f(H - r)}`,
+    `C ${f(W)} ${f(H - r + k)} ${f(W - r + k)} ${f(H)} ${f(W - r)} ${f(H)}`,
+    `L ${f(r)} ${f(H)}`,
+    `C ${f(r - k)} ${f(H)} 0 ${f(H - r + k)} 0 ${f(H - r)}`,
+    `L 0 ${f(r)}`,
+    `C 0 ${f(r - k)} ${f(r - k)} 0 ${f(r)} 0`,
+    'Z'
+  ].join(' ');
+}
 function scaleSvgPath(d, sx, sy) {
   return d.replace(/([MLCmlcZz])([^MLCZmlcz]*)/g, (match, cmd, args) => {
     if (cmd.toUpperCase() === 'Z') return cmd;
@@ -17744,7 +18121,14 @@ function applyStampStyles(el, ann) {
   inner.style.fontStyle = ann.italic ? 'italic' : 'normal';
   inner.style.textDecoration = ann.underline ? 'underline' : 'none';
   inner.style.padding = `${ann.paddingY}px ${ann.paddingX}px`;
-  inner.textContent = ann.text;
+  // white-space:pre (not pre-line) so the on-screen stamp breaks ONLY on explicit
+  // newlines — never soft-wraps. The exported PDF lays text out with split('\n'),
+  // so any soft-wrap in the editor (e.g. a sub-pixel-narrow box pushing the last
+  // word down) would make print show fewer lines than the design. Collapsing
+  // whitespace runs here mirrors print's per-line .replace(/[ \t]+/g,' '), so a
+  // "PAID  •  2024"-style double space looks identical in both.
+  inner.style.whiteSpace = 'pre';
+  inner.textContent = (ann.text || '').replace(/[ \t]+/g, ' ');
 }
 function measureStamp(ann) {
   // Build a hidden, fully-styled clone to measure natural dimensions
@@ -17758,8 +18142,11 @@ function measureStamp(ann) {
   applyStampStyles(tmp, tmpAnn);
   tmp.style.width = 'auto'; tmp.style.height = 'auto';
   inner.style.width = 'auto'; inner.style.height = 'auto';
-  inner.style.whiteSpace = 'pre-line';
-  const w = tmp.offsetWidth, h = tmp.offsetHeight;
+  inner.style.whiteSpace = 'pre';
+  // +2px horizontal safety so the integer-rounded offsetWidth can never end up a
+  // sub-pixel narrower than the text needs (which, with overflow:hidden, would
+  // clip the last glyph). Invisible at the box level, keeps edit == print.
+  const w = tmp.offsetWidth + 2, h = tmp.offsetHeight;
   document.body.removeChild(tmp);
   return { w, h };
 }
@@ -20740,7 +21127,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.76';
+const APP_VERSION = '1.79';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
@@ -21671,6 +22058,113 @@ if (typeof renderPages === 'function') {
     return out;
   };
 }
+
+// ===== Reading ruler — a movable, rotatable straightedge over the document =====
+// Purely an on-screen reading aid (like laying a physical ruler on paper to keep
+// your eye on a line). It is a single viewport-fixed element, NOT an annotation,
+// so it is never serialized and never exported/printed. Drag the band to move it,
+// drag the round handle at either end to rotate, double-click to snap level.
+(function () {
+  const btn = document.getElementById('readingRulerToggle');
+  if (!btn) return;
+  let el = null, angle = 0;
+  const center = { x: 0, y: 0 };
+  let width = 680;
+  const HEIGHT = 44;
+
+  // one-time styles (cursors / hover) — geometry stays inline so it can be live-updated
+  if (!document.getElementById('readingRulerCss')) {
+    const s = document.createElement('style');
+    s.id = 'readingRulerCss';
+    s.textContent =
+      '#readingRuler{position:fixed;z-index:6000;touch-action:none;will-change:transform;}' +
+      '#readingRuler .rr-band{position:absolute;inset:0;border-radius:6px;cursor:grab;' +
+      'background:linear-gradient(180deg,rgba(255,196,0,0.10),rgba(255,196,0,0.22) 50%,rgba(255,196,0,0.10));' +
+      'border-top:1px solid rgba(180,120,0,0.35);border-bottom:1px solid rgba(180,120,0,0.35);' +
+      'box-shadow:0 1px 4px rgba(0,0,0,0.12);}' +
+      '#readingRuler.dragging .rr-band{cursor:grabbing;}' +
+      '#readingRuler .rr-line{position:absolute;left:0;right:0;top:50%;height:0;' +
+      'border-top:2px solid rgba(214,40,40,0.85);pointer-events:none;}' +
+      '#readingRuler .rr-ticks{position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none;opacity:0.5;}' +
+      '#readingRuler .rr-rot{position:absolute;top:50%;width:22px;height:22px;margin-top:-11px;border-radius:50%;' +
+      'background:#fff;border:2px solid rgba(214,40,40,0.85);cursor:crosshair;display:flex;align-items:center;' +
+      'justify-content:center;font-size:12px;color:#d62828;box-shadow:0 1px 3px rgba(0,0,0,0.2);}' +
+      '#readingRuler .rr-rot.l{left:-11px;}#readingRuler .rr-rot.r{right:-11px;}';
+    document.head.appendChild(s);
+  }
+
+  function apply() {
+    if (!el) return;
+    el.style.width = width + 'px';
+    el.style.height = HEIGHT + 'px';
+    el.style.left = (center.x - width / 2) + 'px';
+    el.style.top = (center.y - HEIGHT / 2) + 'px';
+    el.style.transform = 'rotate(' + angle + 'deg)';
+  }
+  function buildTicks() {
+    let t = '';
+    for (let x = 0; x <= width; x += 20) {
+      const major = (x % 100 === 0);
+      t += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="' + (major ? 10 : 6) + '" stroke="#9a6b00" stroke-width="1"/>';
+      t += '<line x1="' + x + '" y1="' + HEIGHT + '" x2="' + x + '" y2="' + (HEIGHT - (major ? 10 : 6)) + '" stroke="#9a6b00" stroke-width="1"/>';
+    }
+    return '<svg class="rr-ticks" viewBox="0 0 ' + width + ' ' + HEIGHT + '" preserveAspectRatio="none" width="' + width + '" height="' + HEIGHT + '">' + t + '</svg>';
+  }
+  function show() {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    width = Math.max(360, Math.min(900, Math.round(vw * 0.6)));
+    center.x = vw / 2; center.y = Math.round(vh * 0.45); angle = 0;
+    el = document.createElement('div');
+    el.id = 'readingRuler';
+    el.innerHTML = buildTicks() +
+      '<div class="rr-band"></div><div class="rr-line"></div>' +
+      '<div class="rr-rot l" title="Drag to rotate">⟲</div>' +
+      '<div class="rr-rot r" title="Drag to rotate">⟳</div>';
+    document.body.appendChild(el);
+    apply();
+    wireDrag();
+    btn.classList.add('active');
+  }
+  function hide() {
+    if (el) { el.remove(); el = null; }
+    btn.classList.remove('active');
+  }
+  function wireDrag() {
+    const band = el.querySelector('.rr-band');
+    // move
+    band.addEventListener('pointerdown', e => {
+      if (e.button) return;
+      e.preventDefault();
+      const sx = e.clientX, sy = e.clientY, cx0 = center.x, cy0 = center.y;
+      el.classList.add('dragging');
+      band.setPointerCapture(e.pointerId);
+      const mv = ev => { center.x = cx0 + (ev.clientX - sx); center.y = cy0 + (ev.clientY - sy); apply(); };
+      const up = ev => { el.classList.remove('dragging'); band.releasePointerCapture(e.pointerId); band.removeEventListener('pointermove', mv); band.removeEventListener('pointerup', up); };
+      band.addEventListener('pointermove', mv); band.addEventListener('pointerup', up);
+    });
+    // double-click to snap back to level
+    band.addEventListener('dblclick', () => { angle = 0; apply(); });
+    // rotate (either handle) — angle from centre to pointer
+    el.querySelectorAll('.rr-rot').forEach(h => {
+      h.addEventListener('pointerdown', e => {
+        if (e.button) return;
+        e.preventDefault(); e.stopPropagation();
+        h.setPointerCapture(e.pointerId);
+        const mv = ev => {
+          let a = Math.atan2(ev.clientY - center.y, ev.clientX - center.x) * 180 / Math.PI;
+          if (h.classList.contains('l')) a += 180;        // left handle points the other way
+          if (ev.shiftKey) a = Math.round(a / 15) * 15;   // Shift = 15° snaps
+          angle = a; apply();
+        };
+        const up = ev => { h.releasePointerCapture(e.pointerId); h.removeEventListener('pointermove', mv); h.removeEventListener('pointerup', up); };
+        h.addEventListener('pointermove', mv); h.addEventListener('pointerup', up);
+      });
+    });
+  }
+  btn.addEventListener('click', () => { el ? hide() : show(); });
+  // Esc hides it when active
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el) hide(); });
+})();
 
 // ===== Measure / ruler tool (press M) =====
 // A transient on-screen ruler: drag on a page to measure. Distance is derived
