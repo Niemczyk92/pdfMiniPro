@@ -1,6 +1,6 @@
-// PDF Mini Editor Pro — service worker v83
+// PDF Mini Editor Pro — service worker v108
 // Bump this version string for every release to trigger updates.
-const CACHE = 'pdf-mini-editor-pro-v83';
+const CACHE = 'pdf-mini-editor-pro-v108';
 
 const ASSETS = [
   './',
@@ -25,6 +25,11 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
+  // Activate this new worker immediately instead of waiting for every tab to
+  // close. Without this, a cache-first worker keeps serving the OLD index.html
+  // for a long time after a release — so users (and our own testing) never see
+  // the fix until they fully quit the browser. Paired with clients.claim() below.
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE).then(cache =>
       Promise.all(ASSETS.map(url =>
@@ -48,13 +53,42 @@ self.addEventListener('message', e => {
 });
 
 self.addEventListener('fetch', e => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+
+  // NETWORK-FIRST for the app shell (the HTML document). A cache-first strategy
+  // here meant every code change was invisible until the cache key changed AND
+  // the worker re-activated — the root cause of "still broken after the fix".
+  // Network-first guarantees the latest index.html when online, with the cached
+  // copy as the offline fallback.
+  const isDoc = req.mode === 'navigate'
+    || req.destination === 'document'
+    || new URL(req.url).pathname.endsWith('/index.html');
+  if (isDoc) {
+    e.respondWith(
+      fetch(req).then(resp => {
+        if (resp && resp.ok) {
+          const clone = resp.clone();
+          caches.open(CACHE).then(cache => cache.put(req, clone)).catch(() => {});
+        }
+        return resp;
+      }).catch(() => caches.match(req).then(c => c || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // CACHE-FIRST for everything else (static icons + pinned CDN libs) — those are
+  // versioned/immutable, so serving from cache is fast and offline-safe.
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
-      if (resp.ok && e.request.method === 'GET') {
-        const clone = resp.clone();
-        caches.open(CACHE).then(cache => cache.put(e.request, clone)).catch(() => {});
-      }
-      return resp;
-    }).catch(() => cached))
+    caches.match(req).then(cached => {
+      if (cached) return cached;
+      return fetch(req).then(resp => {
+        if (resp && resp.ok) {
+          const clone = resp.clone();
+          caches.open(CACHE).then(cache => cache.put(req, clone)).catch(() => {});
+        }
+        return resp;
+      }).catch(() => Response.error());
+    })
   );
 });
