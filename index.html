@@ -5685,6 +5685,32 @@
   /* Touch-friendliness */
   .overlay { touch-action: none; }
 
+  /* ===== Touch / mobile mode (body[data-touch]) ===== */
+  /* In SELECT mode a one-finger drag on empty page should pan/pinch-zoom the
+     document natively (no buggy custom pinch). Annotations still drag because
+     their own elements opt back out with touch-action:none. */
+  body[data-touch] .overlay { touch-action: pan-x pan-y pinch-zoom; }
+  body[data-touch] .overlay .annotation,
+  body[data-touch] .img-handle,
+  body[data-touch] .rot-handle { touch-action: none; }
+  /* Drag-to-draw tools need the finger to draw, not pan, so the page is locked. */
+  body[data-touch].draw-mode .overlay,
+  body[data-touch].shape-mode .overlay,
+  body[data-touch].redact-mode .overlay,
+  body[data-touch].link-mode .overlay,
+  body[data-touch].field-mode .overlay { touch-action: none; }
+  /* Fatten the tiny resize/rotate pucks' hit area on touch (they inherit
+     pointer-events from the puck, which is interactive only when selected). */
+  body[data-touch] .img-handle::after,
+  body[data-touch] .rot-handle::after { content: ''; position: absolute; inset: -12px; }
+  /* Keep every tool reachable on a phone: let the toolbar scroll horizontally
+     and give buttons comfortable touch targets. */
+  @media (max-width: 760px) {
+    .toolbar.tb-v2 { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+    .toolbar.tb-v2 .btn-icon { min-width: 40px; min-height: 40px; }
+    .toolbar.tb-v2 .btn-lg { min-height: 40px; }
+  }
+
   /* Tooltip on Field button label hint */
   .btn.field-btn { background: var(--surface-2); border-color: var(--border); border: 1px solid var(--border); }
   .btn.field-btn:hover { background: var(--surface-3); }
@@ -8795,6 +8821,11 @@
 <script>
 const { PDFDocument, rgb, StandardFonts, degrees,
         pushGraphicsState, popGraphicsState, translate, rotateRadians } = PDFLib;
+// Gated debug logger — keeps diagnostics in the source but OUT of the production
+// console (flip DEBUG to true while developing). Replaces the scattered raw
+// console.log() calls that used to spam the console on every save / undo / load.
+const DEBUG = false;
+function dbg() { if (DEBUG) console.log.apply(console, arguments); }
 // Helper: wrap a drawing operation in a graphics-state rotation around (cx, cy).
 // drawFn may be sync or async; we always await it so async work completes inside the matrix.
 //
@@ -8914,52 +8945,125 @@ function _tokenizeContentStream(bytes) {
   return insts;
 }
 
-// Find the best-matching text-showing instruction (`Tj`, `TJ`, `'`, `"`) for
-// a deletion target. Returns the instruction index or -1. Walks each BT/ET
-// block, tracking Tm. Conservative: only inspects ops at the BT-block's
-// implicit identity CTM (works for body text in most PDFs).
-function _findTjForDeletion(insts, target) {
+// --- Content-aware text-deletion helpers --------------------------------------
+// These let us delete EXACTLY the clicked word instead of blindly removing the
+// whole matched show-operator (which over-deletes a multi-word run) or, worse,
+// removing the wrong operator. The trick: decode the operator's bytes as Latin-1
+// (one byte = one char). For simple WinAnsi/Standard fonts this equals the
+// visible text, so a substring match against the clicked word is reliable. For
+// CID/Type0, /Differences-subset, or otherwise re-mapped fonts the decode is
+// garbage that will NOT contain the word → we decline and fall back to whiteout,
+// so we never silently corrupt or over-delete. (Self-validating by design.)
+function _pdfDecodeLiteral(bytes, start, end) { // start at '(' … end one past ')'
+  let s = ''; let i = start + 1; const last = end - 1;
+  while (i < last) {
+    const b = bytes[i];
+    if (b === 0x5c) { // backslash escape
+      const n = bytes[i + 1];
+      if (n === undefined) { i++; continue; }
+      if (n >= 0x30 && n <= 0x37) { // up to 3 octal digits
+        let oct = 0, k = 0;
+        while (k < 3 && bytes[i + 1 + k] >= 0x30 && bytes[i + 1 + k] <= 0x37) { oct = oct * 8 + (bytes[i + 1 + k] - 0x30); k++; }
+        s += String.fromCharCode(oct & 0xff); i += 1 + k; continue;
+      }
+      if (n === 0x0a) { i += 2; continue; }                       // \<LF> line continuation
+      if (n === 0x0d) { i += (bytes[i + 2] === 0x0a ? 3 : 2); continue; } // \<CR>[LF]
+      const map = { 0x6e: 0x0a, 0x72: 0x0d, 0x74: 0x09, 0x62: 0x08, 0x66: 0x0c };
+      s += String.fromCharCode(map[n] !== undefined ? map[n] : n); i += 2; continue;
+    }
+    s += String.fromCharCode(b); i++;
+  }
+  return s;
+}
+function _pdfDecodeHex(bytes, start, end) { // start at '<' … end one past '>'
+  let hex = '';
+  for (let i = start + 1; i < end - 1; i++) {
+    const c = bytes[i];
+    if ((c >= 0x30 && c <= 0x39) || (c >= 0x41 && c <= 0x46) || (c >= 0x61 && c <= 0x66)) hex += String.fromCharCode(c);
+  }
+  if (hex.length % 2) hex += '0';
+  let s = '';
+  for (let i = 0; i < hex.length; i += 2) s += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+  return s;
+}
+function _decodeTJArray(bytes, arrStart, arrEnd) { // concat the array's string elements
+  let s = ''; let i = arrStart + 1; const end = arrEnd - 1;
+  while (i < end) {
+    const b = bytes[i];
+    if (b === 0x28) { let depth = 1, j = i + 1; while (j < end && depth > 0) { const c = bytes[j]; if (c === 0x5c) { j += 2; continue; } if (c === 0x28) depth++; else if (c === 0x29) depth--; j++; } s += _pdfDecodeLiteral(bytes, i, j); i = j; continue; }
+    if (b === 0x3c) { let j = i + 1; while (j < end && bytes[j] !== 0x3e) j++; if (j < end) j++; s += _pdfDecodeHex(bytes, i, j); i = j; continue; }
+    i++;
+  }
+  return s;
+}
+// Decode a show op's text (Tj/TJ/'/") as Latin-1, or null if it isn't a plain
+// string/array show op.
+function _decodeShowOpText(op, bytes) {
+  const oc = op.opcode;
+  if (oc === 'Tj' || oc === "'" || oc === '"') {
+    const tok = op.operands[op.operands.length - 1];
+    if (!tok) return null;
+    if (tok.type === 'str') return _pdfDecodeLiteral(bytes, tok.start, tok.end);
+    if (tok.type === 'hex') return _pdfDecodeHex(bytes, tok.start, tok.end);
+    return null;
+  }
+  if (oc === 'TJ') {
+    const arr = op.operands[0];
+    if (!arr || arr.type !== 'arr') return null;
+    return _decodeTJArray(bytes, arr.start, arr.end);
+  }
+  return null;
+}
+// Encode a Latin-1 JS string back to a PDF literal `(...)` with correct escaping.
+function _encodeLatin1Literal(text) {
+  let s = '(';
+  for (let k = 0; k < text.length; k++) {
+    const c = text.charCodeAt(k) & 0xff;
+    if (c === 0x28 || c === 0x29 || c === 0x5c) s += '\\' + String.fromCharCode(c);
+    else if (c < 0x20 || c > 0x7e) s += '\\' + c.toString(8).padStart(3, '0');
+    else s += String.fromCharCode(c);
+  }
+  return s + ')';
+}
+// Remove the first occurrence of `needle` from `text`, absorbing ONE flanking
+// space so "ONE TWO THREE" → "ONE THREE" (not a double gap). Returns null if not found.
+function _spliceWord(text, needle) {
+  const i = text.indexOf(needle);
+  if (i < 0) return null;
+  let start = i, end = i + needle.length;
+  if (text[end] === ' ') end++;
+  else if (text[start - 1] === ' ') start--;
+  return text.slice(0, start) + text.slice(end);
+}
+// Content-aware matcher: among show ops on the clicked baseline (and font size),
+// pick the one whose DECODED text actually contains the clicked word and whose
+// run starts at/before the word. Returns the instruction index, or -1.
+function _findOpForDeletion(insts, bytes, target, sourceText) {
+  const needle = (sourceText || '').trim();
+  if (!needle) return -1;
   let best = -1, bestErr = Infinity;
-  let tm5 = 0, tm4 = 0, tmInited = false, fontSize = 12, leading = 0;
-  let inBT = false;
+  let tm5 = 0, tm4 = 0, fontSize = 12, leading = 0, inBT = false;
   for (let i = 0; i < insts.length; i++) {
-    const it = insts[i];
-    const op = it.opcode;
-    if (op === 'BT') { tm5 = tm4 = 0; tmInited = true; inBT = true; continue; }
+    const it = insts[i]; const op = it.opcode;
+    if (op === 'BT') { tm5 = tm4 = 0; inBT = true; continue; }
     if (op === 'ET') { inBT = false; continue; }
     if (!inBT) continue;
-    if (op === 'Tf') {
-      const n = it.operands[1]; if (n && n.type === 'num') fontSize = n.value || fontSize;
-      continue;
-    }
-    if (op === 'TL') {
-      const n = it.operands[0]; if (n && n.type === 'num') leading = n.value;
-      continue;
-    }
-    if (op === 'Tm') {
-      const e = it.operands[4], f = it.operands[5];
-      if (e && f && e.type === 'num' && f.type === 'num') { tm4 = e.value; tm5 = f.value; }
-      continue;
-    }
-    if (op === 'Td' || op === 'TD') {
-      const x = it.operands[0], y = it.operands[1];
-      if (x && y && x.type === 'num' && y.type === 'num') { tm4 += x.value; tm5 += y.value; }
-      if (op === 'TD' && y && y.type === 'num') leading = -y.value;
-      continue;
-    }
+    if (op === 'Tf') { const n = it.operands[1]; if (n && n.type === 'num') fontSize = n.value || fontSize; continue; }
+    if (op === 'TL') { const n = it.operands[0]; if (n && n.type === 'num') leading = n.value; continue; }
+    if (op === 'Tm') { const e = it.operands[4], f = it.operands[5]; if (e && f && e.type === 'num' && f.type === 'num') { tm4 = e.value; tm5 = f.value; } continue; }
+    if (op === 'Td' || op === 'TD') { const x = it.operands[0], y = it.operands[1]; if (x && y && x.type === 'num' && y.type === 'num') { tm4 += x.value; tm5 += y.value; } if (op === 'TD' && y && y.type === 'num') leading = -y.value; continue; }
     if (op === 'T*') { tm5 -= leading; continue; }
     if (op === "'" || op === '"') { tm5 -= leading; }
     if (op === 'Tj' || op === 'TJ' || op === "'" || op === '"') {
-      // baseline-y tolerance ~0.5*fontSize, x-start tolerance ~0.5*fontSize
-      const tolY = Math.max(2, fontSize * 0.5);
-      const tolX = Math.max(2, fontSize * 0.8);
       const dy = Math.abs(tm5 - target.yPt);
-      const dx = Math.abs(tm4 - target.xPt);
+      const tolY = Math.max(2, fontSize * 0.6);
       const sizeErr = Math.abs(fontSize - target.hPt) / Math.max(1, target.hPt);
-      if (dy < tolY && dx < tolX && sizeErr < 0.35) {
-        const err = dy * 2 + dx + sizeErr * fontSize * 4;
-        if (err < bestErr) { bestErr = err; best = i; }
-      }
+      if (dy >= tolY || sizeErr >= 0.4) continue;
+      if (tm4 > target.xPt + Math.max(3, fontSize)) continue;   // run must start at/before the word
+      const txt = _decodeShowOpText(it, bytes);
+      if (txt == null || !txt.includes(needle)) continue;       // content gate
+      const err = dy * 2 + Math.abs(tm4 - target.xPt) + sizeErr * fontSize * 2;
+      if (err < bestErr) { bestErr = err; best = i; }
     }
   }
   return best;
@@ -9030,21 +9134,54 @@ async function _applyTextDeletions(doc, pageNum, deletions, scale, pageH) {
         const hPt = ann.height / scale;
         const wPt = ann.width / scale;
         const target = { xPt, yPt, hPt, wPt };
-        const idx = _findTjForDeletion(insts, target);
-        if (idx < 0) continue;
+        // Content-aware match: find the show op whose DECODED text contains the
+        // clicked word. If none does (CID/Type0, remapped subset, or geometry
+        // mismatch) → leave the stream alone and let the whiteout cover it. This
+        // is what stops the old "removed the wrong / whole multi-word operator"
+        // bug proven on 001.pdf (clicking "Faktura" in a one-operator line).
+        const needle = (ann.sourceText || '').trim();
+        const idx = _findOpForDeletion(insts, bytes, target, needle);
+        if (idx < 0) continue;                       // → whiteout fallback (safe)
         const op = insts[idx];
-        // Mark this op for removal — preserves any TJ/Tj/'/" with whatever
-        // string it carries; we don't try to delete a SUBSTRING of the run.
+        const opText = _decodeShowOpText(op, bytes);
+        if (opText == null || !needle || !opText.includes(needle)) continue;  // safety
+
+        if (op.opcode === 'Tj' && opText.trim() !== needle) {
+          // SUBSTRING SURGERY on a single-string Tj: delete just the clicked run.
+          // Everything after it in the SAME Tj reflows left automatically (one
+          // show op draws from one origin), so no advance math is needed.
+          const newText = _spliceWord(opText, needle);
+          if (newText == null) continue;             // couldn't splice → whiteout
+          if (newText.trim() === '') op._removed = true;
+          else op._replaceRaw = _encodeLatin1Literal(newText) + ' Tj';
+          changed = true;
+          consumed.add(ann);
+          continue;
+        }
+        if (opText.trim() !== needle) continue;      // multi-word TJ/'/" → whiteout (no partial surgery yet)
+        // Whole-operator case: the op shows exactly the clicked word → safe to remove.
         op._removed = true;
-        // Reflow: if the next inst is `tx ty Td` with |ty|<eps, shift tx.
-        // Walk past spacing/Tf/etc. that don't move position.
-        const nxt = insts[idx + 1];
-        if (nxt && (nxt.opcode === 'Td' || nxt.opcode === 'TD')) {
-          const xn = nxt.operands[0], yn = nxt.operands[1];
-          if (xn && yn && xn.type === 'num' && yn.type === 'num' && Math.abs(yn.value) < 0.5) {
-            const newX = xn.value - wPt;
-            nxt._replaceRaw = `${newX.toFixed(3)} ${yn.value} ${nxt.opcode}`;
+        // Reflow within the line (Word-like): find the next text-POSITIONING op
+        // and, if it repositions on the SAME baseline (|ty|<eps), pull it left by
+        // the removed width so the following words close the gap. We skip ops that
+        // don't move the cursor horizontally (font, spacing, colour, ExtGState),
+        // so the reflow still fires when a `Tf`/`TL`/colour op sits between the
+        // deleted run and the next `Td`. Consecutive Tj/' show ops with no Td in
+        // between already reflow automatically (the deleted glyph advance is gone);
+        // absolutely-positioned runs (Tm/cm) are left as-is — the text is still
+        // removed, we just don't risk a cascading reposition.
+        const POS_NEUTRAL = { Tf: 1, TL: 1, Tc: 1, Tw: 1, Tz: 1, Tr: 1, Ts: 1, g: 1, rg: 1, k: 1, G: 1, RG: 1, K: 1, gs: 1, cs: 1, CS: 1, sc: 1, scn: 1, SC: 1, SCN: 1 };
+        for (let j = idx + 1; j < insts.length; j++) {
+          const nxt = insts[j];
+          if (POS_NEUTRAL[nxt.opcode]) continue;          // skip non-moving ops
+          if (nxt.opcode === 'Td' || nxt.opcode === 'TD') {
+            const xn = nxt.operands[0], yn = nxt.operands[1];
+            if (xn && yn && xn.type === 'num' && yn.type === 'num' && Math.abs(yn.value) < 0.5) {
+              const newX = xn.value - wPt;
+              nxt._replaceRaw = `${newX.toFixed(3)} ${yn.value} ${nxt.opcode}`;
+            }
           }
+          break;   // stop at the first position-affecting / showing / structural op
         }
         changed = true;
         consumed.add(ann);
@@ -9162,6 +9299,20 @@ workerReady = initPdfWorker();
   notice.hidden = false;
   const cont = document.getElementById('mobileNoticeContinue');
   if (cont) cont.addEventListener('click', () => { notice.hidden = true; });
+})();
+
+// Touch-mode flag — set ONLY when the primary pointer is coarse (touch) AND there
+// is no fine pointer (mouse). This deliberately does NOT trip on hybrid Windows
+// touch-laptops (which also report a fine pointer), so desktop stays byte-for-byte
+// unchanged; it gates the body[data-touch] mobile CSS + gesture tweaks.
+(function _setTouchFlag() {
+  try {
+    const mm = window.matchMedia;
+    if (!mm) return;
+    const coarse = mm('(pointer: coarse)').matches;
+    const fine = mm('(pointer: fine)').matches;
+    if (coarse && !fine) document.body.setAttribute('data-touch', '1');
+  } catch (_) {}
 })();
 
 // === SW + UPDATE ===
@@ -11932,7 +12083,8 @@ function enableTextDrag(el, ann) {
   // Cache the annotation's "resting" opacity so we restore it (not 1) after drag —
   // otherwise a watermark dropped at opacity 0.25 becomes a solid block on first click.
   let restOpacity = '1';
-  el.addEventListener('mousedown', e => {
+  el.addEventListener('pointerdown', e => {
+    if (e.button !== undefined && e.button !== 0) return;
     if (activeEditor && activeEditorAnn === ann) return;
     if (e.target && e.target.classList &&
         (e.target.classList.contains('img-handle') || e.target.classList.contains('rot-handle'))) return;
@@ -11955,7 +12107,7 @@ function enableTextDrag(el, ann) {
       el.style.opacity = String(Math.max(0.15, parseFloat(restOpacity) * 0.85));
     }
   });
-  window.addEventListener('mousemove', e => {
+  window.addEventListener('pointermove', e => {
     if (!dragging) return;
     const dx = (e.clientX - downX) / currentZoom;
     const dy = (e.clientY - downY) / currentZoom;
@@ -11977,7 +12129,7 @@ function enableTextDrag(el, ann) {
     }
     if (selected === ann) positionPropsPanel(ann);
   });
-  window.addEventListener('mouseup', () => {
+  window.addEventListener('pointerup', () => {
     if (!dragging) return;
     hideAlignmentGuides();
     el.style.opacity = restOpacity;
@@ -12226,7 +12378,7 @@ function enableImageInteractions(container, ann) {
   let mDragging = false, mDownX = 0, mDownY = 0, mStartX = 0, mStartY = 0, mMoved = false;
   let mWoStartX = 0, mWoStartY = 0;
   let mRestOpacity = '1';
-  img.addEventListener('mousedown', e => {
+  img.addEventListener('pointerdown', e => {
     if (e.button !== 0) return;
     e.stopPropagation();
     mDragging = true; mMoved = false;
@@ -12236,7 +12388,7 @@ function enableImageInteractions(container, ann) {
     mRestOpacity = (ann.opacity != null && ann.opacity < 1) ? String(ann.opacity) : (container.style.opacity || '1');
     container.style.opacity = String(Math.max(0.15, parseFloat(mRestOpacity) * 0.85));
   });
-  window.addEventListener('mousemove', e => {
+  window.addEventListener('pointermove', e => {
     if (!mDragging) return;
     const dx = (e.clientX - mDownX) / currentZoom;
     const dy = (e.clientY - mDownY) / currentZoom;
@@ -12257,7 +12409,7 @@ function enableImageInteractions(container, ann) {
     }
     if (selected === ann) positionPropsPanel(ann);
   });
-  window.addEventListener('mouseup', () => {
+  window.addEventListener('pointerup', () => {
     if (!mDragging) return;
     container.style.opacity = mRestOpacity;
     hideAlignmentGuides();
@@ -12267,9 +12419,10 @@ function enableImageInteractions(container, ann) {
 
   // === RESIZE: dragging a corner handle ===
   handles.forEach(h => {
-    h.addEventListener('mousedown', e => {
+    h.addEventListener('pointerdown', e => {
       if (e.button !== 0) return;
       e.stopPropagation(); e.preventDefault();
+      try { h.setPointerCapture(e.pointerId); } catch (_) {}
       select(ann);
       const corner = h.dataset.corner;
       const startX = e.clientX, startY = e.clientY;
@@ -12343,18 +12496,21 @@ function enableImageInteractions(container, ann) {
         if (selected === ann) positionPropsPanel(ann);
       }
       function onUp() {
-        window.removeEventListener('mousemove', onMove);
-        window.removeEventListener('mouseup', onUp);
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+        window.removeEventListener('pointercancel', onUp);
       }
-      window.addEventListener('mousemove', onMove);
-      window.addEventListener('mouseup', onUp);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
     });
   });
 
   // === ROTATE: dragging the rotate handle ===
-  rotHandle.addEventListener('mousedown', e => {
+  rotHandle.addEventListener('pointerdown', e => {
     if (e.button !== 0) return;
     e.stopPropagation(); e.preventDefault();
+    try { rotHandle.setPointerCapture(e.pointerId); } catch (_) {}
     select(ann);
     // Compute image center in viewport coords
     const rect = container.getBoundingClientRect();
@@ -12381,11 +12537,13 @@ function enableImageInteractions(container, ann) {
       }
     }
     function onUp() {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
     }
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
   });
 }
 
@@ -13605,7 +13763,7 @@ function updateHistoryUI() {
   if (redoBtn) redoBtn.disabled = historyIndex >= historyStack.length - 1;
 }
 function doUndo() {
-  console.log('[undo] requested; index=', historyIndex, 'of', historyStack.length);
+  dbg('[undo] requested; index=', historyIndex, 'of', historyStack.length);
   if (historyIndex <= 0) { showToast(window.t('toast.nothingUndo', 'Nothing to undo.'), 'warn'); return; }
   historyIndex--;
   restoreFromSnapshot(historyStack[historyIndex]);
@@ -13613,7 +13771,7 @@ function doUndo() {
   showToast(window.t('toast.undone', 'Undone.'), 'success');
 }
 function doRedo() {
-  console.log('[redo] requested; index=', historyIndex, 'of', historyStack.length);
+  dbg('[redo] requested; index=', historyIndex, 'of', historyStack.length);
   if (historyIndex >= historyStack.length - 1) { showToast('Nothing to redo.', 'warn'); return; }
   historyIndex++;
   restoreFromSnapshot(historyStack[historyIndex]);
@@ -13883,7 +14041,7 @@ function toggleInSelection(ann) {
   }
   if (selected) { buildPropsPanel(selected); positionPropsPanel(selected); }
   else hidePropsPanel();
-  console.log('[multi-select] now selected', selectedSet.size, 'object(s)');
+  dbg('[multi-select] now selected', selectedSet.size, 'object(s)');
 }
 function selectAllAnnotations() {
   clearSelection();
@@ -13907,7 +14065,7 @@ function _healSelection() {
 }
 function doCopySelection() {
   _healSelection();
-  console.log('[copy] selectedSet has', selectedSet.size, 'item(s)');
+  dbg('[copy] selectedSet has', selectedSet.size, 'item(s)');
   if (!selectedSet.size) { showToast(window.t('toast.selectFirst', 'Select something first (click or Shift-click).'), 'warn'); return; }
   const idxMap = new Map();
   annotations.forEach((a, i) => idxMap.set(a, i));
@@ -14226,7 +14384,13 @@ async function generatePdfBytes(saveOpts) {
     return 0;
   });
   const _hasRedaction = annotations.some(a => a.type === 'redact');
+  const _pageCount = doc.getPageCount();
   for (const ann of orderedAnns) {
+    // Defensive: skip any annotation whose page no longer exists (e.g. left over
+    // after pages were deleted/reordered, or a template applied with a higher
+    // page index). pdf-lib's getPage() throws "index … but was actually N" on a
+    // stale pageNum and that aborted the WHOLE save/print — a critical crash.
+    if (!(ann.pageNum >= 1 && ann.pageNum <= _pageCount)) continue;
     // text-delete: handled in the stream-rewrite pre-pass above. If stream
     // matching succeeded, skip — otherwise drop a whiteout as a visual safety
     // net so the user still sees the text gone.
@@ -14425,7 +14589,7 @@ async function generatePdfBytes(saveOpts) {
           // Also measure the WHOLE logical text in one shot for comparison
           const whole = ann.lines.map(l => l.map(s => s.text || '').join('')).join('\n');
           const wholeCanvas = _measureCanvas(whole.replace(/\n/g, ' '), false, false);
-          console.log('[pdf-text-wrap pg', ann.pageNum, ']', {
+          dbg('[pdf-text-wrap pg', ann.pageNum, ']', {
             ann_x: ann.x, ann_y: ann.y,
             ann_width_css_px: ann.width, ann_height_css_px: ann.height,
             fontSize_css_px: ann.fontSize, family, scale,
@@ -15600,8 +15764,18 @@ function startDraw(overlay, pageNum, x0, y0, pointerId) {
   const onMove = (ev) => {
     if (ev.pointerId !== pointerId) return;
     const rect = overlay.getBoundingClientRect();
-    const x = (ev.clientX - rect.left) / currentZoom;
-    const y = (ev.clientY - rect.top) / currentZoom;
+    let cx = ev.clientX, cy = ev.clientY;
+    // Snap to the reading ruler's guide line while it's on — draw a straight
+    // stroke/marking along the ruler like using a physical straightedge.
+    const rl = (typeof window._readingRulerLine === 'function') ? window._readingRulerLine() : null;
+    if (rl) {
+      const a = rl.angleDeg * Math.PI / 180, dxr = Math.cos(a), dyr = Math.sin(a);
+      const t = (cx - rl.cx) * dxr + (cy - rl.cy) * dyr;     // project onto the line
+      const fx = rl.cx + t * dxr, fy = rl.cy + t * dyr;      // foot of perpendicular
+      if (Math.hypot(cx - fx, cy - fy) <= 30) { cx = fx; cy = fy; }  // 30px snap zone
+    }
+    const x = (cx - rect.left) / currentZoom;
+    const y = (cy - rect.top) / currentZoom;
     const last = ann.points[ann.points.length - 1];
     const dx = x - last.x, dy = y - last.y;
     if (dx * dx + dy * dy < 1) return;
@@ -21127,7 +21301,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.79';
+const APP_VERSION = '1.83';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {
@@ -21436,6 +21610,9 @@ function setupMarqueeSelect(overlay, pageNum) {
   let marquee = null, startX = 0, startY = 0;
   overlay.addEventListener('pointerdown', (e) => {
     if (currentTool !== 'select') return;
+    // On touch, never start a marquee from a one-finger press on empty page — let
+    // the browser pan/pinch-zoom the document instead (marquee stays mouse-only).
+    if (e.pointerType === 'touch') return;
     if (e.target !== overlay) return;
     if (e.button !== undefined && e.button !== 0) return;
     if (activeEditor) return;
@@ -22078,6 +22255,10 @@ if (typeof renderPages === 'function') {
     s.id = 'readingRulerCss';
     s.textContent =
       '#readingRuler{position:fixed;z-index:6000;touch-action:none;will-change:transform;}' +
+      // In drawing/marking modes the ruler must NOT eat pointer events — otherwise
+      // you can't draw along it. It stays visible as a guide and strokes snap to it;
+      // switch to Select to move/rotate it.
+      'body.draw-mode #readingRuler,body.shape-mode #readingRuler,body.highlight-mode #readingRuler,body.underline-mode #readingRuler,body.strike-mode #readingRuler{pointer-events:none;}' +
       '#readingRuler .rr-band{position:absolute;inset:0;border-radius:6px;cursor:grab;' +
       'background:linear-gradient(180deg,rgba(255,196,0,0.10),rgba(255,196,0,0.22) 50%,rgba(255,196,0,0.10));' +
       'border-top:1px solid rgba(180,120,0,0.35);border-bottom:1px solid rgba(180,120,0,0.35);' +
@@ -22164,6 +22345,8 @@ if (typeof renderPages === 'function') {
   btn.addEventListener('click', () => { el ? hide() : show(); });
   // Esc hides it when active
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && el) hide(); });
+  // Expose the guide line (viewport coords) so free-draw can snap strokes to it.
+  window._readingRulerLine = () => el ? { cx: center.x, cy: center.y, angleDeg: angle } : null;
 })();
 
 // ===== Measure / ruler tool (press M) =====
@@ -22597,7 +22780,7 @@ async function applyPageSetup() {
   const rangeSel = document.getElementById('psRange').value;
   const fromTo = document.getElementById('psRangeFromTo').value;
   const pages = parsePageRange(rangeSel === 'range' ? fromTo : rangeSel, totalPages);
-  console.log('[page-setup] range=', rangeSel, ' resolved pages=', pages.join(','));
+  dbg('[page-setup] range=', rangeSel, ' resolved pages=', pages.join(','));
   if (!pages.length) { showToast('No pages match the selected range.', 'warn'); return; }
 
   const headerText  = document.getElementById('psHeaderText').value;
@@ -22660,7 +22843,7 @@ async function applyPageSetup() {
       });
     }
     createdCount += pageAdded;
-    console.log('[page-setup] page', pageNum, '→', pageAdded, 'decoration(s)');
+    dbg('[page-setup] page', pageNum, '→', pageAdded, 'decoration(s)');
   }
   if (skippedPages.length) {
     console.warn('[page-setup] skipped pages:', skippedPages.join(', '));
@@ -23797,7 +23980,7 @@ function renderCropOverlays() {
     wrapper.appendChild(overlay);
     rendered++;
   }
-  console.log('[crop] rendered overlays on', rendered, 'page(s);', 'configured for', keys.length, 'page(s)');
+  dbg('[crop] rendered overlays on', rendered, 'page(s);', 'configured for', keys.length, 'page(s)');
   if (skipped.length) console.warn('[crop] skipped:', skipped.join(', '));
 }
 // Wrap the existing renderPages so crops survive page reloads
@@ -24741,7 +24924,7 @@ async function _aiPost(candidate, model, messages, opts, timeoutMs) {
 async function aiTestConnection() {
   if (!aiConfig.baseUrl) return { ok: false, err: 'No base URL configured.' };
   const candidates = _aiCandidateUrls(aiConfig.baseUrl);
-  console.log('[ai] testing candidates:', candidates.map(c => c.url).join(', '));
+  dbg('[ai] testing candidates:', candidates.map(c => c.url).join(', '));
   const tried = [];
   for (const cand of candidates) {
     try {
@@ -26295,7 +26478,7 @@ function openShareModal() {
       supported = navigator.canShare({ files: [probe] });
     }
   } catch (_) {}
-  console.log('[share] Web Share with files supported:', supported, '· UA:', navigator.userAgent.slice(0, 80));
+  dbg('[share] Web Share with files supported:', supported, '· UA:', navigator.userAgent.slice(0, 80));
   if (supported) {
     status.className = 'settings-status ok';
     status.textContent = window.t('share.supported', '✓ Your browser supports direct file sharing. Click Share → pick your email app → PDF will be attached automatically.');
@@ -26371,7 +26554,7 @@ async function doShareViaApp() {
     const { file, outName, outBytes, sourceBytes } = await _prepareSharePayload(goBtn);
     const origMB = ((sourceBytes.byteLength || sourceBytes.length) / 1048576).toFixed(2);
     const newMB  = ((outBytes.byteLength || outBytes.length) / 1048576).toFixed(2);
-    console.log('[share] file ready:', outName, 'bytes:', outBytes.length, '· canShare files:',
+    dbg('[share] file ready:', outName, 'bytes:', outBytes.length, '· canShare files:',
       navigator.canShare && navigator.canShare({ files: [file] }));
     status.className = 'settings-status ok';
     status.textContent = `Ready · ${outName} · ${origMB} MB → ${newMB} MB · Opening share sheet…`;
@@ -26469,7 +26652,7 @@ async function doShare() {
     const newMB  = ((outBytes.byteLength || outBytes.length) / 1048576).toFixed(2);
     const rawName = (pdfFileName || 'document').replace(/\.pdf$/i, '') + (preset !== 'none' ? '-compressed' : '') + '.pdf';
     const outName = _shareSafeName(rawName);
-    console.log('[share] file name:', outName, 'bytes:', outBytes.length);
+    dbg('[share] file name:', outName, 'bytes:', outBytes.length);
     // IMPORTANT: ArrayBuffer-flavoured Uint8Array works with File but some
     // mobile share-sheets misread the size when the underlying buffer is shared.
     // We materialise a fresh ArrayBuffer to avoid that class of bug.
@@ -27427,7 +27610,7 @@ async function detectFormFields() {
         mappedCount++;
       }
     }
-    console.log('[form] detected', mappedCount, 'widget(s) via pdf.js');
+    dbg('[form] detected', mappedCount, 'widget(s) via pdf.js');
     if (acroFormFields.length) {
       renderFormFieldOverlays();
       if (!formDetectedToastShown) {
@@ -27546,7 +27729,7 @@ async function renderFormFieldOverlays() {
     overlay.appendChild(el);
     ff.el = el;
   }
-  console.log('[form] rendered', acroFormFields.filter(f => f.el).length, 'of', acroFormFields.length, 'widget overlays');
+  dbg('[form] rendered', acroFormFields.filter(f => f.el).length, 'of', acroFormFields.length, 'widget overlays');
 }
 
 // Apply form values back into pdfBytes using pdf.js's annotationStorage + saveDocument.
