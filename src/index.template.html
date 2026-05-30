@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+<!-- ⚠ GENERATED FILE — do not edit index.html directly. Edit the modules in
+     src/ (app/*.js, i18n-*.js, app.css, index.template.html) then run
+     `npm run build` (node tools/build.mjs) to regenerate this file. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0d10" media="(prefers-color-scheme: dark)">
+<title>PDF Mini Editor Pro</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Caveat:wght@500;700&family=Dancing+Script:wght@500;700&family=Great+Vibes&family=Pacifico&family=Sacramento&family=Allura&family=Homemade+Apple&family=Yellowtail&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  (function() {
+    const saved = localStorage.getItem('theme');
+    const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', saved || (systemDark ? 'dark' : 'light'));
+  })();
+</script>
+<script>@@INCLUDE:src/i18n-framework.js@@</script>
+<script>@@INCLUDE:src/i18n-dict.js@@</script>
+<style>@@INCLUDE:src/app.css@@</style>
+</head>
+<body>
+
+<!-- Mobile "please use desktop" notice. The mobile-optimized editor was
+     disabled in v1.34 because it had multiple unresolved layout bugs.
+     This full-screen overlay covers everything when the viewport is too
+     narrow to use the editor comfortably; user can dismiss it to peek
+     at the desktop layout but the experience is intentionally not great. -->
+<div id="mobileNotice" hidden>
+  <div class="mobile-notice-card">
+    <div class="mobile-notice-icon">💻</div>
+    <h2 data-i18n="mobile.title">Desktop only — for now</h2>
+    <p data-i18n-html="mobile.body1">
+      PDF Mini Editor is currently <strong>optimised for desktop browsers</strong>.
+      The mobile layout is being rebuilt and isn't ready yet.
+    </p>
+    <p data-i18n-html="mobile.body2">Please open <strong>pdf.kamagio.com</strong> on a desktop or laptop —
+       Chrome, Edge, Firefox or Safari all work. The full editor is free.</p>
+    <p class="mobile-notice-sub" data-i18n="mobile.body3">If you really want to peek on this device you can
+      continue anyway, but layout will be broken until the mobile rework ships.</p>
+    <button class="btn outlined" id="mobileNoticeContinue" type="button" data-i18n="mobile.continue">Continue anyway</button>
+  </div>
+</div>
+
+<div class="titlebar">
+  <div class="brand">
+    <div class="logo">PDF</div>
+    <div class="brand-text">
+      <h1 data-i18n-html="brand.title">PDF Mini Editor <span class="pro-badge">PRO</span></h1>
+      <div class="credit" data-i18n="brand.credit">Created by Kamil Niemczyk</div>
+    </div>
+  </div>
+  <div class="titlebar-right">
+    <div class="file-info" id="fileInfo" data-i18n="brand.noFile">No file loaded</div>
+    <button class="theme-toggle cp-launcher-btn" id="cmdPaletteBtn" type="button" data-i18n-title="hdr.cmdPalette" title="Search any action (Ctrl+K)" aria-label="Command palette">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </button>
+    <button class="theme-toggle" id="sidePanelToggleHeader" data-i18n-title="hdr.sidePanel.title" data-i18n-aria="hdr.sidePanel.aria" title="Show side panel — pages, outline, bookmarks, signatures (Ctrl+\)" aria-label="Side panel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="13" y="3" width="8" height="18" rx="1"/></svg>
+    </button>
+    <button class="theme-toggle" id="statsBtn" data-i18n-title="hdr.stats.title" data-i18n-aria="hdr.stats.aria" title="Document statistics" aria-label="Stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+    </button>
+    <button class="theme-toggle" id="helpBtn" data-i18n-title="hdr.help.title" data-i18n-aria="hdr.help.aria" title="Help & how to use" aria-label="Help">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </button>
+    <button class="theme-toggle" id="profileBtn" data-i18n-title="hdr.profile.title" data-i18n-aria="hdr.profile.aria" title="Your profile" aria-label="Profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+    </button>
+    <button class="theme-toggle" id="settingsBtn" data-i18n-title="hdr.settings.title" data-i18n-aria="hdr.settings.aria" title="App settings: AI, backup, error logs" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <button class="theme-toggle" id="themeToggle" data-i18n-title="hdr.theme.title" data-i18n-aria="hdr.theme.aria" title="Toggle light / dark mode" aria-label="Toggle theme">
+      <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="19.07" y2="4.93"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="toolbar tb-v2">
+  <!-- 1. Open / New -->
+  <label class="btn btn-lg outlined" data-i18n-title="tb.open.title" title="Open a PDF file (Ctrl+O)">
+    <input type="file" id="fileInput" accept="application/pdf,.pdfenc">
+    <span class="icon">📂</span> <span class="lbl" data-i18n="tb.open">Open</span>
+  </label>
+  <button class="btn btn-lg outlined" id="newPdfBtn" type="button" data-i18n-title="tb.new.title" title="Create a new blank PDF — pick a page size">
+    <span class="icon">📄</span> <span class="lbl" data-i18n="tb.new">New</span>
+  </button>
+
+  <div class="tb-sep"></div>
+
+  <!-- 2. Select / Edit Text -->
+  <button class="btn btn-lg tool active" data-tool="select" data-i18n-title="tb.select.title" title="Select tool — click to pick objects (Esc)"><span class="icon">↖</span> <span class="lbl" data-i18n="tb.select">Select</span></button>
+  <button class="btn btn-lg tool pro-tool" data-tool="edit-pdf" data-i18n-title="tb.editText.title" title="Edit existing PDF text — or just double-click any text in the PDF"><span class="icon">✎</span> <span class="lbl" data-i18n="tb.editText">Edit Text</span></button>
+
+  <div class="tb-sep"></div>
+
+  <!-- 3. Add ▼ — text, image, draw, stamp, sign -->
+  <div class="dropdown" id="addDropdown">
+    <button class="btn btn-lg" id="addDropdownBtn" data-i18n-title="tb.add.title" title="Add a new object">
+      <span class="icon">＋</span> <span class="lbl" data-i18n="tb.add">Add</span> <span class="dropdown-caret">▼</span>
+    </button>
+    <div class="dropdown-menu" role="menu">
+      <div class="dropdown-section" data-i18n="tb.add.insert">Insert</div>
+      <button class="dropdown-item" data-act="tool:text" type="button"><span class="icon">T</span><span data-i18n="tb.text">Text</span><span class="kbd">T</span></button>
+      <label class="dropdown-item" data-i18n-title="tb.image.title" title="Insert image (or paste with Ctrl+V)">
+        <input type="file" id="imgInput" accept="image/*"><span class="icon">🖼</span><span data-i18n="tb.image">Image</span><span class="kbd">Ctrl+V</span>
+      </label>
+      <button class="dropdown-item" data-act="tool:draw" type="button"><span class="icon">✏</span><span data-i18n="tb.draw">Free Draw</span><span class="kbd">D</span></button>
+      <button class="dropdown-item" data-act="tool:field" type="button" data-i18n-title="tb.field.title" title="Form field designer (text, checkbox, dropdown, multiline, number)"><span class="icon">📝</span><span data-i18n="tb.field">Form field</span><span class="kbd">F</span></button>
+      <div class="dropdown-submenu" id="shapesSubmenu">
+        <button class="dropdown-item has-submenu" id="shapesSubmenuTrigger" type="button">
+          <span class="icon">▭</span><span data-i18n="tb.shape">Shape</span><span class="submenu-caret">▸</span>
+        </button>
+        <div class="dropdown-menu submenu" role="menu">
+          <div class="dropdown-section" data-i18n="tb.shape.basic">Basic</div>
+          <div class="shape-grid">
+            <button class="shape-tile" data-shape="rect" type="button"><span class="icon">▭</span><span data-i18n="shape.rect">Rectangle</span></button>
+            <button class="shape-tile" data-shape="ellipse" type="button"><span class="icon">◯</span><span data-i18n="shape.ellipse">Ellipse</span></button>
+            <button class="shape-tile" data-shape="triangle" type="button"><span class="icon">△</span><span data-i18n="shape.triangle">Triangle</span></button>
+            <button class="shape-tile" data-shape="line" type="button"><span class="icon">／</span><span data-i18n="shape.line">Line</span></button>
+            <button class="shape-tile" data-shape="arrow" type="button"><span class="icon">↗</span><span data-i18n="shape.arrow">Arrow</span></button>
+            <button class="shape-tile" data-shape="double-arrow" type="button"><span class="icon">⇆</span><span data-i18n-html="shape.dblArrow">Double<br>Arrow</span></button>
+          </div>
+          <div class="dropdown-section" data-i18n="tb.shape.icons">Icons</div>
+          <div class="shape-grid">
+            <button class="shape-tile" data-shape="heart" type="button"><span class="icon">♥</span><span data-i18n="shape.heart">Heart</span></button>
+            <button class="shape-tile" data-shape="star" type="button"><span class="icon">★</span><span data-i18n="shape.star">Star</span></button>
+            <button class="shape-tile" data-shape="lightning" type="button"><span class="icon">⚡</span><span data-i18n="shape.lightning">Lightning</span></button>
+            <button class="shape-tile" data-shape="cloud" type="button"><span class="icon">☁</span><span data-i18n="shape.cloud">Cloud</span></button>
+            <button class="shape-tile" data-shape="check" type="button"><span class="icon">✓</span><span data-i18n="shape.check">Check</span></button>
+            <button class="shape-tile" data-shape="cross" type="button"><span class="icon">✕</span><span data-i18n="shape.cross">Cross</span></button>
+          </div>
+          <div class="dropdown-section" data-i18n="tb.shape.templates">Templates</div>
+          <div class="shape-grid">
+            <button class="shape-tile" data-shape="checklist" type="button"><span class="icon">☐</span><span data-i18n="shape.checklist">Checklist</span></button>
+            <button class="shape-tile" data-shape="calendar-month" type="button"><span class="icon">📅</span><span data-i18n-html="shape.calMonth">Monthly<br>Calendar</span></button>
+            <button class="shape-tile" data-shape="calendar-week" type="button"><span class="icon">📆</span><span data-i18n-html="shape.calWeek">Weekly<br>Calendar</span></button>
+          </div>
+        </div>
+      </div>
+      <div class="dropdown-section" data-i18n="tb.add.marks">Marks</div>
+      <button class="dropdown-item pro-tool" data-act="tool:highlight" type="button"><span class="icon" style="color:#facc15">▓</span><span data-i18n="tb.highlight">Highlight</span></button>
+      <button class="dropdown-item pro-tool" data-act="tool:underline" type="button"><span class="icon" style="color:#dc2626">U̲</span><span data-i18n="tb.underline">Underline</span></button>
+      <button class="dropdown-item pro-tool" data-act="tool:strike" type="button"><span class="icon" style="color:#dc2626">S̶</span><span data-i18n="tb.strike">Strike</span></button>
+      <button class="dropdown-item pro-tool" data-act="tool:redact" type="button"><span class="icon">▮</span><span data-i18n="tb.redact">Redact (black-out)</span><span class="hint" data-i18n="tb.redact.hint">strips metadata on save</span></button>
+      <div class="dropdown-section" data-i18n="tb.add.codes">Codes</div>
+      <button class="dropdown-item pro-tool" id="qrBarcodeBtnMenu" type="button"><span class="icon">▦</span><span data-i18n="tb.qr">QR / Barcode…</span><span class="hint" data-i18n="tb.qr.hint">generate &amp; insert</span></button>
+      <div class="dropdown-section" data-i18n="tb.add.stamps">Stamps & signatures</div>
+      <button class="dropdown-item" id="stampsBtnMenu" type="button"><span class="icon">⊟</span><span data-i18n="tb.stamps">Stamps gallery</span></button>
+      <button class="dropdown-item" id="signatureBtnMenu" type="button"><span class="icon">✍</span><span data-i18n="tb.signature">Signature</span><span class="hint" data-i18n="tb.signature.hint">draw / type / upload</span></button>
+      <button class="dropdown-item pro-tool" id="digitalSigBtnMenu" type="button" hidden style="display:none"><span class="icon">🔐</span><span data-i18n="tb.certSig">Certified signature…</span><span class="hint" data-i18n="tb.certSig.hint">PAdES — roadmap</span></button>
+    </div>
+  </div>
+
+  <div class="tb-sep"></div>
+
+  <!-- 5. Pages -->
+  <button class="btn btn-lg" id="organizeBtn" disabled data-i18n-title="tb.pages.title" title="Organize pages — reorder, rotate, delete, split, merge, compress">
+    <span class="icon">⊞</span> <span class="lbl" data-i18n="tb.pages">Pages</span>
+  </button>
+
+  <!-- 5b. Direct PDF tools: Merge / Split / Compress (also reachable from Pages modal) -->
+  <label class="btn btn-lg" id="mergeMainBtn" data-i18n-title="tb.merge.title" title="Merge — append pages from another PDF" style="display:none">
+    <input type="file" id="mergeMainInput" accept="application/pdf" hidden>
+    <span class="icon">＋</span> <span class="lbl" data-i18n="tb.merge">Merge PDF</span>
+  </label>
+  <button class="btn btn-lg" id="splitMainBtn" type="button" data-i18n-title="tb.split.title" title="Split — extract selected pages into a new PDF" style="display:none">
+    <span class="icon">⤴</span> <span class="lbl" data-i18n="tb.split">Split PDF</span>
+  </button>
+  <button class="btn btn-lg" id="compressMainBtn" type="button" data-i18n-title="tb.compress.title" title="Compress — shrink file size by rasterising pages" style="display:none">
+    <span class="icon">⤓</span> <span class="lbl" data-i18n="tb.compress">Compress PDF</span>
+  </button>
+
+  <!-- AI ▼ — only visible when html.ai-connected; hidden otherwise -->
+  <div class="dropdown ai-only" id="aiDropdown">
+    <button class="btn btn-lg" id="aiDropdownBtn" data-i18n-title="tb.ai.title" title="AI tools (local server)">
+      <span class="icon">🤖</span> <span class="lbl" data-i18n="tb.ai">AI</span> <span class="dropdown-caret">▼</span>
+    </button>
+    <div class="dropdown-menu" role="menu">
+      <button class="dropdown-item" id="aiSummarizeBtn" type="button"><span class="icon">📝</span><span data-i18n="ai.summarize">Summarize this PDF</span></button>
+      <button class="dropdown-item" id="aiTranslateBtn" type="button"><span class="icon">🌐</span><span data-i18n="ai.translate">Translate selected text</span><span class="hint" data-i18n="ai.translate.hint">click a text block first</span></button>
+      <button class="dropdown-item" id="aiExplainBtn" type="button"><span class="icon">💡</span><span data-i18n="ai.explain">Explain this paragraph</span><span class="hint" data-i18n="ai.explain.hint">click a paragraph first</span></button>
+      <button class="dropdown-item" id="aiFormFillBtn" type="button"><span class="icon">📋</span><span data-i18n="ai.formfill">Suggest form fill-ins</span><span class="hint" data-i18n="ai.formfill.hint">if PDF has fields</span></button>
+    </div>
+  </div>
+
+  <!-- 6. More ▼ — Page Setup, Templates, Bookmarks, Crop, Find, OCR -->
+  <div class="dropdown" id="moreDropdown">
+    <button class="btn btn-lg" id="moreDropdownBtn" data-i18n-title="tb.more.title" title="More tools">
+      <span class="icon">⋯</span> <span class="lbl" data-i18n="tb.more">More</span> <span class="dropdown-caret">▼</span>
+    </button>
+    <div class="dropdown-menu" role="menu">
+      <div class="dropdown-section" data-i18n="tb.more.doc">Document</div>
+      <button class="dropdown-item" id="pageSetupBtnMenu" type="button"><span class="icon">📰</span><span data-i18n="tb.pageSetup">Page Setup</span><span class="hint" data-i18n="tb.pageSetup.hint">watermark · header · footer · numbers</span></button>
+      <button class="dropdown-item" id="cropBtnMenu" type="button"><span class="icon">✂</span><span data-i18n="tb.crop">Crop / Resize / Margins</span><span class="hint" data-i18n="tb.crop.hint">A4 · Letter · photo sizes</span></button>
+      <button class="dropdown-item" id="bookmarksBtnMenu" type="button"><span class="icon">🔖</span><span data-i18n="tb.bookmarks">Bookmarks / Outline</span></button>
+      <button class="dropdown-item" id="templatesBtnMenu" type="button"><span class="icon">📋</span><span data-i18n="tb.templates">Templates</span></button>
+
+      <div class="dropdown-section" data-i18n="tb.more.search">Search</div>
+      <button class="dropdown-item" id="findBtnMenu" type="button"><span class="icon">🔎</span><span data-i18n="tb.find">Find &amp; Replace</span><span class="kbd">Ctrl+F</span></button>
+      <button class="dropdown-item" id="ocrBtnMenu" type="button"><span class="icon">📄</span><span data-i18n="tb.ocr">OCR scanned PDF</span></button>
+
+      <div class="dropdown-section" data-i18n="tb.more.security">Security</div>
+      <button class="dropdown-item" id="passwordBtnMenu" type="button"><span class="icon">🔒</span><span data-i18n="tb.password">Password protect…</span><span class="hint" data-i18n="tb.password.hint">AES-256 envelope</span></button>
+      <button class="dropdown-item" id="sanitizeBtnMenu" type="button"><span class="icon">🧼</span><span data-i18n="tb.sanitize">Sanitize document</span><span class="hint" data-i18n="tb.sanitize.hint">flatten · strip metadata</span></button>
+      <button class="dropdown-item" id="regexRedactBtnMenu" type="button"><span class="icon">🛡</span><span data-i18n="tb.regexRedact">RegEx redact…</span><span class="hint" data-i18n="tb.regexRedact.hint">SSN · cards · emails · IBAN</span></button>
+
+      <div class="dropdown-section" data-i18n="tb.more.data">Data &amp; extraction</div>
+      <button class="dropdown-item" id="diffBtnMenu" type="button"><span class="icon">⇄</span><span data-i18n="tb.diff">Compare two PDFs…</span><span class="hint" data-i18n="tb.diff.hint">side-by-side visual diff</span></button>
+      <button class="dropdown-item" id="tableExtractBtnMenu" type="button"><span class="icon">⊞</span><span data-i18n="tb.tableCsv">Extract table → CSV</span></button>
+      <button class="dropdown-item" id="jsonFillBtnMenu" type="button"><span class="icon">{ }</span><span data-i18n="tb.jsonFill">Fill form from JSON…</span><span class="hint" data-i18n="tb.jsonFill.hint">batch from array</span></button>
+    </div>
+  </div>
+
+  <span class="spacer"></span>
+
+  <!-- 7. Default style mini -->
+  <div class="text-defaults">
+    <span class="label" data-i18n="tb.style">Style</span>
+    <input type="color" id="defaultColor" value="#000000" class="pcolor-input" data-i18n-title="tb.style.color" title="Default color">
+    <input type="number" id="defaultSize" value="14" min="6" max="96" class="psize-input" data-i18n-title="tb.style.size" title="Default text size">
+    <select id="defaultBrush" class="select-input" data-i18n-title="tb.style.brush" title="Brush" style="display:none">
+      <option value="pen" data-i18n="brush.pen">✒ Pen</option>
+      <option value="pencil" data-i18n="brush.pencil">✏ Pencil</option>
+      <option value="highlighter" data-i18n="brush.highlighter">🖊 Highlighter</option>
+      <option value="marker" data-i18n="brush.marker">🖌 Marker</option>
+    </select>
+    <select id="defaultStroke" class="select-input stroke-select" data-i18n-title="tb.style.stroke" title="Default stroke width" style="display:none">
+      <option value="1" data-i18n="stroke.thin">Thin · 1</option>
+      <option value="2" selected data-i18n="stroke.light">Light · 2</option>
+      <option value="3" data-i18n="stroke.medium">Medium · 3</option>
+      <option value="5" data-i18n="stroke.bold">Bold · 5</option>
+      <option value="8" data-i18n="stroke.heavy">Heavy · 8</option>
+      <option value="12" data-i18n="stroke.extra">Extra · 12</option>
+    </select>
+  </div>
+
+  <div class="tb-sep"></div>
+
+  <!-- 7c. View: ruler · grid · measure · unit -->
+  <div class="text-defaults view-tools">
+    <span class="label" data-i18n="tb.view">View</span>
+    <button class="btn btn-icon" id="rulerToggle" type="button" data-i18n-title="tb.ruler" title="Ruler"><span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M4 4h16M4 4v16"/><path d="M9 4v3M14 4v4M19 4v3M4 9h3M4 14h4M4 19h3"/></svg></span></button>
+    <button class="btn btn-icon" id="gridToggle" type="button" data-i18n-title="tb.grid" title="Grid"><span class="icon">▦</span></button>
+    <button class="btn btn-icon" id="measureToggle" type="button" data-i18n-title="tb.measure" title="Measure (M)"><span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M5 19L19 5"/><path d="M3.5 17.5l3 3M17.5 3.5l3 3"/></svg></span></button>
+    <button class="btn btn-icon" id="spacingGuidesToggle" type="button" data-i18n-title="tb.spacingGuides" title="Spacing guides — show distance to nearest objects on drag"><span class="icon">⇿</span></button>
+    <button class="btn btn-icon" id="readingRulerToggle" type="button" data-i18n-title="tb.readingRuler" title="Reading ruler — movable, rotatable guide (does not print)"><span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" style="vertical-align:middle"><path d="M4 6h12M4 18h12" stroke-width="1.4" opacity="0.4"/><rect x="2.5" y="10" width="19" height="4" rx="2" fill="currentColor" stroke="none"/></svg></span></button>
+    <select id="unitSelect" class="select-input" data-i18n-title="tb.unit" title="Measurement unit">
+      <option value="mm">mm</option>
+      <option value="cm">cm</option>
+      <option value="in">in</option>
+      <option value="px">px</option>
+      <option value="pt">pt</option>
+    </select>
+  </div>
+
+  <div class="tb-sep"></div>
+
+  <!-- 8. Undo / Redo -->
+  <button class="btn btn-icon" id="undoBtn" disabled data-i18n-title="tb.undo.title" title="Undo (Ctrl+Z)"><span class="icon">↶</span></button>
+  <button class="btn btn-icon" id="redoBtn" disabled data-i18n-title="tb.redo.title" title="Redo (Ctrl+Y / Ctrl+Shift+Z)"><span class="icon">↷</span></button>
+
+  <!-- 9. Save (primary) + ▼ menu -->
+  <div class="dropdown save-dropdown" id="saveMenu">
+    <div class="split-btn">
+      <button class="btn btn-lg primary" id="saveBtn" disabled data-i18n-title="tb.save.title" title="Save PDF (Ctrl+S)">
+        <span class="icon">⬇</span> <span class="lbl" data-i18n="tb.save">Save PDF</span>
+      </button>
+      <button class="btn btn-lg primary split-caret" id="saveMenuBtn" disabled data-i18n-title="tb.saveMore.title" title="More save options"><span class="dropdown-caret">▼</span></button>
+    </div>
+    <div class="dropdown-menu" role="menu" style="right:0;left:auto">
+      <button class="dropdown-item" id="exportBtnMenu" type="button"><span class="icon">⤓</span><span data-i18n="tb.exportAs">Export as…</span><span class="hint" data-i18n="tb.exportAs.hint">HQ / Web / Archive</span></button>
+      <button class="dropdown-item" id="exportTextBtnMenu" type="button"><span class="icon">📄</span><span data-i18n="tb.exportTxt">Export → Text (.txt)</span><span class="hint" data-i18n="tb.exportTxt.hint">extracted plain text</span></button>
+      <button class="dropdown-item" id="exportDocxBtnMenu" type="button"><span class="icon">📝</span><span data-i18n="tb.exportDocx">Export → Word (.docx)</span><span class="hint" data-i18n="tb.exportDocx.hint">text only, no layout</span></button>
+      <button class="dropdown-item" id="shareBtnMenu" type="button"><span class="icon">✉</span><span data-i18n="tb.share">Share by email…</span><span class="hint" data-i18n="tb.share.hint">compresses + attaches</span></button>
+      <button class="dropdown-item" id="printBtnMenu" type="button"><span class="icon">🖨</span><span data-i18n="tb.print">Print</span><span class="kbd">Ctrl+P</span></button>
+      <div class="dropdown-section" data-i18n="tb.danger">Danger</div>
+      <button class="dropdown-item danger" id="clearBtnMenu" type="button"><span class="icon">✕</span><span data-i18n="tb.clear">Clear all edits</span></button>
+    </div>
+  </div>
+
+  <!-- Hidden originals (kept in DOM so existing event listeners still attach) -->
+  <div hidden>
+    <button class="btn tool" data-tool="text" id="addTextBtn">T</button>
+    <button class="btn tool" data-tool="draw" id="drawBtn">✏</button>
+    <button class="btn tool pro-tool" data-tool="highlight">▓</button>
+    <button class="btn tool pro-tool" data-tool="underline">U</button>
+    <button class="btn tool pro-tool" data-tool="strike">S</button>
+    <button class="btn tool pro-tool" data-tool="link">🔗</button>
+    <button class="btn" id="stampsBtn">Stamps</button>
+    <button class="btn" id="signatureBtn">Sign</button>
+    <button class="btn pro-tool" id="pageSetupBtn">Setup</button>
+    <button class="btn pro-tool" id="templatesBtn">Templates</button>
+    <button class="btn pro-tool" id="bookmarksBtn">Bookmarks</button>
+    <button class="btn pro-tool" id="cropBtn">Crop</button>
+    <button class="btn pro-tool" id="findBtn">Find</button>
+    <button class="btn" id="printBtn" disabled>Print</button>
+    <button class="btn danger" id="clearBtn" disabled>Clear</button>
+    <button class="btn pro-tool" id="exportBtn" disabled>Export…</button>
+  </div>
+</div>
+
+<div class="context-bar" id="contextBar">
+  <span class="step">1</span>
+  <span id="contextText" data-i18n="ctx.start">Start by opening a PDF file — click "Open" or drag a file onto the page.</span>
+</div>
+
+<!-- ========================== MOBILE LAYOUT ========================== -->
+<!-- Visible only on screens < 760px; matches the dock pattern in 013.jpg.  -->
+<div class="mobile-topbar" id="mobileTopbar">
+  <button class="mt-btn" id="mobileMenuBtn" type="button" aria-label="Menu">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <button class="mt-btn" id="mobileUndoBtn" type="button" aria-label="Undo">↶</button>
+  <button class="mt-btn" id="mobileRedoBtn" type="button" aria-label="Redo">↷</button>
+  <span class="mt-spacer"></span>
+  <button class="mt-btn" id="mobileHelpBtn" type="button" aria-label="Help">?</button>
+  <button class="mt-pill" id="mobileShareBtn" type="button">Share</button>
+  <button class="mt-pill primary" id="mobileDownloadBtn" type="button">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    <span>Download</span>
+  </button>
+</div>
+
+<div class="mobile-dock" id="mobileDock">
+  <button class="md-btn active" data-mob-tool="select" type="button"><span class="md-icon">↖</span><span class="md-label">Select</span></button>
+  <button class="md-btn" data-mob-tool="text" type="button"><span class="md-icon" style="font-weight:700">T</span><span class="md-label">Text</span></button>
+  <button class="md-btn" data-mob-tool="draw" type="button"><span class="md-icon">✏</span><span class="md-label">Draw</span></button>
+  <button class="md-btn" data-mob-tool="image" type="button"><span class="md-icon">🖼</span><span class="md-label">Image</span></button>
+  <button class="md-btn" data-mob-tool="shape" type="button"><span class="md-icon">▭</span><span class="md-label">Shape</span></button>
+  <button class="md-btn" data-mob-tool="sign" type="button"><span class="md-icon">✍</span><span class="md-label">Sign</span></button>
+  <button class="md-btn" id="mobileMoreBtn" type="button"><span class="md-icon">⋯</span><span class="md-label">More</span></button>
+</div>
+
+<div class="mobile-sheet" id="mobileMoreSheet">
+  <div class="ms-backdrop"></div>
+  <div class="ms-content">
+    <div class="ms-handle"></div>
+
+    <div class="ms-section-label">Pages</div>
+    <div class="ms-grid">
+      <button class="ms-tile" data-ms="merge" type="button"><span class="ms-icon">＋</span><span>Merge</span></button>
+      <button class="ms-tile" data-ms="split" type="button"><span class="ms-icon">⤴</span><span>Split</span></button>
+      <button class="ms-tile" data-ms="compress" type="button"><span class="ms-icon">⤓</span><span>Compress</span></button>
+      <button class="ms-tile" data-ms="rearrange" type="button"><span class="ms-icon">⊞</span><span>Rearrange</span></button>
+      <button class="ms-tile" data-ms="rotate" type="button"><span class="ms-icon">↻</span><span>Rotate</span></button>
+      <button class="ms-tile" data-ms="pagenum" type="button"><span class="ms-icon">№</span><span>Page numbers</span></button>
+    </div>
+
+    <div class="ms-section-label">Tools</div>
+    <div class="ms-grid">
+      <button class="ms-tile" data-ms="highlight" type="button"><span class="ms-icon" style="color:#facc15">▓</span><span>Highlight</span></button>
+      <button class="ms-tile" data-ms="find" type="button"><span class="ms-icon">🔎</span><span>Find</span></button>
+      <button class="ms-tile" data-ms="ocr" type="button"><span class="ms-icon">📄</span><span>OCR</span></button>
+    </div>
+
+    <div class="ms-section-label">Security</div>
+    <div class="ms-grid">
+      <button class="ms-tile" data-ms="password" type="button"><span class="ms-icon">🔒</span><span>Password</span></button>
+      <button class="ms-tile" data-ms="sanitize" type="button"><span class="ms-icon">🧼</span><span>Sanitize</span></button>
+      <button class="ms-tile" data-ms="rxredact" type="button"><span class="ms-icon">🛡</span><span>RegEx redact</span></button>
+    </div>
+
+    <div class="ms-section-label">Data &amp; AI</div>
+    <div class="ms-grid">
+      <button class="ms-tile" data-ms="diff" type="button"><span class="ms-icon">⇄</span><span>Compare PDFs</span></button>
+      <button class="ms-tile" data-ms="table" type="button"><span class="ms-icon">⊞</span><span>Table → CSV</span></button>
+      <button class="ms-tile" data-ms="jsonfill" type="button"><span class="ms-icon">{ }</span><span>Fill from JSON</span></button>
+      <button class="ms-tile" data-ms="autofill" type="button"><span class="ms-icon">📝</span><span>Auto-Fill</span></button>
+      <button class="ms-tile" data-ms="ai" type="button"><span class="ms-icon">✨</span><span>Ask AI</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Floating colour picker for highlight / underline / strike — only visible in those modes -->
+<div class="deco-color-bar" id="decoColorBar" role="toolbar" aria-label="Annotation color">
+  <span class="dcb-label">Color</span>
+  <button class="dcb-swatch active" data-color="#ffeb3b" style="background:#ffeb3b" title="Yellow" type="button"></button>
+  <button class="dcb-swatch" data-color="#a5f3fc" style="background:#a5f3fc" title="Cyan" type="button"></button>
+  <button class="dcb-swatch" data-color="#bbf7d0" style="background:#bbf7d0" title="Green" type="button"></button>
+  <button class="dcb-swatch" data-color="#fecaca" style="background:#fecaca" title="Red" type="button"></button>
+  <button class="dcb-swatch" data-color="#fbcfe8" style="background:#fbcfe8" title="Pink" type="button"></button>
+  <button class="dcb-swatch" data-color="#c4b5fd" style="background:#c4b5fd" title="Purple" type="button"></button>
+  <button class="dcb-swatch" data-color="#fed7aa" style="background:#fed7aa" title="Orange" type="button"></button>
+  <button class="dcb-swatch" data-color="#000000" style="background:#000000" title="Black" type="button"></button>
+  <input type="color" class="dcb-custom" id="decoCustomColor" value="#ffeb3b" title="Custom color">
+</div>
+
+<div class="brush-bar" id="brushBar" role="toolbar" aria-label="Brush picker">
+  <button class="brush-pick" data-brush="pen" type="button" title="Pen"><span class="bp-icon">✒</span><span class="bp-name" data-i18n="brush.pen">Pen</span></button>
+  <button class="brush-pick" data-brush="pencil" type="button" title="Pencil"><span class="bp-icon">✏</span><span class="bp-name" data-i18n="brush.pencil">Pencil</span></button>
+  <button class="brush-pick" data-brush="highlighter" type="button" title="Highlighter"><span class="bp-icon">🖊</span><span class="bp-name" data-i18n="brush.highlighter">Highlighter</span></button>
+  <button class="brush-pick" data-brush="marker" type="button" title="Marker"><span class="bp-icon">🖌</span><span class="bp-name" data-i18n="brush.marker">Marker</span></button>
+  <span class="bb-sep"></span>
+  <span class="bb-mini-label" data-i18n="brush.bar.color">Colour</span>
+  <button class="dcb-swatch bb-swatch" data-bcolor="#000000" style="background:#000000" title="Black" type="button"></button>
+  <button class="dcb-swatch bb-swatch" data-bcolor="#ffeb3b" style="background:#ffeb3b" title="Yellow" type="button"></button>
+  <button class="dcb-swatch bb-swatch" data-bcolor="#2563eb" style="background:#2563eb" title="Blue" type="button"></button>
+  <button class="dcb-swatch bb-swatch" data-bcolor="#dc2626" style="background:#dc2626" title="Red" type="button"></button>
+  <button class="dcb-swatch bb-swatch" data-bcolor="#16a34a" style="background:#16a34a" title="Green" type="button"></button>
+  <input type="color" class="dcb-custom" id="brushCustomColor" value="#000000" title="Custom color">
+  <span class="bb-sep"></span>
+  <span class="bb-mini-label" data-i18n="brush.bar.width">Width</span>
+  <input type="range" id="brushWidth" min="1" max="20" value="2" class="brush-width" title="Width">
+  <span class="bb-width-val" id="brushWidthVal">2</span>
+</div>
+
+<div class="field-bar" id="fieldBar" role="toolbar" aria-label="Form field designer">
+  <button class="brush-pick" data-fieldsub="text" type="button" title="Text"><span class="bp-icon">🔡</span><span class="bp-name" data-i18n="field.text">Text</span></button>
+  <button class="brush-pick" data-fieldsub="multiline" type="button" title="Multi-line"><span class="bp-icon">¶</span><span class="bp-name" data-i18n="field.multiline">Multi-line</span></button>
+  <button class="brush-pick" data-fieldsub="number" type="button" title="Number"><span class="bp-icon">#</span><span class="bp-name" data-i18n="field.number">Number</span></button>
+  <!-- DISABLED — date / combobox / toggle / signature subtypes hidden until
+       the editor + saved-PDF UX is reliable across all viewers.
+  <button class="brush-pick" data-fieldsub="date" type="button" title="Date"><span class="bp-icon">📅</span><span class="bp-name" data-i18n="field.date">Date</span></button>
+  -->
+  <button class="brush-pick" data-fieldsub="check" type="button" title="Checkbox"><span class="bp-icon">☑</span><span class="bp-name" data-i18n="field.check">Check</span></button>
+  <button class="brush-pick" data-fieldsub="dropdown" type="button" title="Dropdown"><span class="bp-icon">▾</span><span class="bp-name" data-i18n="field.dropdown">Dropdown</span></button>
+  <!--
+  <button class="brush-pick" data-fieldsub="combobox" type="button" title="Combobox (dropdown + free text)"><span class="bp-icon">▽</span><span class="bp-name" data-i18n="field.combobox">Combobox</span></button>
+  -->
+  <button class="brush-pick" data-fieldsub="multiselect" type="button" title="Multi-select list"><span class="bp-icon">☰</span><span class="bp-name" data-i18n="field.multiselect">Multi-select</span></button>
+  <!--
+  <button class="brush-pick" data-fieldsub="toggle" type="button" title="Toggle switch (yes/no)"><span class="bp-icon">⇆</span><span class="bp-name" data-i18n="field.toggle">Toggle</span></button>
+  <button class="brush-pick" data-fieldsub="signature" type="button" title="Signature field (simple or certified — Bank-ID etc.)"><span class="bp-icon">✒</span><span class="bp-name" data-i18n="field.signature">Signature</span></button>
+  -->
+  <button class="brush-pick" data-fieldsub="button" type="button" title="Action button (Print · Clear · Submit)"><span class="bp-icon">▶</span><span class="bp-name" data-i18n="field.button">Button</span></button>
+</div>
+
+<div class="ocr-banner" id="ocrBanner" style="display:none">
+  <div class="ocr-banner-icon">📄</div>
+  <div class="ocr-banner-body">
+    <div class="ocr-banner-title">
+      <strong data-i18n="ocr.banner.title">This PDF looks like a scan</strong>
+      <span class="pro-badge">PRO</span>
+    </div>
+    <div class="ocr-banner-sub" data-i18n-html="ocr.banner.sub">No editable text was found in this PDF. Run OCR to extract text so you can <strong>click and edit it</strong> the same way as a normal PDF.</div>
+    <div class="ocr-banner-hint">
+      <span class="ocr-hint-clock">⏱</span>
+      <span data-i18n-html="ocr.banner.hint">Typically <strong>3–8 seconds per page</strong> on a modern laptop. First run downloads ~5 MB language data (after that everything works offline).</span>
+    </div>
+  </div>
+  <div class="ocr-banner-actions">
+    <label class="ocr-lang-row">
+      <span data-i18n="ocr.lang">Language</span>
+      <select id="ocrLang" class="select-input" data-i18n-title="ocr.lang.title" title="OCR language">
+        <option value="eng" selected>English</option>
+        <option value="ces">Czech (Čeština)</option>
+        <option value="deu">German</option>
+        <option value="fra">French</option>
+        <option value="spa">Spanish</option>
+        <option value="ita">Italian</option>
+        <option value="pol">Polish</option>
+        <option value="slk">Slovak</option>
+        <option value="eng+ces">English + Czech</option>
+      </select>
+    </label>
+    <button class="ocr-cta-btn" id="ocrRunBtn" type="button">
+      <span class="ocr-cta-icon">🔍</span>
+      <span class="ocr-cta-text">
+        <span class="ocr-cta-label" data-i18n="ocr.cta.label">Extract text with OCR</span>
+        <span class="ocr-cta-meta" data-i18n="ocr.cta.meta">Make this PDF editable</span>
+      </span>
+    </button>
+    <button class="ocr-banner-dismiss" id="ocrDismissBtn" type="button" data-i18n-title="ocr.dismiss" title="Dismiss">✕</button>
+  </div>
+</div>
+
+<aside class="side-panel" id="sidePanel" hidden>
+  <div class="sp-tabs" role="tablist">
+    <button class="sp-tab active" data-sp="thumbs" type="button" title="Page thumbnails" aria-label="Page thumbnails">📄</button>
+    <button class="sp-tab" data-sp="outline" type="button" title="Outline (table of contents)" aria-label="Outline">≡</button>
+    <button class="sp-tab" data-sp="bookmarks" type="button" title="Bookmarks" aria-label="Bookmarks">🔖</button>
+    <button class="sp-tab" data-sp="signatures" type="button" title="Signatures" aria-label="Signatures">✍</button>
+    <button class="sp-tab" data-sp="attachments" type="button" title="Attachments" aria-label="Attachments">📎</button>
+    <span class="sp-spacer"></span>
+    <button class="sp-close" id="sidePanelClose" type="button" title="Hide panel" aria-label="Close">✕</button>
+  </div>
+  <div class="sp-thumb-zoom" id="spThumbZoom">
+    <button class="sp-zoom-btn" id="spZoomOut" type="button" title="Smaller thumbnails">−</button>
+    <input type="range" id="spZoomSlider" min="100" max="320" step="10" value="200">
+    <button class="sp-zoom-btn" id="spZoomIn" type="button" title="Larger thumbnails">+</button>
+  </div>
+  <div class="sp-body" id="sidePanelBody">
+    <div class="sp-pane" data-sp="thumbs"><div class="sp-loading" data-i18n="sp.noPdf">No PDF loaded</div></div>
+    <div class="sp-pane" data-sp="outline" hidden><div class="sp-loading" data-i18n="sp.noPdf">No PDF loaded</div></div>
+    <div class="sp-pane" data-sp="bookmarks" hidden><div class="sp-loading" data-i18n="sp.noPdf">No PDF loaded</div></div>
+    <div class="sp-pane" data-sp="signatures" hidden><div class="sp-loading" data-i18n="sp.noPdf">No PDF loaded</div></div>
+    <div class="sp-pane" data-sp="attachments" hidden><div class="sp-loading" data-i18n="sp.noPdf">No PDF loaded</div></div>
+  </div>
+  <div class="sp-resize-handle" id="spResizeHandle" title="Drag to resize panel"><span>‖</span></div>
+</aside>
+
+<button class="side-panel-toggle" id="sidePanelToggle" title="Show side panel (Ctrl+\\)" aria-label="Side panel">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="13" y="3" width="8" height="18" rx="1"/></svg>
+</button>
+
+<main>
+  <div id="dropzone">
+    <div class="drop-icon">📄</div>
+    <h2 data-i18n="drop.title">Drop your PDF file here</h2>
+    <div class="sub" data-i18n="drop.sub">Or click anywhere in this area to choose a file</div>
+    <div class="quick-guide">
+      <h3 data-i18n="drop.quickGuide">Quick guide</h3>
+      <ol>
+        <li data-i18n-html="drop.step1"><strong>Open</strong> a PDF (drop here or click)</li>
+        <li data-i18n-html="drop.step2"><strong>Add Text</strong>: click on the PDF and type. <kbd>Enter</kbd> finishes; <kbd>Shift</kbd>+<kbd>Enter</kbd> = new line. Select text to format (Bold, Italic, Underline, colour, background)</li>
+        <li data-i18n-html="drop.step3"><strong>Image</strong>: insert from a file or <kbd>Ctrl</kbd>+<kbd>V</kbd> paste. Drag corners to resize, top handle to rotate</li>
+        <li data-i18n-html="drop.step4"><strong>Draw</strong> — brushes <strong>pen · pencil · highlighter · marker</strong>. <strong>Highlighter prints identical to the screen</strong> — never darker on overlap</li>
+        <li data-i18n-html="drop.step5"><strong>Shapes</strong> — rectangle, ellipse, line, arrow with smart <strong>snap, alignment &amp; equal-spacing guides</strong> (Figma-style)</li>
+        <li data-i18n-html="drop.step6"><strong>Form fields</strong> (<kbd>F</kbd>) — text · multi-line · number · date · checkbox · dropdown · combobox · multi-select · toggle · signature · action button. Per field: required *, tooltip, format (USD/EUR/CZK/% · ISO/US/EU date), Tab #</li>
+        <li data-i18n-html="drop.step7">Drag/double-click/<kbd>Delete</kbd>. <strong>Copy / cut / paste</strong> across pages with <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></li>
+        <li data-i18n-html="drop.step8"><strong>Save</strong>, <strong>Export</strong> (HQ / Web / Archive / Word / Text) or <strong>Print</strong>. Zoom with <kbd>Ctrl</kbd>+<kbd>scroll</kbd></li>
+        <li data-i18n-html="drop.step9"><strong>Measure &amp; view</strong> (<kbd>M</kbd> / 📐 ▦) — drag to measure in mm/cm/in/px; ruler &amp; grid in the View bar</li>
+        <li data-i18n-html="drop.step10"><strong>PDF metadata</strong> — click <strong>📊</strong> to edit Title / Author / Subject / Keywords. <strong>Command palette</strong> <kbd>Ctrl</kbd>+<kbd>K</kbd> &amp; single-letter shortcuts</li>
+      </ol>
+    </div>
+  </div>
+  <div id="pages"></div>
+</main>
+
+<div class="props-panel" id="propsPanel"></div>
+
+<div class="quick-panel" id="quickPanel" hidden>
+  <div class="qp-label" data-i18n-title="quick.title" title="Your most-used tools" data-i18n="quick.label">QUICK</div>
+  <div class="qp-items" id="quickPanelItems"></div>
+</div>
+
+<div class="zoom-bar" id="zoomBar" style="display: none">
+  <button class="zoom-btn" id="zoomOut" title="Zoom out (Ctrl+−)">−</button>
+  <button class="zoom-percent" id="zoomReset" title="Click to type a zoom value · Alt+click for 100%">100%</button>
+  <button class="zoom-btn" id="zoomIn" title="Zoom in (Ctrl++)">+</button>
+</div>
+
+<div class="banner install" id="installBanner">
+  <div class="banner-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  </div>
+  <div class="banner-text"><strong>Install this app</strong>Open PDFs faster — no browser tabs.</div>
+  <div class="actions">
+    <button class="btn" id="installDismiss">Later</button>
+    <button class="btn primary" id="installAccept">Install</button>
+  </div>
+</div>
+
+<div class="banner update" id="updateBanner">
+  <div class="banner-icon">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+  </div>
+  <div class="banner-text"><strong>A new version is ready</strong>Click to refresh and use the latest version.</div>
+  <div class="actions">
+    <button class="btn" id="updateDismiss">Later</button>
+    <button class="btn primary" id="updateAccept">Refresh</button>
+  </div>
+</div>
+
+<div id="status">
+  <span><span class="label" data-i18n="status.tool">Tool:</span> <span class="val" id="statusTool">Text</span></span>
+  <span><span class="label" data-i18n="status.pages">Pages:</span> <span class="val" id="statusPages">0</span></span>
+  <span><span class="label" data-i18n="status.edits">Edits:</span> <span class="val" id="statusAnnots">0</span></span>
+  <span class="signature" style="margin-left: auto; margin-right: auto" data-i18n-html="status.built">Built<span class="heart"> ♥ </span>by Kamil Niemczyk</span>
+  <span data-i18n-html="status.shortcuts">
+    <kbd>Ctrl</kbd>+<kbd>S</kbd> save · <kbd>Ctrl</kbd>+<kbd>P</kbd> print · <kbd>Ctrl</kbd>+<kbd>±</kbd> zoom
+  </span>
+</div>
+
+<div class="modal-overlay" id="sigModal" role="dialog" aria-modal="true" aria-labelledby="sigModalTitle">
+  <div class="modal-card modal-card-wide">
+    <div class="modal-head">
+      <h2 class="modal-title" id="sigModalTitle" data-i18n="sig.title">Create New Signature</h2>
+      <button class="modal-close" id="sigClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="sig-saved-section" id="sigSavedSection" hidden>
+      <span class="label" data-i18n="sig.saved">Your saved signatures — click to insert</span>
+      <div class="row" id="sigSavedThumbs"></div>
+    </div>
+    <div class="tab-bar" role="tablist">
+      <button class="tab active" data-sig-tab="draw" type="button" role="tab" aria-selected="true" data-i18n="sig.tab.draw">Draw</button>
+      <button class="tab" data-sig-tab="type" type="button" role="tab" data-i18n="sig.tab.type">Type</button>
+      <button class="tab" data-sig-tab="upload" type="button" role="tab" data-i18n="sig.tab.upload">Upload</button>
+    </div>
+
+    <div class="sig-tab-body" data-sig-body="draw">
+      <canvas id="sigPad" class="signature-pad" width="1200" height="360"></canvas>
+      <div class="sig-caption"><span data-i18n="sig.drawLabel">Draw Signature*</span><button class="link-btn" id="sigClear" type="button" data-i18n="sig.clear">Clear</button></div>
+    </div>
+
+    <div class="sig-tab-body" data-sig-body="type" hidden>
+      <input type="text" id="sigTypeInput" class="sig-type-input" data-i18n-placeholder="sig.typeName" placeholder="Type your name…" maxlength="60" autocomplete="off">
+      <div class="sig-type-preview" id="sigTypePreview" aria-live="polite"></div>
+      <div class="sig-font-grid" id="sigFontGrid" role="radiogroup" data-i18n-aria="sig.fontGrid" aria-label="Signature font"></div>
+    </div>
+
+    <div class="sig-tab-body" data-sig-body="upload" hidden>
+      <label class="upload-drop" id="sigUploadDrop">
+        <input type="file" id="sigUploadInput" accept="image/png,image/jpeg,image/jpg,image/webp,image/svg+xml" hidden>
+        <div class="upload-icon">⬆</div>
+        <div class="upload-title" data-i18n="sig.upload.title">Click or drop an image of your signature</div>
+        <div class="upload-sub" data-i18n="sig.upload.sub">PNG, JPG, WEBP or SVG — transparent PNG works best</div>
+      </label>
+      <div class="sig-upload-preview" id="sigUploadPreview" hidden>
+        <img id="sigUploadImg" data-i18n-alt="sig.upload.alt" alt="Signature preview">
+        <button class="link-btn" id="sigUploadRemove" type="button" data-i18n="sig.upload.change">Choose a different image</button>
+      </div>
+    </div>
+
+    <div class="sig-tools">
+      <select id="sigTypeStyle" class="select-input" data-i18n-title="sig.styles" title="Text styles">
+        <option value="" data-i18n="sig.styles">Text Styles</option>
+      </select>
+      <span class="sig-tools-sep"></span>
+      <button class="sig-swatch active" data-sig-color="#000000" style="background:#000000" data-i18n-title="color.black" title="Black" type="button"></button>
+      <button class="sig-swatch" data-sig-color="#1d4ed8" style="background:#1d4ed8" data-i18n-title="color.blue" title="Blue" type="button"></button>
+      <button class="sig-swatch" data-sig-color="#dc2626" style="background:#dc2626" data-i18n-title="color.red" title="Red" type="button"></button>
+      <input type="color" id="sigColor" value="#000000" class="pcolor-input" data-i18n-title="sig.customColor" title="Custom ink color">
+    </div>
+
+    <div class="save-sig-row">
+      <label class="check"><input type="checkbox" id="sigSaveCheckbox"> <span data-i18n="sig.saveCheck">Save this signature to my profile for future use</span></label>
+    </div>
+    <div class="sig-audit-row">
+      <label class="check"><input type="checkbox" id="sigAuditCheckbox"> <span data-i18n-html="sig.auditLabel">Strengthen signature with audit metadata <span style="color:var(--muted);font-weight:400">— hash + timestamp + IP + device</span></span></label>
+      <div id="sigAuditPanel" hidden style="margin-top:6px;padding:8px 10px;background:var(--surface-2);border-radius:var(--radius-sm);border:1px solid var(--border)">
+        <div class="settings-desc" style="margin:0 0 6px" data-i18n-html="sig.auditDesc">A small audit stamp is rendered <em>into</em> the signature image — non-removable. Includes: SHA-256 hash of the document, timestamp from an external time server, your IP + ISP + <strong>city-level location</strong> from <code>ipapi.co</code> (always captured), browser/OS. Click <em>Capture GPS</em> below for street-level precision and an English address via OpenStreetMap. Optional signer fields make it more official. All client-side, no backend.</div>
+        <details style="margin-top:4px" open>
+          <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--text-soft)" data-i18n="sig.signerId">Signer identity (optional — printed on the stamp)</summary>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+            <label class="ps-mini"><span data-i18n="sig.first">First name</span><input type="text" id="sigAuditFirst" class="ps-text" data-i18n-placeholder="sig.first.ph" placeholder="John" autocomplete="given-name"></label>
+            <label class="ps-mini"><span data-i18n="sig.last">Last name</span><input type="text" id="sigAuditLast" class="ps-text" data-i18n-placeholder="sig.last.ph" placeholder="Doe" autocomplete="family-name"></label>
+            <label class="ps-mini"><span data-i18n="profile.email">Email</span><input type="email" id="sigAuditEmail" class="ps-text" placeholder="john@example.com" autocomplete="email"></label>
+            <label class="ps-mini"><span data-i18n="profile.phone">Phone</span><input type="tel" id="sigAuditPhone" class="ps-text" data-i18n-placeholder="profile.phone.ph" placeholder="+1 555 123 4567" autocomplete="tel"></label>
+            <label class="ps-mini" style="grid-column:span 2"><span data-i18n-html="sig.role">Role / title <span style="color:var(--muted);font-weight:400">(optional)</span></span><input type="text" id="sigAuditRole" class="ps-text" data-i18n-placeholder="sig.role.ph" placeholder="CEO, Notary, Witness…"></label>
+          </div>
+          <label class="check" style="margin-top:6px"><input type="checkbox" id="sigAuditRemember"> <span data-i18n="sig.remember">Remember on this device for next time</span></label>
+        </details>
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <button class="btn outlined" id="sigAuditLocBtn" type="button" style="padding:6px 10px"><span class="icon">📍</span> <span data-i18n="sig.gpsBtn">Upgrade to GPS-precise location</span></button>
+          <span id="sigAuditLocStatus" style="font-size:12px;color:var(--muted)" data-i18n="sig.gpsStatus">IP-based city/region is captured automatically. Click for GPS coordinates + street address.</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="sigCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="sigInsert" type="button" disabled data-i18n="sig.create">Create</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="stampsModal" role="dialog" aria-modal="true" aria-labelledby="stampsModalTitle">
+  <div class="modal-card modal-card-wide modal-card-stamps">
+    <div class="modal-head">
+      <h2 class="modal-title" id="stampsModalTitle" data-i18n="stamps.title">Stamps</h2>
+      <button class="btn outlined" id="newStampBtn" type="button"><span class="icon">＋</span> <span data-i18n="stamps.createNew">Create New Stamp</span></button>
+      <button class="modal-close" id="stampsClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="stamps-tabs" role="tablist">
+      <button class="tab active" data-stamp-tab="standard" type="button" data-i18n="stamps.tab.standard">Standard Stamps</button>
+      <button class="tab" data-stamp-tab="info" type="button" data-i18n="stamps.tab.info">Information</button>
+      <button class="tab" data-stamp-tab="custom" type="button" data-i18n="stamps.tab.custom">Custom Stamps</button>
+    </div>
+    <div class="stamps-grid-body">
+      <div class="stamps-grid" id="stampsGridStandard"></div>
+      <div class="stamps-grid" id="stampsGridInfo" hidden></div>
+      <div class="stamps-grid" id="stampsGridCustom" hidden>
+        <div class="stamps-empty" id="stampsEmptyCustom" data-i18n-html="stamps.emptyCustom">
+          No custom stamps yet. Click <strong>Create New Stamp</strong> to make one.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="createStampModal" role="dialog" aria-modal="true" aria-labelledby="createStampTitle">
+  <div class="modal-card modal-card-wide modal-card-create-stamp">
+    <div class="modal-head">
+      <h2 class="modal-title" id="createStampTitle" data-i18n="cs.title">Create New Stamp</h2>
+      <button class="modal-close" id="createStampClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="create-stamp-body">
+      <div class="create-stamp-preview" id="createStampPreview">
+        <div class="stamp-preview-box" id="createStampPreviewBox">DRAFT</div>
+      </div>
+      <div class="create-stamp-form">
+        <div class="field cs-kind-row">
+          <label class="cs-kind-pill"><input type="radio" name="csKind" value="text" checked> <span data-i18n="cs.kind.text">✎ Text stamp</span></label>
+          <label class="cs-kind-pill"><input type="radio" name="csKind" value="image"> <span data-i18n="cs.kind.image">🖼 Image stamp</span></label>
+          <span class="cs-hint" style="margin-left:auto" data-i18n="cs.kind.hint">Image = upload a logo or scan of a real stamp.</span>
+        </div>
+        <div class="field" id="csTextField">
+          <label for="csText"><span data-i18n="cs.content">Stamp content*</span> <span class="cs-hint" data-i18n="cs.content.hint">— one line per line; click a chip to insert a token at the cursor</span></label>
+          <textarea id="csText" rows="3" maxlength="280" placeholder="DRAFT&#10;{USER} · {DATE} {TIME}" class="cs-template"></textarea>
+          <div class="cs-chip-row">
+            <button class="cs-chip" id="csInsertUser" type="button" data-token="{USER}" data-i18n-title="cs.insertUser.title" title="Insert username — uses your profile name by default" data-i18n="cs.insertUser">+ Username</button>
+            <button class="cs-chip" id="csInsertDate" type="button" data-token="{DATE}" data-i18n-title="cs.insertDate.title" title="Insert today's date — format below" data-i18n="cs.insertDate">+ Date</button>
+            <button class="cs-chip" id="csInsertTime" type="button" data-token="{TIME}" data-i18n-title="cs.insertTime.title" title="Insert current time — format below" data-i18n="cs.insertTime">+ Time</button>
+            <button class="cs-chip" id="csInsertNL" type="button" data-token="&#10;" data-i18n-title="cs.insertNL.title" title="Insert a new line (you can also just press Enter)" data-i18n="cs.insertNL">↵ New line</button>
+          </div>
+        </div>
+        <div class="field" id="csImageField" hidden>
+          <label data-i18n="cs.imageLabel">Stamp image*</label>
+          <div class="cs-image-drop" id="csImageDrop">
+            <input type="file" id="csImageInput" accept="image/*" hidden>
+            <div class="cs-image-empty" id="csImageEmpty">
+              <div class="cs-image-icon">🖼</div>
+              <div class="cs-image-cta" data-i18n="cs.imageCta">Click to choose a PNG / JPG / SVG…</div>
+              <div class="cs-image-hint" data-i18n="cs.imageHint">Transparent PNGs work best for logos and round stamps.</div>
+            </div>
+            <img id="csImagePreview" class="cs-image-preview" data-i18n-alt="cs.imageAlt" alt="Stamp image preview" hidden>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <button class="btn outlined" id="csImageReplace" type="button" hidden data-i18n="cs.imageReplace">Replace image</button>
+            <button class="btn danger" id="csImageClear" type="button" hidden data-i18n="cs.imageRemove">Remove image</button>
+            <span id="csImageInfo" class="cs-hint" style="margin-left:auto"></span>
+          </div>
+        </div>
+        <div id="csTextOnlyFields">
+          <div class="field">
+            <label data-i18n="cs.fontStyle">Font Style</label>
+            <div class="row">
+              <select id="csFont" class="select-input">
+                <option value="Helvetica">Helvetica</option>
+                <option value="Times-Roman">Times Roman</option>
+                <option value="Courier">Courier</option>
+              </select>
+              <button class="pbtn" id="csBold" type="button" data-i18n-title="style.bold" title="Bold">B</button>
+              <button class="pbtn italic" id="csItalic" type="button" data-i18n-title="style.italic" title="Italic">I</button>
+              <button class="pbtn underline" id="csUnderline" type="button" data-i18n-title="style.underline" title="Underline">U</button>
+            </div>
+          </div>
+          <div class="field">
+            <label data-i18n="cs.textColor">Text Color</label>
+            <div class="row swatch-row" id="csTextColorRow">
+              <button class="pswatch" data-color="#000000" style="background:#000000" type="button"></button>
+              <button class="pswatch" data-color="#ffffff" style="background:#ffffff;border-color:var(--border-strong)" type="button"></button>
+              <button class="pswatch" data-color="#dc2626" style="background:#dc2626" type="button"></button>
+              <button class="pswatch" data-color="#15803d" style="background:#15803d" type="button"></button>
+              <button class="pswatch" data-color="#1d4ed8" style="background:#1d4ed8" type="button"></button>
+              <input type="color" id="csTextColor" value="#dc2626" class="pcolor-input">
+              <button class="pbtn danger" id="csTextColorClear" type="button" data-i18n-title="cs.resetTextColor" title="Reset text color">🗑</button>
+            </div>
+          </div>
+          <div class="field">
+            <label data-i18n="cs.bgColor">Background Color</label>
+            <div class="row swatch-row" id="csBgColorRow">
+              <button class="pswatch" data-bg="#fde68a" style="background:#fde68a" type="button"></button>
+              <button class="pswatch" data-bg="#bbf7d0" style="background:#bbf7d0" type="button"></button>
+              <button class="pswatch" data-bg="#bfdbfe" style="background:#bfdbfe" type="button"></button>
+              <button class="pswatch" data-bg="#fecaca" style="background:#fecaca" type="button"></button>
+              <input type="color" id="csBgColor" value="#ffffff" class="pcolor-input">
+              <button class="pbtn danger" id="csBgClear" type="button" data-i18n-title="cs.noBg" title="No background">🗑</button>
+            </div>
+          </div>
+          <div class="field">
+            <label data-i18n="cs.border">Border</label>
+            <div class="row">
+              <select id="csBorderStyle" class="select-input">
+                <option value="dashed" data-i18n="border.dashed">Dashed</option>
+                <option value="solid" data-i18n="border.solid">Solid</option>
+                <option value="none" data-i18n="border.none">None</option>
+              </select>
+              <input type="color" id="csBorderColor" value="#dc2626" class="pcolor-input" data-i18n-title="cs.borderColor" title="Border color">
+              <input type="number" id="csBorderWidth" value="2" min="0" max="10" class="psize-input" data-i18n-title="cs.borderWidth" title="Border width">
+            </div>
+          </div>
+          <div class="field">
+            <label><span data-i18n="cs.tokens">Token values</span> <span class="cs-hint" data-i18n="cs.tokens.hint">— what {USER}, {DATE}, {TIME} resolve to</span></label>
+            <div class="row" id="csTimestampRow">
+              <input type="text" id="csUsernameVal" class="select-input" data-i18n-placeholder="cs.usernamePh" placeholder="Your name (used by {USER})" maxlength="40" style="flex:1;min-width:140px">
+            </div>
+            <div class="row" style="margin-top:6px">
+              <select id="csDateFormat" class="select-input" style="flex:1" data-i18n-title="cs.dateFmt" title="Date format used by {DATE}">
+                <option value="MM/DD/YYYY" selected>MM/DD/YYYY (USA)</option>
+                <option value="MMM-DD-YYYY">Month DD, YYYY</option>
+                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+              </select>
+              <select id="csTimeFormat" class="select-input" style="flex:1" data-i18n-title="cs.timeFmt" title="Time format used by {TIME}">
+                <option value="hh:mm A" selected data-i18n="cs.time12">12-hour (hh:mm AM/PM)</option>
+                <option value="HH:mm" data-i18n="cs.time24">24-hour (HH:mm)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="csFontSize" data-i18n="cs.textSize">Text Size</label>
+            <div class="row">
+              <input type="number" id="csFontSize" class="psize-input" value="24" min="8" max="96">
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="check"><input type="checkbox" id="csSaveLib"> <span data-i18n="cs.saveLib">Save to my custom stamps</span></label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="csCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="csCreate" type="button" data-i18n="cs.createInsert">Create &amp; Insert</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="organizeModal" role="dialog" aria-modal="true" aria-labelledby="organizeTitle">
+  <div class="modal-card modal-card-organize">
+    <div class="modal-head">
+      <h2 class="modal-title" id="organizeTitle" data-i18n="organize.title">Organize Pages</h2>
+      <button class="modal-close" id="organizeClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="organize-tools">
+      <label class="btn outlined" data-i18n-title="organize.mergeTitle" title="Append another PDF">
+        <input type="file" id="mergeInput" accept="application/pdf" hidden>
+        <span class="icon">＋</span> <span data-i18n="tb.merge">Merge PDF</span>
+      </label>
+      <button class="btn outlined" id="addBlankPageBtn" type="button" data-i18n-title="organize.blankTitle" title="Append a blank page — pick a page size"><span class="icon">📄</span> <span data-i18n="organize.blank">Blank page</span></button>
+      <button class="btn outlined" id="splitBtn" type="button"><span class="icon">⤴</span> <span data-i18n="organize.exportSel">Export Selected</span></button>
+      <button class="btn outlined" id="rotateAllBtn" type="button" data-i18n-title="organize.rotateAllTitle" title="Rotate every page 90° clockwise"><span data-i18n="organize.rotateAll">↻ Rotate All</span></button>
+      <button class="btn outlined" id="compressBtn" type="button"><span class="icon">⤓</span> <span data-i18n="organize.compress">Compress PDF…</span></button>
+      <span class="spacer" style="flex:1"></span>
+      <span class="organize-stats" id="organizeStats"></span>
+    </div>
+    <div class="organize-grid" id="organizeGrid"></div>
+    <input type="file" id="replacePageInput" accept="application/pdf" hidden>
+    <div class="modal-actions">
+      <button class="btn" id="organizeCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="organizeApply" type="button" data-i18n="organize.apply">Apply Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="replacePagePicker" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n="rpp.title">Which page to use as replacement?</h2>
+      <button class="modal-close" id="rppClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="ps-section">
+      <div id="rppInfo" style="font-size:13px;color:var(--muted);margin-bottom:8px"></div>
+      <label class="ps-label" data-i18n-html="rpp.pageNum">Page number (1–<span id="rppMax">1</span>)</label>
+      <input type="number" id="rppPageNum" class="ps-text" min="1" value="1">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="rppCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="rppOk" type="button" data-i18n="rpp.use">Use this page</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="compressModal" role="dialog" aria-modal="true" aria-labelledby="compressTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="modal-title" id="compressTitle" data-i18n="compress.title">Compress PDF</h2>
+      <button class="modal-close" id="compressClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n="compress.sub">Compression rasterizes each page into a JPEG image at the chosen quality. Vector text becomes part of the image, but file size shrinks significantly.</div>
+    <div class="compress-presets">
+      <button class="compress-card" data-quality="0.5" data-dpi="100" type="button">
+        <span class="cc-title" data-i18n="compress.max">Maximum compression</span>
+        <span class="cc-sub" data-i18n="compress.max.sub">Lowest quality · smallest file</span>
+      </button>
+      <button class="compress-card active" data-quality="0.72" data-dpi="120" type="button">
+        <span class="cc-title" data-i18n="compress.rec">Recommended</span>
+        <span class="cc-sub" data-i18n="compress.rec.sub">Good balance · much smaller file</span>
+      </button>
+      <button class="compress-card" data-quality="0.85" data-dpi="150" type="button">
+        <span class="cc-title" data-i18n="compress.hq">High quality</span>
+        <span class="cc-sub" data-i18n="compress.hq.sub">Best quality · moderate reduction</span>
+      </button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="compressCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="compressGo" type="button" data-i18n="compress.go">Compress &amp; Download</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="passwordModal" role="dialog" aria-modal="true" aria-labelledby="passwordTitle">
+  <div class="modal-card" style="max-width:460px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="passwordTitle" data-i18n="pwd.title">🔒 Password protect</h2>
+      <button class="modal-close" id="passwordClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n-html="pwd.sub">Encrypt the current PDF with a password. The output is a <code>.pdfenc</code> file (AES-256-GCM, 250k PBKDF2 rounds). Open it back via the Open button — drop the <code>.pdfenc</code> file or pick it normally.</div>
+    <div class="ps-section">
+      <label class="ps-label" data-i18n="pwd.password">Password</label>
+      <input type="password" id="passwordInput" class="ps-text" data-i18n-placeholder="pwd.password.ph" placeholder="Strong password — at least 8 characters" autocomplete="new-password">
+      <label class="ps-label" style="margin-top:8px" data-i18n="pwd.confirm">Confirm</label>
+      <input type="password" id="passwordConfirm" class="ps-text" data-i18n-placeholder="pwd.confirm.ph" placeholder="Re-type the password" autocomplete="new-password">
+      <label class="check" style="margin-top:8px"><input type="checkbox" id="passwordShow"> <span data-i18n="pwd.show">Show passwords</span></label>
+      <div id="passwordError" style="color:var(--danger);font-size:12px;margin-top:6px;min-height:14px"></div>
+      <div class="settings-desc" style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:8px 10px;border-radius:6px;margin-top:8px" data-i18n="pwd.warning">
+        ⚠ No recovery: without the password, the file cannot be decrypted. The encryption is fully client-side — your password never leaves the browser.
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="passwordCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="passwordEncrypt" type="button" data-i18n="pwd.encrypt">Encrypt &amp; download</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="passwordOpenModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:420px">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n="pwdOpen.title">🔓 Decrypt PDF</h2>
+      <button class="modal-close" id="passwordOpenClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n="pwdOpen.sub">This file is encrypted. Enter the password to open it.</div>
+    <div class="ps-section">
+      <label class="ps-label" data-i18n="pwd.password">Password</label>
+      <input type="password" id="passwordOpenInput" class="ps-text" data-i18n-placeholder="pwd.password" placeholder="Password" autocomplete="current-password">
+      <div id="passwordOpenError" style="color:var(--danger);font-size:12px;margin-top:6px;min-height:14px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="passwordOpenCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="passwordOpenGo" type="button" data-i18n="pwdOpen.go">Decrypt &amp; open</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="sanitizeModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:520px">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n="san.title">🧼 Sanitize document</h2>
+      <button class="modal-close" id="sanitizeClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n="san.sub">Strip everything that could leak data: PDF metadata, hidden objects, JavaScript actions, and old incremental revisions. Annotations are baked into the visual layer first so nothing is "secretly editable" afterwards.</div>
+    <div class="ps-section">
+      <label class="check"><input type="checkbox" id="sanStripMeta" checked> <span data-i18n="san.strip">Strip metadata (Title, Author, Subject, Keywords, Producer, Creator, dates)</span></label>
+      <label class="check" style="margin-top:6px"><input type="checkbox" id="sanFlatten" checked> <span data-i18n="san.flatten">Flatten annotations into the page (bake whiteouts, redactions, highlights, text)</span></label>
+      <label class="check" style="margin-top:6px"><input type="checkbox" id="sanRasterize"> <span data-i18n="san.raster">Rasterize every page (most aggressive — destroys selectable text but guarantees no hidden content)</span></label>
+      <label class="ps-label" style="margin-top:10px" data-i18n="san.dpi">Rasterize DPI</label>
+      <input type="number" id="sanRasterDpi" class="ps-text" min="72" max="300" value="150" style="width:120px">
+      <div id="sanStatus" style="font-size:12px;color:var(--muted);margin-top:10px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="sanitizeCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="sanitizeGo" type="button" data-i18n="san.go">Sanitize &amp; download</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="regexRedactModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:640px">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n="rx.title">🛡 RegEx redact</h2>
+      <button class="modal-close" id="regexRedactClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n-html="rx.sub">Permanently remove sensitive data. Each match in the PDF text layer is covered by an opaque rectangle <em>and</em> the text is dropped from the underlying content. Save the document to bake these in.</div>
+    <div class="ps-section">
+      <label class="ps-label" data-i18n-html="rx.presets">Presets <span style="color:var(--muted);font-weight:400">— click to insert &amp; preview</span></label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn outlined" data-rx-preset="\b\d{3}-?\d{2}-?\d{4}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.ssn" data-rx-example="123-45-6789">SSN</button>
+        <button class="btn outlined" data-rx-preset="\b(?:\d[ -]*?){13,19}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.cc" data-rx-example="4111 1111 1111 1111">Credit card</button>
+        <button class="btn outlined" data-rx-preset="[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.email" data-rx-example="john@example.com">Email</button>
+        <button class="btn outlined" data-rx-preset="\+?[\d][\d\s()-]{7,}\d" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.phone" data-rx-example="+420 777 123 456">Phone</button>
+        <button class="btn outlined" data-rx-preset="\b[A-Z]{2}\d{2}[A-Z0-9]{4,30}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.iban" data-rx-example="CZ6508000000192000145399">IBAN</button>
+        <button class="btn outlined" data-rx-preset="\b\d{6}\/?\d{3,4}\b" type="button" style="padding:4px 8px;font-size:12px" data-i18n="rx.preset.cz" data-rx-example="940215/3127">CZ rodné č.</button>
+        <button class="btn outlined" data-rx-preset="\b\d{1,3}(\.\d{1,3}){3}\b" type="button" style="padding:4px 8px;font-size:12px" data-rx-example="192.168.1.42">IP</button>
+        <button class="btn outlined" data-rx-preset="https?://[^\s]+" type="button" style="padding:4px 8px;font-size:12px" data-rx-example="https://example.com/path">URL</button>
+      </div>
+      <label class="ps-label" data-i18n="rx.pattern">Regular expression (JavaScript flavor)</label>
+      <input type="text" id="rxPattern" class="ps-text" placeholder="\b\d{3}-\d{2}-\d{4}\b" style="font-family:'JetBrains Mono', monospace">
+      <div id="rxLivePreview" style="font-size:12px;color:var(--muted);margin-top:6px;min-height:18px"></div>
+      <label class="check" style="margin-top:6px"><input type="checkbox" id="rxFlagI" checked> <span data-i18n="rx.caseI">Case-insensitive</span></label>
+      <div id="rxStatus" style="font-size:12px;color:var(--muted);margin-top:10px"></div>
+      <details style="margin-top:14px;padding:8px 10px;background:var(--surface-2);border-radius:6px;border:1px solid var(--border)">
+        <summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--text-soft)" data-i18n="rx.helpTitle">📖 Regex cheat sheet — click to expand</summary>
+        <div style="margin-top:8px;font-size:12px;line-height:1.6;color:var(--text-soft)" data-i18n-html="rx.helpBody">
+          <strong>Basics:</strong><br>
+          <code>.</code> any char · <code>\d</code> digit (0-9) · <code>\w</code> word char · <code>\s</code> whitespace<br>
+          <code>+</code> one or more · <code>*</code> zero or more · <code>?</code> optional<br>
+          <code>{n}</code> exactly n times · <code>{n,m}</code> n-to-m times<br>
+          <code>\b</code> word boundary · <code>^</code> start · <code>$</code> end<br>
+          <code>[abc]</code> any of a/b/c · <code>[^abc]</code> none of a/b/c · <code>[A-Z]</code> any uppercase letter<br>
+          <code>(a|b)</code> either a or b · <code>\.</code> literal dot (escape special chars with \)<br><br>
+          <strong>Examples:</strong><br>
+          <code>\b\d{4}\s\d{4}\s\d{4}\s\d{4}\b</code> — credit card with spaces<br>
+          <code>(?:Mr|Mrs|Dr)\.\s\w+</code> — titles followed by a name<br>
+          <code>\b[A-Z][a-z]+\s[A-Z][a-z]+\b</code> — Two capitalised words (a name)
+        </div>
+      </details>
+    </div>
+    <div class="modal-actions">
+      <button class="btn outlined" id="rxPreview" type="button" data-i18n="rx.preview">Preview matches in document</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn" id="regexRedactCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="regexRedactGo" type="button" data-i18n="rx.go">Redact all matches</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="diffModal" role="dialog" aria-modal="true">
+  <div class="modal-card modal-card-diff" style="max-width:min(1500px,98vw);width:98vw;max-height:96vh;display:flex;flex-direction:column">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n="diff.title">⇄ Compare two PDFs</h2>
+      <button class="modal-close" id="diffClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n-html="diff.sub">Both PDFs are rendered side by side. <span style="background:#fecaca;padding:1px 6px;border-radius:3px;color:#7f1d1d">Red</span> = removed in the original, <span style="background:#bbf7d0;padding:1px 6px;border-radius:3px;color:#14532d">green</span> = added in the updated version. Unchanged text stays untouched.</div>
+
+    <div class="ps-section" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <label class="upload-drop" style="flex:1;min-width:200px;height:56px;display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;padding:0 12px">
+        <input type="file" id="diffFileA" accept="application/pdf" hidden>
+        <span style="background:#fecaca;color:#7f1d1d;font-weight:700;padding:2px 6px;border-radius:3px;font-size:11px">A</span>
+        <span><strong id="diffNameA" style="font-size:13px" data-i18n="diff.origPick">Original — click to pick</strong></span>
+      </label>
+      <label class="upload-drop" style="flex:1;min-width:200px;height:56px;display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed var(--border);border-radius:8px;cursor:pointer;padding:0 12px">
+        <input type="file" id="diffFileB" accept="application/pdf" hidden>
+        <span style="background:#bbf7d0;color:#14532d;font-weight:700;padding:2px 6px;border-radius:3px;font-size:11px">B</span>
+        <span><strong id="diffNameB" style="font-size:13px" data-i18n="diff.updPick">Updated — click to pick</strong></span>
+      </label>
+      <label class="check" style="font-size:13px;white-space:nowrap"><input type="checkbox" id="diffSyncScroll" checked> <span data-i18n="diff.sync">Sync scroll</span></label>
+      <button class="btn primary" id="diffGo" type="button" disabled data-i18n="diff.compute">Compute diff</button>
+    </div>
+    <div id="diffStatus" style="font-size:12px;color:var(--muted);padding:4px 18px"></div>
+
+    <!-- Side-by-side panes -->
+    <div id="diffPanes" style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 12px 12px;min-height:0">
+      <div class="diff-pane" id="diffPaneA" style="background:#f3f4f6;border:1px solid var(--border);border-radius:6px;overflow:auto;min-height:300px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px"></div>
+      <div class="diff-pane" id="diffPaneB" style="background:#f3f4f6;border:1px solid var(--border);border-radius:6px;overflow:auto;min-height:300px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px"></div>
+    </div>
+    <div class="modal-actions" style="padding:8px 18px">
+      <button class="btn" id="diffCancel" type="button" data-i18n="common.close">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- === JSON FORM FILL === -->
+<div class="modal-overlay" id="jsonFillModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:560px">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n="jsonFill.title">Fill form from JSON</h2>
+      <button class="modal-close" id="jsonFillClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n="jsonFill.sub">Paste a JSON object and we'll match its keys to the PDF's form-field names (case-insensitive, substring match). Or paste an array to produce multiple filled copies as a ZIP.</div>
+    <div class="ps-section">
+      <label class="ps-label" data-i18n="jsonFill.payload">JSON payload</label>
+      <textarea id="jsonFillPayload" rows="10" class="ps-text" style="font-family:'JetBrains Mono', monospace;font-size:12px;width:100%" placeholder='{ "firstName": "John", "lastName": "Doe", "email": "john@example.com" }'></textarea>
+      <div id="jsonFillStatus" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn outlined" id="jsonFillPreview" type="button" data-i18n="jsonFill.preview">Preview field matches</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn" id="jsonFillCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="jsonFillGo" type="button" data-i18n="jsonFill.go">Fill</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="splitModal" role="dialog" aria-modal="true" aria-labelledby="splitTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="modal-title" id="splitTitle" data-i18n="split.title">Split PDF</h2>
+      <button class="modal-close" id="splitClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n="split.sub">Split the current PDF into multiple files. Each chunk downloads as its own PDF.</div>
+    <div class="compress-presets">
+      <button class="compress-card split-mode active" data-mode="ranges" type="button">
+        <span class="cc-title" data-i18n="split.ranges">Custom ranges</span>
+        <span class="cc-sub" data-i18n="split.ranges.sub">e.g. 1-3, 5, 7-10</span>
+      </button>
+      <button class="compress-card split-mode" data-mode="every" type="button">
+        <span class="cc-title" data-i18n="split.every">Every N pages</span>
+        <span class="cc-sub" data-i18n="split.every.sub">fixed-size chunks</span>
+      </button>
+      <button class="compress-card split-mode" data-mode="each" type="button">
+        <span class="cc-title" data-i18n="split.each">One per page</span>
+        <span class="cc-sub" data-i18n="split.each.sub">each page → its own PDF</span>
+      </button>
+    </div>
+    <div class="ps-section" id="splitRangesRow">
+      <label class="ps-label" data-i18n-html="split.rangesLabel">Page ranges <span id="splitRangesHint" style="color:var(--muted);font-weight:400">(pages 1–1)</span></label>
+      <input type="text" id="splitRangesInput" class="ps-text" placeholder="1-3, 5, 7-10">
+      <div class="settings-desc" data-i18n="split.rangesDesc">Each range becomes one output PDF. Use commas to separate; dashes for inclusive ranges.</div>
+    </div>
+    <div class="ps-section" id="splitEveryRow" hidden>
+      <label class="ps-label" data-i18n="split.everyLabel">Pages per chunk</label>
+      <input type="number" id="splitEveryInput" class="ps-text" min="1" max="999" value="1">
+      <div class="settings-desc" data-i18n="split.everyDesc">e.g. 2 → produces files of pages 1-2, 3-4, 5-6, …</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="splitCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="splitGo" type="button" data-i18n="split.go">Split &amp; Download</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="certSignModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:600px">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n="cert.title">🔐 Sign PDF with X.509 certificate</h2>
+      <button class="modal-close" id="certClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="ps-section">
+      <div class="settings-desc" data-i18n="cert.desc">Real PAdES-B-B signature embedded in the PDF. Acrobat Reader will display the signature widget and validate the certificate chain against installed trust roots.</div>
+      <label class="ps-label" style="margin-top:12px" data-i18n="cert.file">Certificate file (.p12 or .pfx)</label>
+      <label class="btn outlined" style="margin-top:4px;display:inline-flex;cursor:pointer">
+        <input type="file" id="certFileInput" accept=".p12,.pfx,application/x-pkcs12" hidden>
+        <span class="icon">📁</span>&nbsp;<span id="certFileName" data-i18n="cert.chooseFile">Choose file…</span>
+      </label>
+      <label class="ps-label" style="margin-top:10px" data-i18n="pwd.password">Password</label>
+      <input type="password" id="certPassword" class="ps-text" data-i18n-placeholder="cert.pwd.ph" placeholder="(empty for unprotected p12)">
+      <div id="certInfoBox" class="settings-status" style="margin-top:10px;white-space:pre-line;display:none"></div>
+      <div class="code-row" style="margin-top:12px">
+        <div>
+          <label class="ps-label" data-i18n="cert.reason">Reason</label>
+          <input type="text" id="certReason" class="ps-text" data-i18n-placeholder="cert.reason.ph" placeholder="e.g. I approve this document" value="I am the author of this document">
+        </div>
+        <div>
+          <label class="ps-label" data-i18n="cert.location">Location</label>
+          <input type="text" id="certLocation" class="ps-text" data-i18n-placeholder="cert.location.ph" placeholder="e.g. Boynton Beach, FL">
+        </div>
+      </div>
+      <label class="ps-label" style="margin-top:8px" data-i18n="cert.contact">Contact info (optional)</label>
+      <input type="text" id="certContact" class="ps-text" data-i18n-placeholder="cert.contact.ph" placeholder="e.g. you@example.com or +1 555 …">
+      <label class="check" style="margin-top:12px">
+        <input type="checkbox" id="certVisible" checked>
+        <span data-i18n="cert.visible">Add a visible signature block on the first page (drag to reposition before saving)</span>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="certCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn primary" id="certSignBtn" type="button" disabled data-i18n="cert.sign">🔐 Sign &amp; download</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="codeModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:620px">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n="code.title">Generate QR / Barcode</h2>
+      <button class="modal-close" id="codeClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="settings-tabs" role="tablist">
+      <button class="settings-tab active" data-codetab="qr" type="button" data-i18n="code.tab.qr">▦ QR Code</button>
+      <button class="settings-tab" data-codetab="bar" type="button" data-i18n="code.tab.bar">||||| Barcode</button>
+    </div>
+
+    <!-- QR — wizard with templates -->
+    <div class="code-pane" data-codepane="qr">
+      <div id="qrStep1" class="qr-step">
+        <div class="qr-step-title" data-i18n="qr.shareWhat">What do you want to share?</div>
+        <div class="qr-template-grid">
+          <button class="qr-template-card" data-qr-tpl="url" type="button">
+            <span class="qr-tpl-icon">🌐</span>
+            <span class="qr-tpl-label" data-i18n="qr.tpl.url">Website</span>
+            <span class="qr-tpl-sub" data-i18n="qr.tpl.url.sub">Open a URL on scan</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="vcard" type="button">
+            <span class="qr-tpl-icon">👤</span>
+            <span class="qr-tpl-label" data-i18n="qr.tpl.vcard">Business card</span>
+            <span class="qr-tpl-sub" data-i18n="qr.tpl.vcard.sub">vCard — name, phone, email…</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="wifi" type="button">
+            <span class="qr-tpl-icon">📶</span>
+            <span class="qr-tpl-label" data-i18n="qr.tpl.wifi">Wi-Fi</span>
+            <span class="qr-tpl-sub" data-i18n="qr.tpl.wifi.sub">Connect with one tap</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="email" type="button">
+            <span class="qr-tpl-icon">✉</span>
+            <span class="qr-tpl-label" data-i18n="qr.tpl.email">Email</span>
+            <span class="qr-tpl-sub" data-i18n="qr.tpl.email.sub">Pre-filled mailto:</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="phone" type="button">
+            <span class="qr-tpl-icon">📞</span>
+            <span class="qr-tpl-label" data-i18n="qr.tpl.phone">Phone</span>
+            <span class="qr-tpl-sub" data-i18n="qr.tpl.phone.sub">Tap to call</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="sms" type="button">
+            <span class="qr-tpl-icon">💬</span>
+            <span class="qr-tpl-label" data-i18n="qr.tpl.sms">SMS</span>
+            <span class="qr-tpl-sub" data-i18n="qr.tpl.sms.sub">Pre-filled message</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="geo" type="button">
+            <span class="qr-tpl-icon">📍</span>
+            <span class="qr-tpl-label" data-i18n="qr.tpl.geo">Location</span>
+            <span class="qr-tpl-sub" data-i18n="qr.tpl.geo.sub">Open in maps</span>
+          </button>
+          <button class="qr-template-card" data-qr-tpl="text" type="button">
+            <span class="qr-tpl-icon">📝</span>
+            <span class="qr-tpl-label" data-i18n="qr.tpl.text">Plain text</span>
+            <span class="qr-tpl-sub" data-i18n="qr.tpl.text.sub">Anything — notes, codes…</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: fill template fields + style + preview -->
+      <div id="qrStep2" class="qr-step" hidden>
+        <div class="qr-step2-head">
+          <button class="qr-back-btn" id="qrBackBtn" type="button" data-i18n-title="qr.backTitle" title="Back to template picker" data-i18n="qr.back">← Back</button>
+          <div class="qr-step2-title"><span id="qrTplIcon">🌐</span> <span id="qrTplName">Website</span></div>
+        </div>
+        <div class="code-grid">
+          <div class="code-form">
+            <!-- Template-specific fields injected here -->
+            <div id="qrFields"></div>
+
+            <details class="qr-style-section">
+              <summary data-i18n="qr.style">🎨 Style &amp; appearance</summary>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+                <div>
+                  <label class="ps-label" data-i18n="qr.fg">Foreground</label>
+                  <input type="color" id="qrDark" class="ps-text" value="#000000" style="height:38px;padding:2px">
+                </div>
+                <div>
+                  <label class="ps-label" data-i18n="qr.bg">Background</label>
+                  <input type="color" id="qrLight" class="ps-text" value="#ffffff" style="height:38px;padding:2px">
+                </div>
+              </div>
+              <label class="check" style="margin-top:8px"><input type="checkbox" id="qrTransparent"> <span data-i18n="qr.transparent">Transparent background</span></label>
+              <label class="ps-label" style="margin-top:10px" data-i18n="qr.module">Module shape</label>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="qr-style-pill"><input type="radio" name="qrModuleShape" value="square" checked> <span data-i18n="qr.shape.square">▪ Square</span></label>
+                <label class="qr-style-pill"><input type="radio" name="qrModuleShape" value="rounded"> <span data-i18n="qr.shape.rounded">◐ Rounded</span></label>
+                <label class="qr-style-pill"><input type="radio" name="qrModuleShape" value="dot"> <span data-i18n="qr.shape.dot">● Dot</span></label>
+              </div>
+              <label class="ps-label" style="margin-top:10px" data-i18n="qr.eye">Eye style (3 corner squares)</label>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <label class="qr-style-pill"><input type="radio" name="qrEyeShape" value="square" checked> <span data-i18n="qr.eye.square">Square</span></label>
+                <label class="qr-style-pill"><input type="radio" name="qrEyeShape" value="rounded"> <span data-i18n="qr.eye.rounded">Rounded</span></label>
+                <label class="qr-style-pill"><input type="radio" name="qrEyeShape" value="circle"> <span data-i18n="qr.eye.circle">Circle</span></label>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+                <div>
+                  <label class="ps-label" data-i18n="qr.sizePx">Size (px)</label>
+                  <input type="number" id="qrSize" class="ps-text" value="320" min="120" max="800" step="20">
+                </div>
+                <div>
+                  <label class="ps-label" data-i18n="qr.ecc">Error correction</label>
+                  <select id="qrEcc" class="ps-text">
+                    <option value="L" data-i18n="qr.ecc.L">L · 7% recovery</option>
+                    <option value="M" selected data-i18n="qr.ecc.M">M · 15% (default)</option>
+                    <option value="Q" data-i18n="qr.ecc.Q">Q · 25%</option>
+                    <option value="H" data-i18n="qr.ecc.H">H · 30% (best)</option>
+                  </select>
+                </div>
+              </div>
+              <label class="ps-label" style="margin-top:10px" data-i18n="qr.logo">Center logo (optional)</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <label class="btn outlined" style="font-size:13px;padding:6px 10px">
+                  <input type="file" id="qrLogoInput" accept="image/*" hidden>
+                  <span data-i18n="qr.chooseImg">Choose image…</span>
+                </label>
+                <button class="btn" id="qrLogoClear" type="button" style="font-size:13px;padding:6px 10px" hidden data-i18n="profile.remove">Remove</button>
+                <span id="qrLogoStatus" style="font-size:12px;color:var(--muted)" data-i18n="qr.noLogo">No logo</span>
+              </div>
+              <input type="hidden" id="qrMargin" value="2">
+            </details>
+          </div>
+          <div class="code-preview">
+            <div class="code-preview-label" data-i18n="qr.preview">Preview</div>
+            <canvas id="qrCanvas" class="code-canvas"></canvas>
+            <div id="qrStatus" class="code-status" data-i18n="qr.fillFields">Fill in the fields above.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barcode -->
+    <div class="code-pane" data-codepane="bar" hidden>
+      <div class="code-grid">
+        <div class="code-form">
+          <label class="ps-label" data-i18n="bar.format">Format</label>
+          <select id="barFormat" class="ps-text">
+            <option value="CODE128" selected data-i18n="bar.fmt.code128">Code 128 — general (alphanumeric)</option>
+            <option value="CODE39" data-i18n="bar.fmt.code39">Code 39 — uppercase + digits</option>
+            <option value="EAN13" data-i18n="bar.fmt.ean13">EAN-13 — 12-digit, retail</option>
+            <option value="EAN8" data-i18n="bar.fmt.ean8">EAN-8 — 7-digit retail</option>
+            <option value="UPC" data-i18n="bar.fmt.upc">UPC-A — 11-digit, US retail</option>
+            <option value="ITF14" data-i18n="bar.fmt.itf14">ITF-14 — packaging</option>
+            <option value="ITF" data-i18n="bar.fmt.itf">ITF — interleaved 2 of 5</option>
+            <option value="MSI" data-i18n="bar.fmt.msi">MSI — inventory</option>
+            <option value="pharmacode" data-i18n="bar.fmt.pharma">Pharmacode — short pharma</option>
+            <option value="codabar" data-i18n="bar.fmt.codabar">Codabar — libraries / blood banks</option>
+          </select>
+          <label class="ps-label" style="margin-top:8px" data-i18n="bar.value">Value</label>
+          <input type="text" id="barText" class="ps-text" data-i18n-placeholder="bar.value.ph" placeholder="12345 or ABC-123" value="123456789012">
+          <div class="code-row">
+            <div>
+              <label class="ps-label" data-i18n="bar.width">Bar width (px)</label>
+              <input type="number" id="barWidth" class="ps-text" value="2" min="1" max="8">
+            </div>
+            <div>
+              <label class="ps-label" data-i18n="bar.height">Height (px)</label>
+              <input type="number" id="barHeight" class="ps-text" value="80" min="20" max="240">
+            </div>
+          </div>
+          <div class="code-row">
+            <div>
+              <label class="ps-label" data-i18n="bar.color">Bar colour</label>
+              <input type="color" id="barColor" class="ps-text" value="#000000" style="height:38px;padding:2px">
+            </div>
+            <div>
+              <label class="check" style="margin-top:24px"><input type="checkbox" id="barDisplayValue" checked> <span data-i18n="bar.showValue">Show value below bars</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="code-preview">
+          <div class="code-preview-label" data-i18n="qr.preview">Preview</div>
+          <canvas id="barCanvas" class="code-canvas"></canvas>
+          <div id="barStatus" class="code-status" data-i18n="bar.pickFmt">Pick format + value to preview.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="codeCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn outlined" id="codeDownload" type="button" data-i18n="code.savePng">⤓ Save as PNG</button>
+      <button class="btn primary" id="codeInsert" type="button" data-i18n="code.insertPdf">＋ Insert into PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="shareModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:560px">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n="share.title">Share PDF by email</h2>
+      <button class="modal-close" id="shareClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="ps-section">
+      <div class="settings-desc" data-i18n-html="share.desc">PDF is compressed locally, then opens the <strong>system Share dialog</strong> (mobile + Chrome/Edge on Windows) → pick an email app and the file is already attached. If your browser doesn't support Web Share with files (Firefox, Safari on desktop), it falls back to download + mailto (drag-and-drop). Browser security blocks automatic mailto attachments.</div>
+      <label class="ps-label" style="margin-top:10px" data-i18n="share.compress">Compression level</label>
+      <select id="sharePreset" class="ps-text">
+        <option value="high" data-i18n="share.high">High quality (DPI 150, JPEG 88%)</option>
+        <option value="balanced" selected data-i18n="share.balanced">Balanced (DPI 120, JPEG 72%) — recommended for email</option>
+        <option value="small" data-i18n="share.small">Smallest (DPI 96, JPEG 55%)</option>
+        <option value="none" data-i18n="share.none">No compression — just attach the original</option>
+      </select>
+      <label class="ps-label" style="margin-top:10px" data-i18n="share.to">Recipient (optional)</label>
+      <input type="email" id="shareTo" class="ps-text" placeholder="who@example.com">
+      <label class="ps-label" style="margin-top:8px" data-i18n="share.subject">Subject</label>
+      <input type="text" id="shareSubject" class="ps-text" data-i18n-placeholder="share.subject.ph" placeholder="Document for your review">
+      <label class="ps-label" style="margin-top:8px" data-i18n="share.message">Message</label>
+      <textarea id="shareBody" class="ps-text" data-i18n-placeholder="share.message.ph" placeholder="Hi, please find the attached document…" style="height:90px"></textarea>
+      <div id="shareStatus" class="settings-status" style="margin-top:10px" data-i18n="share.status">Pick a compression level and click Share.</div>
+    </div>
+    <div class="modal-actions" style="flex-wrap:wrap;gap:8px">
+      <button class="btn" id="shareCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn outlined" id="shareGoDownload" type="button" data-i18n="share.download">📥 Download + open mail</button>
+      <button class="btn primary" id="shareGo" type="button" data-i18n="share.go">📨 Share via app</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="aiResponseModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:680px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="aiRespTitle" data-i18n="aiResp.title">AI Result</h2>
+      <button class="modal-close" id="aiRespClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="ps-section">
+      <div id="aiRespBody" class="ai-response-text" data-i18n="aiResp.loading">Loading…</div>
+      <div id="aiRespMeta" style="margin-top:8px;font-size:11px;color:var(--muted)"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn outlined" id="aiRespCopy" type="button" data-i18n="aiResp.copy">⎘ Copy</button>
+      <button class="btn outlined" id="aiRespInsert" type="button" hidden data-i18n="aiResp.insert">＋ Insert as text on PDF</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn primary" id="aiRespDone" type="button" data-i18n="common.done">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Floating "Ask AI about this PDF" chat — visible only when AI is connected -->
+<button id="aiChatFab" type="button" title="Ask AI about this PDF" aria-label="Ask AI about this PDF">💬</button>
+<div id="aiChatPanel" role="dialog" aria-labelledby="aiChatTitle">
+  <div class="aichat-head">
+    <span style="font-size:18px">🤖</span>
+    <span class="title" id="aiChatTitle">Ask AI about this PDF</span>
+    <button class="aichat-act" id="aiChatClear" type="button" title="Clear chat">↺</button>
+    <button class="aichat-act" id="aiChatClose" type="button" title="Close" aria-label="Close">✕</button>
+  </div>
+  <div class="aichat-body" id="aiChatBody">
+    <div class="aichat-empty">Ask a question about the open PDF and I'll answer using its contents. The viewer will jump to the page the answer came from.</div>
+  </div>
+  <div class="aichat-foot">
+    <textarea id="aiChatInput" placeholder="Ask something about this PDF…" rows="1"></textarea>
+    <button class="aichat-send" id="aiChatSend" type="button">Send</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal-card" style="max-width:680px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="settingsTitle" data-i18n="settings.title">Settings</h2>
+      <button class="modal-close" id="settingsClose" type="button" data-i18n-aria="settings.close.aria" aria-label="Close">✕</button>
+    </div>
+    <div class="settings-tabs" role="tablist">
+      <button class="settings-tab" data-tab="language" type="button" data-i18n-html="settings.tab.language">🌐 Language</button>
+      <button class="settings-tab active" data-tab="backup" type="button" data-i18n-html="settings.tab.backup">💾 Backup</button>
+      <button class="settings-tab" data-tab="ai" type="button" data-i18n-html="settings.tab.ai">🤖 AI</button>
+      <button class="settings-tab" data-tab="errors" type="button" data-i18n-html="settings.tab.errors">🐞 Errors</button>
+      <button class="settings-tab" data-tab="about" type="button" data-i18n-html="settings.tab.about">ℹ About</button>
+    </div>
+
+    <!-- Language tab -->
+    <div class="settings-pane" data-pane="language" hidden>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.lang.title">Application language</div>
+        <div class="settings-desc" data-i18n="settings.lang.desc">Pick the interface language. The default is auto-detected from your browser; your choice is saved on this device.</div>
+        <label class="ps-label" style="margin-top:10px" data-i18n="settings.lang.label">Language</label>
+        <select id="langSelect" class="ps-text" style="max-width:280px">
+          <option value="EN">English</option>
+          <option value="CZ">Čeština</option>
+          <option value="PL">Polski</option>
+          <option value="ES">Español</option>
+        </select>
+        <div class="settings-status" id="langStatus" style="margin-top:10px" data-i18n="settings.lang.note">Language switches instantly — no reload needed.</div>
+      </div>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.ui.title">Interface complexity</div>
+        <div class="settings-desc" data-i18n="settings.ui.desc">Simple hides advanced/Pro tools (RegEx redact, JSON fill, table extract, sanitize, password, AI…). Pro shows everything. Switch any time — your annotations are unaffected.</div>
+        <label class="ps-label" style="margin-top:10px" data-i18n="settings.ui.modeLabel">Mode</label>
+        <select id="uiModeSelect" class="ps-text" style="max-width:280px">
+          <option value="pro" data-i18n="settings.ui.pro">Pro — all tools</option>
+          <option value="simple" data-i18n="settings.ui.simple">Simple — only essentials</option>
+        </select>
+        <div class="settings-status" style="margin-top:10px" data-i18n="settings.ui.hint">Tip: even in Simple mode, every tool is still reachable via Ctrl+K (command search).</div>
+      </div>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.kbd.title">Keyboard shortcuts</div>
+        <div class="settings-desc" data-i18n-html="settings.kbd.desc">
+          <kbd>Ctrl+K</kbd> or <kbd>/</kbd> — search any action ·
+          <kbd>V</kbd> Select · <kbd>T</kbd> Text · <kbd>D</kbd> Draw ·
+          <kbd>E</kbd> Edit PDF text · <kbd>H</kbd> Highlight · <kbd>U</kbd> Underline · <kbd>R</kbd> Shape ·
+          <kbd>?</kbd> Help · <kbd>Esc</kbd> Cancel
+        </div>
+      </div>
+    </div>
+
+    <!-- Backup tab -->
+    <div class="settings-pane" data-pane="backup">
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.backup.autoTitle">Automatic local backup</div>
+        <div class="settings-desc" data-i18n="settings.backup.autoDesc">Your profile, signatures, custom stamps, templates, and preferences are automatically snapshotted to your browser's IndexedDB. The snapshot survives page reloads — and is offered for restore after a new version of the app is installed if your localStorage was wiped.</div>
+        <div class="settings-status" id="backupStatus" data-i18n="settings.backup.checking">Checking last backup…</div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" id="backupNowBtn" type="button" data-i18n="settings.backup.snapshot">⤓ Snapshot now</button>
+          <button class="btn outlined" id="backupRestoreBtn" type="button" data-i18n="settings.backup.restore">↺ Restore from snapshot</button>
+        </div>
+      </div>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.backup.fileTitle">Export / Import as file</div>
+        <div class="settings-desc" data-i18n-html="settings.backup.fileDesc">Move your settings between devices, or keep an off-device backup. The exported JSON contains profile, signatures, stamps, templates, AI config, and UI preferences. <strong>No PDFs</strong> are included.</div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn outlined" id="settingsExportBtn" type="button" data-i18n="settings.backup.export">⤓ Export settings.json</button>
+          <label class="btn outlined">
+            <input type="file" id="settingsImportInput" accept="application/json" hidden>
+            <span data-i18n="settings.backup.import">⤒ Import settings.json</span>
+          </label>
+        </div>
+      </div>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.backup.resetTitle">Reset</div>
+        <div class="settings-desc" data-i18n="settings.backup.resetDesc">Wipe local data (profile, signatures, custom stamps, templates, recent colours, AI config). PDFs in the auto-save draft are not affected.</div>
+        <div style="margin-top:10px"><button class="btn danger" id="settingsResetBtn" type="button" data-i18n="settings.backup.reset">Clear all local data</button></div>
+      </div>
+    </div>
+
+    <!-- AI tab -->
+    <div class="settings-pane" data-pane="ai" hidden>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.ai.serverTitle">Local AI server (OpenAI-compatible)</div>
+        <div class="settings-desc" data-i18n-html="settings.ai.serverDesc">Point this to a local LLM that exposes an OpenAI-compatible <code>/v1/chat/completions</code> endpoint — Ollama, llama.cpp server, LM Studio, vLLM, etc. When connected, AI features (Summarize PDF, Translate, Explain paragraph, Fill-in suggestions) appear in the toolbar. Leave blank to disable.</div>
+        <label class="ps-label" style="margin-top:10px" data-i18n="settings.ai.baseUrl">Base URL</label>
+        <input type="text" id="aiBaseUrl" class="ps-text" placeholder="http://192.168.1.50:11434/v1   or   http://localhost:1234/v1">
+        <label class="ps-label" style="margin-top:8px" data-i18n="settings.ai.apiKey">API key (optional)</label>
+        <input type="password" id="aiApiKey" class="ps-text" data-i18n-placeholder="settings.ai.apiKey.ph" placeholder="sk-… (most local servers don't need one)">
+        <label class="ps-label" style="margin-top:8px" data-i18n="settings.ai.model">Model name</label>
+        <input type="text" id="aiModel" class="ps-text" placeholder="llama3.2   or   gpt-oss-120b   or   mistral-small">
+        <div class="settings-status" id="aiStatus" style="margin-top:10px" data-i18n="settings.ai.notConfigured">Not configured.</div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" id="aiTestBtn" type="button" data-i18n="settings.ai.test">Test connection</button>
+          <button class="btn outlined" id="aiSaveBtn" type="button" data-i18n="settings.ai.save">Save</button>
+          <button class="btn danger" id="aiClearBtn" type="button" data-i18n="settings.ai.disconnect">Disconnect</button>
+        </div>
+      </div>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.ai.privacyTitle">Privacy</div>
+        <div class="settings-desc" data-i18n="settings.ai.privacyDesc">Requests are sent directly from your browser to the URL you configured. Nothing is sent to Anthropic, OpenAI, or any third party by this app. For LAN servers, ensure CORS is enabled on your AI host (most LLM servers expose this via a config flag).</div>
+      </div>
+    </div>
+
+    <!-- Errors tab -->
+    <div class="settings-pane" data-pane="errors" hidden>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.err.logTitle">Local error log</div>
+        <div class="settings-desc" data-i18n="settings.err.logDesc">JavaScript errors are captured to this log so you can attach them to a bug report. Logs never leave your device unless you copy or email them yourself.</div>
+        <div class="settings-status" id="errLogStatus" data-i18n="settings.err.none">No errors logged.</div>
+        <textarea id="errLogView" class="ps-text" readonly style="margin-top:10px;height:160px;font-family:'JetBrains Mono',monospace;font-size:11px"></textarea>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn outlined" id="errLogCopyBtn" type="button" data-i18n="settings.err.copy">⎘ Copy</button>
+          <button class="btn outlined" id="errLogRefreshBtn" type="button" data-i18n="settings.err.refresh">↻ Refresh</button>
+          <button class="btn danger" id="errLogClearBtn" type="button" data-i18n="settings.err.clear">Clear log</button>
+        </div>
+      </div>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.err.reportTitle">Report a problem / send feedback</div>
+        <div class="settings-desc" data-i18n="settings.err.reportDesc">Compose a bug report or feedback message. It opens in your default mail client (mailto:) with the error log attached — or you can copy the body to the clipboard.</div>
+        <label class="ps-label" style="margin-top:10px" data-i18n="settings.err.recipient">Recipient email</label>
+        <input type="email" id="bugRecipient" class="ps-text" value="support@kamagio.com">
+        <label class="ps-label" style="margin-top:8px" data-i18n="settings.err.desc">Your description</label>
+        <textarea id="bugBody" class="ps-text" data-i18n-placeholder="settings.err.desc.ph" placeholder="What were you doing when the issue happened? Steps to reproduce help a lot." style="height:100px"></textarea>
+        <label class="check" style="margin-top:8px"><input type="checkbox" id="bugAttachLog" checked> <span data-i18n="settings.err.attach">Attach error log</span></label>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn primary" id="bugSendBtn" type="button" data-i18n="settings.err.openMail">✉ Open mail client</button>
+          <button class="btn outlined" id="bugCopyBtn" type="button" data-i18n="settings.err.copyBody">⎘ Copy body</button>
+        </div>
+        <div class="settings-desc" style="margin-top:8px;font-size:11px" data-i18n="settings.err.smtpNote">Note: SMTP from a browser requires a server bridge. The mail-client option works on every device without any backend. If you want fully automatic SMTP delivery, add a small relay (e.g., a Cloudflare Worker or a small Node server) and we'll wire it in here.</div>
+      </div>
+    </div>
+
+    <!-- About tab -->
+    <div class="settings-pane" data-pane="about" hidden>
+      <div class="ps-section">
+        <div class="settings-row-title">PDF Mini Editor Pro</div>
+        <div class="settings-desc" data-i18n-html="settings.about.version">Version <strong id="aboutVersion">—</strong> · Service worker <strong id="aboutSw">—</strong></div>
+        <div class="settings-desc" style="margin-top:6px" data-i18n="settings.about.author">Created by Kamil Niemczyk · No tracking · No analytics.</div>
+        <div class="settings-desc" id="aboutPrivacyLine" style="margin-top:10px;padding:10px 12px;border-radius:6px;background:var(--surface-2);border-left:3px solid #10b981">…</div>
+      </div>
+      <div class="ps-section">
+        <div class="settings-row-title" data-i18n="settings.about.swTitle">Service worker</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+          <button class="btn outlined" id="swUpdateBtn" type="button" data-i18n="settings.about.swCheck">↻ Check for update</button>
+          <button class="btn outlined" id="swClearBtn" type="button" data-i18n="settings.about.swClear">🗑 Clear cached assets</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="settingsDone" type="button" data-i18n="settings.done">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- Photo cropper / editor — opens when the user picks a profile photo so they
+     can pan, zoom, rotate (free + 90°), mirror, and tweak filters /
+     brightness / contrast / saturation before saving the square crop. -->
+<div class="modal-overlay" id="photoCropModal" role="dialog" aria-modal="true" aria-labelledby="photoCropTitle">
+  <div class="modal-card" style="max-width:720px;width:min(720px,calc(100vw - 32px));overflow:hidden">
+    <div class="modal-head">
+      <h2 class="modal-title" id="photoCropTitle" data-i18n="pc.title">Adjust your photo</h2>
+      <button class="modal-close" id="photoCropClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="ps-section photo-crop-body">
+      <div class="photo-crop-stage" id="photoCropStage">
+        <canvas id="photoCropCanvas" width="320" height="320"></canvas>
+        <div class="photo-crop-mask" aria-hidden="true"></div>
+        <div class="photo-crop-hint" data-i18n="pc.hint">Drag to position · Scroll to zoom</div>
+      </div>
+      <div class="photo-crop-tools">
+        <div class="pc-row">
+          <label class="pc-label" data-i18n="pc.zoom">Zoom</label>
+          <input type="range" id="pcZoom" min="0.5" max="4" step="0.01" value="1">
+          <span class="pc-val" id="pcZoomVal">100%</span>
+        </div>
+        <div class="pc-row">
+          <label class="pc-label" data-i18n="pc.rotate">Rotate</label>
+          <input type="range" id="pcRot" min="-180" max="180" step="1" value="0">
+          <span class="pc-val" id="pcRotVal">0°</span>
+        </div>
+        <div class="pc-row pc-btnrow">
+          <button class="pc-btn" id="pcRotL" type="button" data-i18n-title="props.rotateLeft" title="Rotate 90° left">↶ 90°</button>
+          <button class="pc-btn" id="pcRotR" type="button" data-i18n-title="props.rotateRight" title="Rotate 90° right">↷ 90°</button>
+          <button class="pc-btn" id="pcFlipH" type="button" data-i18n-title="pc.mirrorH" title="Mirror horizontally"><span data-i18n="pc.mirror">⇆ Mirror</span></button>
+          <button class="pc-btn" id="pcFlipV" type="button" data-i18n-title="pc.mirrorV" title="Mirror vertically"><span data-i18n="pc.flip">⇅ Flip</span></button>
+        </div>
+        <div class="pc-row">
+          <label class="pc-label" data-i18n="pc.filter">Filter</label>
+          <select id="pcFilter" class="ps-text" style="flex:1">
+            <option value="none" data-i18n="pc.f.none">None</option>
+            <option value="grayscale" data-i18n="pc.f.gray">Black &amp; white</option>
+            <option value="sepia" data-i18n="pc.f.sepia">Sepia</option>
+            <option value="vintage" data-i18n="pc.f.vintage">Vintage</option>
+            <option value="cool" data-i18n="pc.f.cool">Cool tone</option>
+            <option value="warm" data-i18n="pc.f.warm">Warm tone</option>
+            <option value="blur" data-i18n="pc.f.blur">Soft (slight blur)</option>
+            <option value="sharpen" data-i18n="pc.f.sharpen">Crisp (contrast boost)</option>
+          </select>
+        </div>
+        <div class="pc-row">
+          <label class="pc-label" data-i18n="pc.bright">Brightness</label>
+          <input type="range" id="pcBright" min="0.5" max="1.6" step="0.01" value="1">
+          <span class="pc-val" id="pcBrightVal">100%</span>
+        </div>
+        <div class="pc-row">
+          <label class="pc-label" data-i18n="pc.contrast">Contrast</label>
+          <input type="range" id="pcContrast" min="0.5" max="1.6" step="0.01" value="1">
+          <span class="pc-val" id="pcContrastVal">100%</span>
+        </div>
+        <div class="pc-row">
+          <label class="pc-label" data-i18n="pc.sat">Saturation</label>
+          <input type="range" id="pcSat" min="0" max="2" step="0.01" value="1">
+          <span class="pc-val" id="pcSatVal">100%</span>
+        </div>
+        <div class="pc-row pc-btnrow">
+          <label class="check" style="flex:1"><input type="checkbox" id="pcVignette"> <span data-i18n="pc.vignette">Vignette (darken edges)</span></label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="photoCropReset" type="button" data-i18n="pc.reset">↺ Reset</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn" id="photoCropCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="photoCropApply" type="button" data-i18n="common.apply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="profileModal" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+  <div class="modal-card modal-card-wide">
+    <div class="modal-head">
+      <h2 class="modal-title" id="profileTitle" data-i18n="profile.title">Your Profile</h2>
+      <button class="modal-close" id="profileClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n="profile.sub">Saved locally on this device. Used to pre-fill business cards, stamps with your info, and saved signatures.</div>
+    <div class="profile-form">
+      <div class="field profile-photo-row">
+        <div class="profile-photo-circle" id="prPhotoCircle" data-i18n-title="profile.noPhoto" title="No photo set">
+          <svg id="prPhotoSilhouette" class="profile-photo-silhouette" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="24" r="13" fill="currentColor" opacity="0.85"/>
+            <path d="M8 60 C 8 44, 24 38, 32 38 C 40 38, 56 44, 56 60 Z" fill="currentColor" opacity="0.85"/>
+          </svg>
+          <span id="prPhotoInitials" class="profile-photo-initials" hidden></span>
+          <img id="prPhotoImg" class="profile-photo-img" data-i18n-alt="profile.photo.alt" alt="Profile photo" hidden>
+        </div>
+        <div class="profile-photo-actions">
+          <label class="btn outlined" style="font-size:13px">
+            <input type="file" id="prPhotoInput" accept="image/*" hidden>
+            <span data-i18n="profile.upload">📷 Upload photo</span>
+          </label>
+          <button class="btn danger" id="prPhotoClear" type="button" style="font-size:13px" data-i18n="profile.remove" hidden>Remove</button>
+          <div class="cs-hint" style="flex-basis:100%" data-i18n="profile.photoHint">Square photos work best. Goes on the business card.</div>
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="profile.fullName">Full Name</label>
+        <input type="text" id="prFullName" maxlength="80" data-i18n-placeholder="profile.fullName.ph" placeholder="Jane Doe">
+      </div>
+      <div class="field">
+        <label data-i18n="profile.email">Email</label>
+        <input type="email" id="prEmail" maxlength="80" placeholder="jane@example.com">
+      </div>
+      <div class="field">
+        <label data-i18n="profile.phone">Phone</label>
+        <input type="tel" id="prPhone" maxlength="40" data-i18n-placeholder="profile.phone.ph" placeholder="+1 (555) 123-4567">
+      </div>
+      <div class="field">
+        <label data-i18n="profile.street">Street Address</label>
+        <input type="text" id="prStreet" maxlength="120" data-i18n-placeholder="profile.street.ph" placeholder="123 Main Street">
+      </div>
+      <div class="field-row">
+        <div class="field" style="flex:1">
+          <label data-i18n="profile.city">City</label>
+          <input type="text" id="prCity" maxlength="60" data-i18n-placeholder="profile.city.ph" placeholder="Boynton Beach">
+        </div>
+        <div class="field" style="width:130px">
+          <label data-i18n="profile.state">State / Region</label>
+          <input type="text" id="prState" maxlength="40" data-i18n-placeholder="profile.state.ph" placeholder="FL">
+        </div>
+        <div class="field" style="width:130px">
+          <label data-i18n="profile.zip">ZIP / Postcode</label>
+          <input type="text" id="prZip" maxlength="20" data-i18n-placeholder="profile.zip.ph" placeholder="33436">
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="profile.country">Country</label>
+        <input type="text" id="prCountry" maxlength="60" data-i18n-placeholder="profile.country.ph" placeholder="United States">
+      </div>
+      <div class="field-row">
+        <div class="field" style="flex:1">
+          <label data-i18n="profile.company">Company / Organization</label>
+          <input type="text" id="prCompany" maxlength="80" data-i18n-placeholder="profile.company.ph" placeholder="Acme Inc.">
+        </div>
+        <div class="field" style="flex:1">
+          <label data-i18n="profile.jobTitle">Job title</label>
+          <input type="text" id="prTitle" maxlength="80" data-i18n-placeholder="profile.jobTitle.ph" placeholder="Director of Engineering">
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="profile.website">Website</label>
+        <input type="url" id="prWebsite" maxlength="120" placeholder="https://example.com">
+      </div>
+      <div class="field-row">
+        <div class="field" style="flex:1">
+          <label data-i18n="profile.linkedin">LinkedIn (optional)</label>
+          <input type="text" id="prLinkedIn" maxlength="120" placeholder="linkedin.com/in/username">
+        </div>
+        <div class="field" style="flex:1">
+          <label data-i18n="profile.social">Other social (optional)</label>
+          <input type="text" id="prSocial" maxlength="120" data-i18n-placeholder="profile.social.ph" placeholder="@username or URL">
+        </div>
+      </div>
+      <div class="field">
+        <label data-i18n="profile.tagline">Tagline / Notes (optional)</label>
+        <input type="text" id="prTagline" maxlength="120" data-i18n-placeholder="profile.tagline.ph" placeholder="Short one-liner — shown on the business card">
+      </div>
+      <div class="profile-saved-sigs">
+        <h3 data-i18n="profile.savedSigs">Saved Signatures</h3>
+        <div class="saved-sigs-grid" id="savedSigsGrid"></div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn danger" id="profileClear" type="button" data-i18n="profile.clearAll">Clear All Profile Data</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn" id="profileCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="profileSave" type="button" data-i18n="common.save">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="modal-card modal-card-wide modal-card-help">
+    <div class="modal-head">
+      <h2 class="modal-title" id="helpTitle" data-i18n="help.title">Help · How to use PDF Mini</h2>
+      <button class="modal-close" id="helpClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n-html="help.sub">Click any section to expand. Press <kbd>Esc</kbd> at any time to return to Select mode.</div>
+    <div class="help-content" id="helpContent"></div>
+    <div class="modal-actions">
+      <button class="btn outlined" id="helpReplayIntro" type="button" data-i18n="help.replay">▶ Replay intro tour</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn primary" id="helpDone" type="button" data-i18n="help.gotIt">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="onboardModal" role="dialog" aria-modal="true" aria-labelledby="onboardTitle">
+  <div class="modal-card modal-card-wide modal-card-onboard">
+    <div class="modal-head">
+      <h2 class="modal-title" id="onboardTitle" data-i18n="onboard.title">Welcome to PDF Mini Editor</h2>
+      <button class="modal-close" id="onboardSkip" type="button" data-i18n-aria="onboard.skip" aria-label="Skip">✕</button>
+    </div>
+    <div class="onboard-slide" id="onboardSlide"></div>
+    <div class="onboard-footer">
+      <div class="onboard-progress">
+        <div class="onboard-progress-track">
+          <div class="onboard-progress-fill" id="onboardProgressFill" style="width:0%"></div>
+        </div>
+        <div class="onboard-counter" id="onboardCounter" data-i18n="onboard.step">Step 1 of 1</div>
+      </div>
+      <button class="btn" id="onboardPrev" type="button" data-i18n="onboard.back">Back</button>
+      <button class="btn primary" id="onboardNext" type="button" data-i18n="onboard.next">Next →</button>
+    </div>
+  </div>
+</div>
+
+<div id="autoSaveIndicator"></div>
+
+<div class="modal-overlay" id="pageSetupModal" role="dialog" aria-modal="true" aria-labelledby="psTitle">
+  <div class="modal-card modal-card-wide">
+    <div class="modal-head">
+      <h2 class="modal-title" id="psTitle" data-i18n-html="ps.title">Page Setup <span class="pro-badge">PRO</span></h2>
+      <button class="modal-close" id="psClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n="ps.sub">Add headers, footers, page numbers, or a watermark to multiple pages at once.</div>
+    <div class="tab-bar" role="tablist">
+      <button class="tab active" data-ps-tab="header-footer" type="button" data-i18n="ps.tab.hf">Header &amp; Footer</button>
+      <button class="tab" data-ps-tab="page-numbers" type="button" data-i18n="ps.tab.pn">Page Numbers</button>
+      <button class="tab" data-ps-tab="watermark" type="button" data-i18n="ps.tab.wm">Watermark</button>
+    </div>
+
+    <div class="ps-tab-body" data-ps-body="header-footer">
+      <div class="ps-section">
+        <div class="ps-section-title" data-i18n="ps.header">Header</div>
+        <input type="text" id="psHeaderText" class="ps-text" data-i18n-placeholder="ps.empty.ph" placeholder="(leave empty to skip)">
+        <div class="ps-row">
+          <label><span data-i18n="ps.position">Position</span>
+            <select id="psHeaderPos" class="select-input">
+              <option value="left" data-i18n="pos.left">Left</option>
+              <option value="center" selected data-i18n="pos.center">Center</option>
+              <option value="right" data-i18n="pos.right">Right</option>
+            </select>
+          </label>
+          <label><span data-i18n="ps.color">Color</span> <input type="color" id="psHeaderColor" value="#666666"></label>
+          <label><span data-i18n="ps.size">Size</span> <input type="number" id="psHeaderSize" class="psize-input" value="11" min="6" max="48"></label>
+        </div>
+      </div>
+      <div class="ps-section">
+        <div class="ps-section-title" data-i18n="ps.footer">Footer</div>
+        <input type="text" id="psFooterText" class="ps-text" data-i18n-placeholder="ps.empty.ph" placeholder="(leave empty to skip)">
+        <div class="ps-row">
+          <label><span data-i18n="ps.position">Position</span>
+            <select id="psFooterPos" class="select-input">
+              <option value="left" data-i18n="pos.left">Left</option>
+              <option value="center" selected data-i18n="pos.center">Center</option>
+              <option value="right" data-i18n="pos.right">Right</option>
+            </select>
+          </label>
+          <label><span data-i18n="ps.color">Color</span> <input type="color" id="psFooterColor" value="#666666"></label>
+          <label><span data-i18n="ps.size">Size</span> <input type="number" id="psFooterSize" class="psize-input" value="10" min="6" max="48"></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ps-tab-body" data-ps-body="page-numbers" hidden>
+      <div class="ps-section">
+        <div class="ps-section-title" data-i18n="ps.pn">Page Numbers</div>
+        <input type="text" id="psPnFormat" class="ps-text" data-i18n-placeholder="ps.format" placeholder="Format" value="Page {n} of {total}">
+        <div class="ps-hint" data-i18n-html="ps.pnHint">Use <code>{n}</code> for the current page and <code>{total}</code> for the total count.</div>
+        <div class="ps-row">
+          <label><span data-i18n="ps.position">Position</span>
+            <select id="psPnPos" class="select-input">
+              <option value="top-left" data-i18n="pos.tl">Top left</option>
+              <option value="top-center" data-i18n="pos.tc">Top center</option>
+              <option value="top-right" data-i18n="pos.tr">Top right</option>
+              <option value="bottom-left" data-i18n="pos.bl">Bottom left</option>
+              <option value="bottom-center" selected data-i18n="pos.bc">Bottom center</option>
+              <option value="bottom-right" data-i18n="pos.br">Bottom right</option>
+            </select>
+          </label>
+          <label><span data-i18n="ps.color">Color</span> <input type="color" id="psPnColor" value="#666666"></label>
+          <label><span data-i18n="ps.size">Size</span> <input type="number" id="psPnSize" class="psize-input" value="10" min="6" max="48"></label>
+          <label class="check"><input type="checkbox" id="psPnSkipFirst"> <span data-i18n="ps.skipFirst">Skip first page</span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ps-tab-body" data-ps-body="watermark" hidden>
+      <div class="ps-section">
+        <div class="ps-section-title" data-i18n="ps.wm">Text Watermark</div>
+        <input type="text" id="psWmText" class="ps-text" data-i18n-placeholder="ps.wm.ph" placeholder="e.g. CONFIDENTIAL">
+        <div class="ps-row">
+          <label><span data-i18n="ps.color">Color</span> <input type="color" id="psWmColor" value="#aaaaaa"></label>
+          <label><span data-i18n="ps.size">Size</span> <input type="number" id="psWmSize" class="psize-input" value="80" min="20" max="300"></label>
+          <label><span data-i18n="ps.rotation">Rotation</span>
+            <input type="number" id="psWmRotation" class="psize-input" value="-45" min="-180" max="180">°
+          </label>
+          <label><span data-i18n="ps.opacity">Opacity</span>
+            <input type="range" id="psWmOpacity" min="0.05" max="1" step="0.05" value="0.25" class="protate-slider">
+            <span id="psWmOpacityVal">0.25</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ps-range">
+      <label class="ps-range-label" data-i18n="ps.applyTo">Apply to:</label>
+      <select id="psRange" class="select-input">
+        <option value="all" selected data-i18n="ps.range.all">All pages</option>
+        <option value="odd" data-i18n="ps.range.odd">Odd pages only</option>
+        <option value="even" data-i18n="ps.range.even">Even pages only</option>
+        <option value="range" data-i18n="ps.range.custom">Custom range…</option>
+      </select>
+      <input type="text" id="psRangeFromTo" placeholder="e.g. 1-3,5,7-10" style="display:none">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="psCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="psApply" type="button" data-i18n="common.apply">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="hyperlinkModal" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n="hl.title">Add hyperlink</h2>
+      <button class="modal-close" id="hlClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="ps-section">
+      <label class="check"><input type="radio" name="hlType" id="hlTypeUrl" value="url" checked> <span data-i18n="hl.url">Web URL</span></label>
+      <input type="url" id="hlUrl" class="ps-text" placeholder="https://example.com">
+      <label class="check" style="margin-top:8px"><input type="radio" name="hlType" id="hlTypePage" value="page"> <span data-i18n="hl.page">Internal page jump</span></label>
+      <input type="number" id="hlPage" class="ps-text" data-i18n-placeholder="hl.pageNum" placeholder="Page number" min="1">
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="hlCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="hlOk" type="button" data-i18n="hl.add">Add link</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="templatesModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:560px">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n-html="tpl.title">Templates <span class="pro-badge">PRO</span></h2>
+      <button class="modal-close" id="tplClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-sub" data-i18n-html="tpl.sub">Templates save a snapshot of the current annotations (text, stamps, shapes, signatures, layout) so you can apply them to any other PDF later. Add your edits to this PDF, type a name, click <strong>＋ Save current</strong> — then open a different PDF and click the template to drop the same content on top.</div>
+    <div class="ps-section">
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px">
+        <input type="text" id="tplNewName" class="ps-text" data-i18n-placeholder="tpl.name.ph" placeholder="Template name…" style="flex:1">
+        <button class="btn primary" id="tplSaveCurrent" type="button" data-i18n="tpl.save">＋ Save current</button>
+      </div>
+      <div id="tplList" class="tpl-list">
+        <div class="tpl-empty" data-i18n-html="tpl.empty">No templates yet. Add annotations to your PDF, then click <strong>＋ Save current</strong>.</div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="tplDone" type="button" data-i18n="common.done">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="bookmarksModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:560px">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n-html="bm.title">Bookmarks / Outline <span class="pro-badge">PRO</span></h2>
+      <button class="modal-close" id="bmClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="ps-section">
+      <div style="display:flex; gap:8px; align-items:flex-end; margin-bottom:10px">
+        <div style="flex:1">
+          <label class="ps-label" data-i18n="bm.titleLabel">Title</label>
+          <input type="text" id="bmNewTitle" class="ps-text" data-i18n-placeholder="bm.title.ph" placeholder="e.g. Chapter 1">
+        </div>
+        <div style="width:90px">
+          <label class="ps-label" data-i18n="bm.page">Page</label>
+          <input type="number" id="bmNewPage" class="ps-text" min="1" value="1">
+        </div>
+        <button class="btn primary" id="bmAdd" type="button" data-i18n="bm.add">＋ Add</button>
+        <button class="btn" id="bmAutoDetect" type="button" data-i18n="bm.autoDetect" title="Scan the document for headings and add them as bookmarks">✨ Auto</button>
+      </div>
+      <div id="bmList" class="bm-list">
+        <div class="bm-empty" data-i18n="bm.empty">No bookmarks yet.</div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:10px" data-i18n="bm.note">Bookmarks are written to the PDF outline on Save. Existing outlines from the original file are preserved.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="bmDone" type="button" data-i18n="common.done">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- New blank PDF: pick a page size, optionally orientation, then create a one-page doc. -->
+<div class="modal-overlay" id="newPdfModal" role="dialog" aria-modal="true" aria-labelledby="newPdfTitle">
+  <div class="modal-card" style="max-width:520px">
+    <div class="modal-head">
+      <h2 class="modal-title" id="newPdfTitle" data-i18n="newPdf.title">📄 New blank PDF</h2>
+      <button class="modal-close" id="newPdfClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="ps-section">
+      <div class="modal-sub" data-i18n-html="newPdf.sub">Creates a single blank page at the size you pick. You can add more pages later via <strong>Pages → + Blank page</strong>.</div>
+      <label class="ps-label" style="margin-top:10px" data-i18n="newPdf.pageSize">Page size</label>
+      <select id="newPdfSize" class="ps-text">
+        <optgroup data-i18n-label="size.iso" label="ISO (mm)">
+          <option value="a4" selected>A4 portrait (210×297 mm)</option>
+          <option value="a4l">A4 landscape (297×210 mm)</option>
+          <option value="a3">A3 portrait (297×420 mm)</option>
+          <option value="a3l">A3 landscape (420×297 mm)</option>
+          <option value="a5">A5 portrait (148×210 mm)</option>
+          <option value="a5l">A5 landscape (210×148 mm)</option>
+        </optgroup>
+        <optgroup data-i18n-label="size.us" label="US (inches)">
+          <option value="letter">Letter (8.5×11 in)</option>
+          <option value="letterl">Letter landscape (11×8.5 in)</option>
+          <option value="legal">Legal (8.5×14 in)</option>
+          <option value="legall">Legal landscape (14×8.5 in)</option>
+          <option value="tabloid">Tabloid / Ledger (11×17 in)</option>
+          <option value="exec">Executive (7.25×10.5 in)</option>
+        </optgroup>
+        <optgroup data-i18n-label="size.photo" label="Photo">
+          <option value="p4x6">4×6 in (10×15 cm)</option>
+          <option value="p5x7">5×7 in (13×18 cm)</option>
+          <option value="p8x10">8×10 in (20×25 cm)</option>
+          <option value="p10x15cm">10×15 cm</option>
+          <option value="p13x18cm">13×18 cm</option>
+        </optgroup>
+        <optgroup data-i18n-label="size.other" label="Other">
+          <option value="square">Square 8×8 in</option>
+          <option value="square10cm">Square 10×10 cm</option>
+          <option value="custom" data-i18n="size.custom">Custom…</option>
+        </optgroup>
+      </select>
+      <div id="newPdfCustomRow" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;align-items:end">
+        <label class="ps-mini"><span data-i18n="common.width">Width</span><input type="number" id="newPdfCustomW" class="ps-text" min="36" value="595"></label>
+        <label class="ps-mini"><span data-i18n="common.height">Height</span><input type="number" id="newPdfCustomH" class="ps-text" min="36" value="842"></label>
+        <label class="ps-mini"><span data-i18n="common.unit">Unit</span><select id="newPdfCustomUnit" class="select-input">
+          <option value="pt" selected data-i18n="unit.pt">points</option>
+          <option value="mm" data-i18n="unit.mm">mm</option>
+          <option value="in" data-i18n="unit.in">inches</option>
+        </select></label>
+      </div>
+      <div id="newPdfPreview" style="margin-top:12px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono', monospace"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="newPdfCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn primary" id="newPdfCreate" type="button" data-i18n="newPdf.create">Create blank PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cropModal" role="dialog" aria-modal="true">
+  <div class="modal-card" style="max-width:560px">
+    <div class="modal-head">
+      <h2 class="modal-title" data-i18n-html="crop.title">Crop / Resize / Margins <span class="pro-badge">PRO</span></h2>
+      <button class="modal-close" id="cropClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="ps-section">
+      <label class="ps-label" data-i18n="crop.applyTo">Apply to pages</label>
+      <input type="text" id="cropRange" class="ps-text" data-i18n-placeholder="crop.range.ph" placeholder="all   or  1-3,7   or  2" value="all">
+    </div>
+
+    <div class="ps-section" style="border-top:1px solid var(--border);padding-top:14px">
+      <label class="ps-label" data-i18n-html="crop.margins">Margins <span style="color:var(--muted);font-weight:400">— hide / trim edges, in PDF points (72 pt = 1 inch)</span></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+        <label class="ps-mini"><span data-i18n="common.top">Top</span><input type="number" id="cropTop" class="ps-text" value="0" min="0"></label>
+        <label class="ps-mini"><span data-i18n="common.right">Right</span><input type="number" id="cropRight" class="ps-text" value="0" min="0"></label>
+        <label class="ps-mini"><span data-i18n="common.bottom">Bottom</span><input type="number" id="cropBottom" class="ps-text" value="0" min="0"></label>
+        <label class="ps-mini"><span data-i18n="common.left">Left</span><input type="number" id="cropLeft" class="ps-text" value="0" min="0"></label>
+      </div>
+      <label class="check" style="margin-top:10px"><input type="checkbox" id="cropTrim"> <span data-i18n-html="crop.trim">Trim (set <code>MediaBox</code> too — removes content outside)</span></label>
+      <div id="cropExisting" style="font-size:12px;color:var(--muted);margin-top:10px"></div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn outlined" id="cropClear" type="button" data-i18n="crop.clear">Clear all margins</button>
+        <button class="btn primary" id="cropApply" type="button" data-i18n="crop.apply">Apply margins</button>
+      </div>
+    </div>
+
+    <div class="ps-section" style="border-top:1px solid var(--border);padding-top:14px">
+      <label class="ps-label" data-i18n-html="crop.normalize">Normalize page size <span style="color:var(--muted);font-weight:400">— good for photos, scans, off-spec PDFs</span></label>
+      <select id="cropSizePreset" class="select-input" style="margin-top:4px;width:100%">
+        <option value="" data-i18n="crop.pickTarget">— Pick a target size —</option>
+        <optgroup data-i18n-label="size.iso" label="ISO (mm)">
+          <option value="a4">A4 portrait (210×297 mm)</option>
+          <option value="a4l">A4 landscape (297×210 mm)</option>
+          <option value="a3">A3 portrait (297×420 mm)</option>
+          <option value="a3l">A3 landscape (420×297 mm)</option>
+          <option value="a5">A5 portrait (148×210 mm)</option>
+          <option value="a5l">A5 landscape (210×148 mm)</option>
+        </optgroup>
+        <optgroup data-i18n-label="size.us" label="US (inches)">
+          <option value="letter">Letter (8.5×11 in)</option>
+          <option value="letterl">Letter landscape (11×8.5 in)</option>
+          <option value="legal">Legal (8.5×14 in)</option>
+          <option value="legall">Legal landscape (14×8.5 in)</option>
+          <option value="tabloid">Tabloid / Ledger (11×17 in)</option>
+          <option value="exec">Executive (7.25×10.5 in)</option>
+        </optgroup>
+        <optgroup data-i18n-label="size.photo" label="Photo">
+          <option value="p4x6">4×6 in (10×15 cm)</option>
+          <option value="p5x7">5×7 in (13×18 cm)</option>
+          <option value="p8x10">8×10 in (20×25 cm)</option>
+          <option value="p10x15cm">10×15 cm</option>
+          <option value="p13x18cm">13×18 cm</option>
+        </optgroup>
+        <optgroup data-i18n-label="size.other" label="Other">
+          <option value="square">Square 8×8 in</option>
+          <option value="square10cm">Square 10×10 cm</option>
+          <option value="custom" data-i18n="size.custom">Custom…</option>
+        </optgroup>
+      </select>
+      <div id="cropCustomSize" hidden style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;align-items:end">
+        <label class="ps-mini"><span data-i18n="common.width">Width</span><input type="number" id="cropCustomW" class="ps-text" min="36" value="595"></label>
+        <label class="ps-mini"><span data-i18n="common.height">Height</span><input type="number" id="cropCustomH" class="ps-text" min="36" value="842"></label>
+        <label class="ps-mini"><span data-i18n="common.unit">Unit</span><select id="cropCustomUnit" class="select-input">
+          <option value="pt" selected data-i18n="unit.pt">points</option>
+          <option value="mm" data-i18n="unit.mm">mm</option>
+          <option value="in" data-i18n="unit.in">inches</option>
+        </select></label>
+      </div>
+      <label class="ps-label" style="margin-top:10px" data-i18n="crop.fitMode">Fit mode</label>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:13px">
+        <label class="check"><input type="radio" name="cropFit" value="fit" checked> <span data-i18n-html="crop.fit">Fit <span style="color:var(--muted)">— pad with background</span></span></label>
+        <label class="check"><input type="radio" name="cropFit" value="fill"> <span data-i18n-html="crop.fill">Fill <span style="color:var(--muted)">— crop to cover</span></span></label>
+        <label class="check"><input type="radio" name="cropFit" value="stretch"> <span data-i18n-html="crop.stretch">Stretch <span style="color:var(--muted)">— ignore aspect</span></span></label>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+        <label class="ps-mini"><span data-i18n="crop.rotateContent">Rotate content</span><select id="cropRotate" class="select-input">
+          <option value="0" data-i18n="rot.0">No rotation</option>
+          <option value="90" data-i18n="rot.90">90° clockwise</option>
+          <option value="180" data-i18n="rot.180">180°</option>
+          <option value="270" data-i18n="rot.270">90° counter-clockwise</option>
+        </select></label>
+        <label class="ps-mini"><span data-i18n="crop.background">Background</span><input type="color" id="cropBg" class="pcolor-input" value="#ffffff" data-i18n-title="crop.padColor" title="Padding color (used by Fit mode)"></label>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px" data-i18n="crop.tip">Tip: pre-rotation happens before fit math, so a 90° rotate of a portrait scan will fit a landscape target without distortion.</div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:12px;color:var(--muted);flex:1" data-i18n="crop.annotNote">Annotations are baked in before resizing. PDF reloads with the new dimensions.</span>
+        <button class="btn primary" id="cropResizeBtn" type="button"><span class="icon">⛶</span> <span data-i18n="crop.resize">Resize pages</span></button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="cropCancel" type="button" data-i18n="common.close">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportTitle">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="modal-title" id="exportTitle" data-i18n-html="export.title">Export PDF <span class="pro-badge">PRO</span></h2>
+      <button class="modal-close" id="exportClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="ps-section">
+      <label class="export-preset">
+        <input type="radio" name="exportPreset" value="hq" checked>
+        <div>
+          <div class="export-preset-title" data-i18n="export.hq.title">High Quality</div>
+          <div class="export-preset-desc" data-i18n="export.hq.desc">Default — preserves images and fonts at original resolution. Best for printing.</div>
+        </div>
+      </label>
+      <label class="export-preset">
+        <input type="radio" name="exportPreset" value="web">
+        <div>
+          <div class="export-preset-title" data-i18n="export.web.title">Web (smaller)</div>
+          <div class="export-preset-desc" data-i18n="export.web.desc">Uses object streams and strips metadata for the smallest file. Best for email or web upload.</div>
+        </div>
+      </label>
+      <label class="export-preset">
+        <input type="radio" name="exportPreset" value="archive">
+        <div>
+          <div class="export-preset-title" data-i18n="export.arch.title">Archive (PDF/A-ish)</div>
+          <div class="export-preset-desc" data-i18n="export.arch.desc">No object streams, adds producer/creator/keywords metadata. Approximate PDF/A — true PDF/A also requires fully embedded fonts.</div>
+        </div>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="exportCancel" type="button" data-i18n="common.cancel">Cancel</button>
+      <button class="btn primary" id="exportGo" type="button" data-i18n="export.go">Export</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="statsModal" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
+  <div class="modal-card modal-card-stats">
+    <div class="modal-head">
+      <h2 class="modal-title" id="statsTitle" data-i18n="stats.title">Document Statistics</h2>
+      <button class="modal-close" id="statsClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div id="statsBody"></div>
+    <div class="modal-actions">
+      <button class="btn primary" id="statsDone" type="button" data-i18n="common.close">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="ocrModal" role="dialog" aria-modal="true" aria-labelledby="ocrTitle">
+  <div class="modal-card modal-card-ocr">
+    <div class="modal-head">
+      <h2 class="modal-title" id="ocrTitle" data-i18n="ocr.title">Running OCR…</h2>
+    </div>
+    <div class="ocr-status" id="ocrStatus" data-i18n="ocr.loading">Loading Tesseract OCR engine…</div>
+    <div class="ocr-progress"><div class="ocr-progress-bar" id="ocrProgressBar"></div></div>
+    <div class="modal-actions">
+      <button class="btn" id="ocrCancelBtn" type="button" data-i18n="common.cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="findModal" role="dialog" aria-modal="true" aria-labelledby="findTitle">
+  <div class="modal-card modal-card-find">
+    <div class="modal-head">
+      <h2 class="modal-title" id="findTitle" data-i18n-html="find.title">Find &amp; Replace <span class="pro-badge">PRO</span></h2>
+      <button class="modal-close" id="findClose" type="button" data-i18n-aria="common.close" aria-label="Close">✕</button>
+    </div>
+    <div class="find-form">
+      <div class="field">
+        <label for="findInput" data-i18n="find.find">Find</label>
+        <input type="text" id="findInput" data-i18n-placeholder="find.find.ph" placeholder="Text to find…" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="replaceInput" data-i18n="find.replace">Replace with</label>
+        <input type="text" id="replaceInput" data-i18n-placeholder="find.replace.ph" placeholder="(leave empty to delete)" autocomplete="off">
+      </div>
+      <div class="find-options">
+        <label class="check"><input type="checkbox" id="findCase"> <span data-i18n="find.case">Case-sensitive</span></label>
+        <label class="check"><input type="checkbox" id="findWhole"> <span data-i18n="find.whole">Whole word</span></label>
+      </div>
+      <div class="find-status" id="findStatus" data-i18n="find.status">Type and press Enter to search.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn outlined" id="findPrev" type="button" data-i18n="find.prev">↑ Previous</button>
+      <button class="btn outlined" id="findNext" type="button" data-i18n="find.next">↓ Next</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn" id="replaceOne" type="button" data-i18n="find.replaceOne">Replace</button>
+      <button class="btn primary" id="replaceAll" type="button" data-i18n="find.replaceAll">Replace All</button>
+    </div>
+  </div>
+</div>
+
+<!-- Command palette — Ctrl+K / Cmd+K opens; fuzzy search every action.
+     The list is rendered dynamically from CMD_PALETTE in JS. -->
+<div class="cp-overlay" id="cmdPalette" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="cp-card">
+    <div class="cp-search-row">
+      <span class="cp-search-icon">🔎</span>
+      <input type="text" id="cpInput" class="cp-search-input" data-i18n-placeholder="cp.ph" placeholder="Search actions… (type to filter)" autocomplete="off" spellcheck="false">
+      <span class="cp-search-hint">Esc</span>
+    </div>
+    <div class="cp-list" id="cpList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>@@INCLUDEDIR:src/app@@</script>
+
+<!-- Cloudflare Web Analytics — privacy-friendly aggregate stats (no cookies, no PII).
+     Dashboard: dash.cloudflare.com → Analytics & Logs → Web Analytics → pdf.kamagio.com -->
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "dcf73eb45cca47c1879fdedd10748b06"}'></script>
+</body>
+</html>
