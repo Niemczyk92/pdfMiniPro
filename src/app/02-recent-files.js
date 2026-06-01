@@ -628,6 +628,23 @@ function editOriginalPdfText(overlay, span) {
   enableTextDrag(el, ann);
   addTextHandles(el, ann);
   el.addEventListener('dblclick', () => openTextEditor(el.parentElement, ann.pageNum, ann.x, ann.y, ann));
+  // Also queue the ORIGINAL glyphs for real removal from the PDF content stream
+  // (content-aware delete; falls back to an ANCHORED whiteout at save time). The
+  // editable text carries its own cover with it when moved/nudged, so without
+  // this the untouched original underneath would re-appear once the new text is
+  // dragged away (see 020.jpg). This cover stays put at the original position.
+  annotations.push({
+    type: 'text-delete',
+    pageNum,
+    x,
+    y: yTop,
+    width: w,
+    height: h,
+    fontHeight,
+    sourceText: text,
+    _spanId: 'editdel_' + Math.random().toString(36).slice(2, 9),
+    _fromEdit: true,
+  });
   updateAnnotCount();
   // Hide the source span so the user doesn't keep re-editing the same region
   span.style.display = 'none';

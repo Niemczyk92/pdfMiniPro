@@ -382,7 +382,7 @@ document.getElementById('helpReplayIntro').addEventListener('click', () => {
 });
 
 // === ONBOARDING / WHAT'S NEW ===
-const APP_VERSION = '1.84';
+const APP_VERSION = '1.85';
 const ONBOARD_KEY = 'pdfMini.onboardedVersion';
 const ONBOARD_SLIDES = [
   {

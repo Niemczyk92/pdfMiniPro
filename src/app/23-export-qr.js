@@ -322,10 +322,109 @@ function loadBarLib() {
 let _qrTpl = null;
 let _qrLogo = null;
 
+// Convert a Czech account number ("prefix-number" or "number") + 4-digit bank
+// code into an IBAN (needed for the SPAYD payment payload). If `account` is
+// already an IBAN it is returned normalised. Returns null on invalid input.
+function _czAccountToIban(account, bankCode) {
+  const raw = String(account || '').trim().replace(/\s+/g, '');
+  if (/^[A-Za-z]{2}\d{2}/.test(raw)) return raw.toUpperCase(); // already an IBAN
+  let prefix = '0',
+    number = raw;
+  if (raw.includes('-')) {
+    const p = raw.split('-');
+    prefix = p[0];
+    number = p[1] || '';
+  }
+  prefix = prefix.replace(/\D/g, '');
+  number = number.replace(/\D/g, '');
+  const bank = String(bankCode || '').replace(/\D/g, '');
+  if (!number || bank.length !== 4) return null;
+  const bban = bank + prefix.padStart(6, '0') + number.padStart(10, '0'); // 20 digits
+  // mod-97 check digits: BBAN + 'CZ'(=1235) + '00', check = 98 - (n mod 97)
+  let check;
+  try {
+    check = 98 - Number(BigInt(bban + '123500') % 97n);
+  } catch (_) {
+    return null;
+  }
+  return 'CZ' + String(check).padStart(2, '0') + bban;
+}
+
 // ---- Template metadata ----
 // Each template knows: icon, display name, what fields to render, and how to
 // turn those field values into the actual QR string payload.
 const QR_TEMPLATES = {
+  payment: {
+    icon: '💳',
+    name: 'Payment (QR Platba)',
+    fields: [
+      {
+        id: 'qrf_acc',
+        label: 'Account number / IBAN',
+        labelKey: 'qrf.acc',
+        type: 'text',
+        placeholder: '19-2000145399   or   CZ6508000000192000145399',
+        placeholderKey: 'qrf.accPh',
+        required: true,
+      },
+      {
+        id: 'qrf_bank',
+        label: 'Bank code (skip if IBAN above)',
+        labelKey: 'qrf.bank',
+        type: 'text',
+        placeholder: '0800',
+      },
+      { id: 'qrf_amount', label: 'Amount', labelKey: 'qrf.amount', type: 'number', placeholder: '450.00' },
+      {
+        id: 'qrf_cur',
+        label: 'Currency',
+        labelKey: 'qrf.cur',
+        type: 'select',
+        options: [
+          { value: 'CZK', label: 'CZK' },
+          { value: 'EUR', label: 'EUR' },
+          { value: 'USD', label: 'USD' },
+          { value: 'GBP', label: 'GBP' },
+          { value: 'PLN', label: 'PLN' },
+        ],
+      },
+      { id: 'qrf_vs', label: 'Variable symbol (VS)', labelKey: 'qrf.vs', type: 'text', placeholder: '1234567890' },
+      { id: 'qrf_ss', label: 'Specific symbol (SS)', labelKey: 'qrf.ss', type: 'text' },
+      { id: 'qrf_ks', label: 'Constant symbol (KS)', labelKey: 'qrf.ks', type: 'text' },
+      { id: 'qrf_rn', label: 'Recipient name', labelKey: 'qrf.rn', type: 'text' },
+      { id: 'qrf_due', label: 'Due date', labelKey: 'qrf.due', type: 'date' },
+      {
+        id: 'qrf_msg',
+        label: 'Message for recipient',
+        labelKey: 'qrf.payMsg',
+        type: 'text',
+        placeholder: 'Invoice 2024-001',
+      },
+    ],
+    // SPAYD (Short Payment Descriptor) — the Czech "QR Platba" standard read by
+    // every CZ/SK banking app: SPD*1.0*ACC:<IBAN>*AM:<amt>*CC:<cur>*X-VS:..*MSG:..
+    build: (v) => {
+      const iban = _czAccountToIban(v.qrf_acc, v.qrf_bank);
+      if (!iban) return '';
+      const clean = (s, max) =>
+        String(s || '')
+          .replace(/\*/g, ' ')
+          .trim()
+          .slice(0, max);
+      const parts = ['SPD', '1.0', 'ACC:' + iban];
+      const amt = parseFloat(String(v.qrf_amount || '').replace(',', '.'));
+      if (isFinite(amt) && amt > 0) parts.push('AM:' + amt.toFixed(2));
+      parts.push('CC:' + (v.qrf_cur || 'CZK'));
+      const digits = (s) => String(s || '').replace(/\D/g, '');
+      if (digits(v.qrf_vs)) parts.push('X-VS:' + digits(v.qrf_vs));
+      if (digits(v.qrf_ss)) parts.push('X-SS:' + digits(v.qrf_ss));
+      if (digits(v.qrf_ks)) parts.push('X-KS:' + digits(v.qrf_ks));
+      if (v.qrf_rn) parts.push('RN:' + clean(v.qrf_rn, 35));
+      if (v.qrf_due) parts.push('DT:' + String(v.qrf_due).replace(/-/g, ''));
+      if (v.qrf_msg) parts.push('MSG:' + clean(v.qrf_msg, 60));
+      return parts.join('*');
+    },
+  },
   url: {
     icon: '🌐',
     name: 'Website',

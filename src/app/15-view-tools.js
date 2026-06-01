@@ -101,10 +101,108 @@ function _buildRulerSvg(w, h) {
     `</svg>`
   );
 }
+// ===== Ruler guides (Word / InDesign style) =====
+// Double-click the ruler strip to drop a guide line (top strip → vertical guide,
+// left strip → horizontal). Drag a guide to reposition; drag it back onto the
+// ruler strip, or double-click it, to remove. Guides are UI-only orientation
+// aids stored per page — they are NEVER printed/exported (not annotations).
+const _rulerGuides = {}; // pageNum -> [{ axis:'v'|'h', pos }]
+function _guidesFor(pn) {
+  return (_rulerGuides[pn] = _rulerGuides[pn] || []);
+}
+function _renderGuides(overlay, pageNum) {
+  let layer = overlay.querySelector('.guide-layer');
+  const guides = _rulerGuides[pageNum] || [];
+  if (!showRuler || !guides.length) {
+    if (layer) layer.remove();
+    return;
+  }
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.className = 'guide-layer';
+    layer.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:5;';
+    overlay.appendChild(layer);
+  }
+  layer.innerHTML = '';
+  guides.forEach((gd, i) => {
+    const isV = gd.axis === 'v';
+    const line = document.createElement('div');
+    line.className = 'ruler-guide ' + gd.axis;
+    line.style.cssText =
+      'position:absolute;pointer-events:auto;background:#0aa5e0;' +
+      (isV
+        ? `left:${gd.pos}px;top:0;width:1px;height:100%;cursor:ew-resize;`
+        : `top:${gd.pos}px;left:0;height:1px;width:100%;cursor:ns-resize;`);
+    const hit = document.createElement('div'); // fatter grab area
+    hit.style.cssText =
+      'position:absolute;' +
+      (isV ? 'left:-4px;top:0;width:9px;height:100%;' : 'top:-4px;left:0;height:9px;width:100%;') +
+      'cursor:inherit;';
+    line.appendChild(hit);
+    layer.appendChild(line);
+    _enableGuideDrag(line, hit, overlay, pageNum, i, isV);
+  });
+}
+function _enableGuideDrag(line, hit, overlay, pageNum, idx, isV) {
+  hit.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      line.setPointerCapture(e.pointerId);
+    } catch (_) {}
+    const rect = overlay.getBoundingClientRect();
+    const move = (ev) => {
+      const g = _guidesFor(pageNum)[idx];
+      if (!g) return;
+      g.pos = isV
+        ? Math.max(0, Math.min(overlay.offsetWidth, (ev.clientX - rect.left) / currentZoom))
+        : Math.max(0, Math.min(overlay.offsetHeight, (ev.clientY - rect.top) / currentZoom));
+      g._del = g.pos < RULER_STRIP; // dropped back on the ruler → will be removed
+      line.style[isV ? 'left' : 'top'] = g.pos + 'px';
+      line.style.opacity = g._del ? '0.3' : '1';
+    };
+    const up = () => {
+      line.removeEventListener('pointermove', move);
+      line.removeEventListener('pointerup', up);
+      const guides = _guidesFor(pageNum);
+      if (guides[idx] && guides[idx]._del) guides.splice(idx, 1);
+      _renderGuides(overlay, pageNum);
+    };
+    line.addEventListener('pointermove', move);
+    line.addEventListener('pointerup', up);
+  });
+  line.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    _guidesFor(pageNum).splice(idx, 1);
+    _renderGuides(overlay, pageNum);
+  });
+}
+
 function updateViewOverlays() {
   document.querySelectorAll('.page-wrapper').forEach((wrapper) => {
     const overlay = wrapper.querySelector('.overlay');
     if (!overlay) return;
+    const pageNum = parseInt(overlay.dataset.pageNum) || parseInt(wrapper.dataset.pageNum) || 1;
+    // Double-click the ruler strip → drop a guide. Bound once per overlay.
+    if (!overlay._guideDblBound) {
+      overlay._guideDblBound = true;
+      overlay.addEventListener('dblclick', (e) => {
+        if (!showRuler) return;
+        const rect = overlay.getBoundingClientRect();
+        const lx = (e.clientX - rect.left) / currentZoom;
+        const ly = (e.clientY - rect.top) / currentZoom;
+        const pn = parseInt(overlay.dataset.pageNum) || 1;
+        if (ly <= RULER_STRIP) {
+          e.stopPropagation();
+          _guidesFor(pn).push({ axis: 'v', pos: lx });
+          _renderGuides(overlay, pn);
+        } else if (lx <= RULER_STRIP) {
+          e.stopPropagation();
+          _guidesFor(pn).push({ axis: 'h', pos: ly });
+          _renderGuides(overlay, pn);
+        }
+      });
+    }
     const w = parseFloat(wrapper.dataset.baseW) || overlay.offsetWidth || 0;
     const h = parseFloat(wrapper.dataset.baseH) || overlay.offsetHeight || 0;
     let g = overlay.querySelector('.grid-layer');
@@ -134,6 +232,7 @@ function updateViewOverlays() {
     } else if (r) {
       r.remove();
     }
+    _renderGuides(overlay, pageNum); // re-place guide lines (hidden when ruler off)
   });
 }
 function _syncViewButtons() {
@@ -206,7 +305,10 @@ if (typeof renderPages === 'function') {
     const s = document.createElement('style');
     s.id = 'readingRulerCss';
     s.textContent =
-      '#readingRuler{position:fixed;z-index:6000;touch-action:none;will-change:transform;}' +
+      // z-index 150: above the page/annotations but BELOW modals (.modal-overlay
+      // is 200), so opening any dialog (Add ▸ QR, etc.) covers the ruler instead
+      // of the ruler floating on top of the window.
+      '#readingRuler{position:fixed;z-index:150;touch-action:none;will-change:transform;}' +
       // In drawing/marking modes the ruler must NOT eat pointer events — otherwise
       // you can't draw along it. It stays visible as a guide and strokes snap to it;
       // switch to Select to move/rotate it.
@@ -355,10 +457,8 @@ if (typeof renderPages === 'function') {
   btn.addEventListener('click', () => {
     el ? hide() : show();
   });
-  // Esc hides it when active
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && el) hide();
-  });
+  // The ruler is toggled ONLY via its toolbar button — deliberately NOT bound to
+  // Escape (Esc closes dialogs/editors and shouldn't also dismiss the ruler).
   // Expose the guide line (viewport coords) so free-draw can snap strokes to it.
   window._readingRulerLine = () => (el ? { cx: center.x, cy: center.y, angleDeg: angle } : null);
 })();
